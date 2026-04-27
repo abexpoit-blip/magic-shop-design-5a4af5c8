@@ -8,9 +8,11 @@ import {
   Crown, Flame, Lock
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const Index = () => {
   const { profile } = useAuth();
+  const settings = useSiteSettings();
   const [news, setNews] = useState<{ id: string; label: string; count: number }[]>([]);
   const [anns, setAnns] = useState<{ id: string; title: string; body: string }[]>([]);
   const [stats, setStats] = useState({ orders: 0, spend: 0 });
@@ -42,27 +44,20 @@ const Index = () => {
             <div className="lg:col-span-7 space-y-7">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-[11px] font-mono tracking-[0.2em] text-primary-glow">
                 <Sparkles className="h-3 w-3" />
-                WELCOME BACK · {profile?.username?.toUpperCase() ?? "MEMBER"}
+                {settings.hero_eyebrow} · {profile?.username?.toUpperCase() ?? "MEMBER"}
               </div>
 
               <h1 className="font-display font-extrabold leading-[1.05] tracking-[-0.03em] text-[44px] sm:text-[64px] lg:text-[80px] text-foreground">
-                The world's most{" "}
-                <em className="not-italic font-display italic gold-text drop-shadow-[0_0_28px_hsl(43_96%_56%/0.35)]">
-                  trusted
-                </em>{" "}
-                Gift <span className="neon-text">Card</span>{" "}
-                <span className="gold-text">&amp;</span>{" "}
-                <span className="gold-text">CC</span> marketplace.
+                {settings.hero_title}
               </h1>
 
               <p className="text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
-                Verified inventory from elite sellers, instant delivery, automated replacement,
-                and vault-grade settlement — engineered for professional buyers who demand the very best.
+                {settings.hero_sub}
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
                 <Link to="/shop" className="btn-luxe">
-                  Enter the marketplace <ArrowRight className="h-4 w-4" />
+                  {settings.hero_cta} <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link to="/recharge" className="btn-ghost-luxe">
                   <Wallet className="h-4 w-4" /> Recharge wallet

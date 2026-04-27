@@ -6,6 +6,7 @@ import logo from "@/assets/panther-logo.png";
 import { Button } from "@/components/ui/button";
 import { BuildBadge } from "@/components/BuildBadge";
 // Admin access is purely role-based (server-side via user_roles + RLS).
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 type Density = "comfortable" | "compact";
 
@@ -20,6 +21,7 @@ const baseNav = [
 
 export const AppShell = ({ children }: { children: ReactNode }) => {
   const { profile, roles, activeRole, setActiveRole, signOut, loading, user, profileError, refresh } = useAuth();
+  const settings = useSiteSettings();
   const isAdmin = roles.includes("admin");
   const canSell = roles.includes("seller") || isAdmin;
   // Effective mode honours the user's pick at login but falls back safely for
@@ -75,11 +77,11 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
           <div className="ticker shrink-0 gap-12 flex pl-6">
             {Array.from({ length: 2 }).map((_, k) => (
               <div key={k} className="flex gap-12">
-                <span><span className="text-primary-glow">●</span> LIVE INVENTORY · 12,400+ FRESH CARDS</span>
-                <span className="text-gold/80">★ VERIFIED SELLERS · INSTANT DELIVERY</span>
-                <span><span className="text-success">●</span> 99.4% VALID RATE THIS WEEK</span>
-                <span className="text-gold/80">↗ AUTO REPLACEMENT WITHIN 5 MINUTES</span>
-                <span><span className="text-primary-glow">●</span> SUPPORT 24/7 · @CRUZERCC_SUPPORT</span>
+                {settings.ticker_items.map((item, i) => (
+                  <span key={`${k}-${i}`} className={i % 2 === 0 ? "" : "text-gold/80"}>
+                    {item}
+                  </span>
+                ))}
               </div>
             ))}
           </div>
@@ -93,16 +95,15 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
           <NavLink to="/" className="nav-brand flex items-center group shrink-0">
             <div className="relative">
               <div className="absolute inset-0 rounded-xl bg-primary/30 blur-xl group-hover:bg-primary/50 transition-all duration-500" />
-              <img src={logo} alt="cruzercc.shop" width={44} height={44}
+              <img src={logo} alt={settings.shop_name} width={44} height={44}
                 className="nav-brand-logo relative drop-shadow-[0_0_18px_hsl(268_90%_62%/0.65)] transition-transform duration-500 group-hover:scale-105" />
             </div>
             <div className="leading-none ml-3 sm:ml-3.5">
-              <div className="nav-brand-name font-display font-semibold tracking-[-0.02em]">
-                <span className="text-foreground">cruzer</span><span className="gold-text">cc</span>
-                <span className="text-muted-foreground/80">.shop</span>
+              <div className="nav-brand-name font-display font-semibold tracking-[-0.02em] text-foreground">
+                {settings.shop_name}
               </div>
               <div className="nav-brand-tag font-mono text-muted-foreground/60 mt-1 sm:mt-1.5">
-                GIFT&nbsp;CARD · CC&nbsp;PROVIDER
+                {settings.shop_tag}
               </div>
             </div>
           </NavLink>
@@ -298,8 +299,8 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-3">
               <img src={logo} alt="" className="h-8 w-8" />
-              <div className="font-display font-bold text-base">
-                <span>cruzer</span><span className="gold-text">cc</span><span className="text-muted-foreground">.shop</span>
+              <div className="font-display font-bold text-base text-foreground">
+                {settings.shop_name}
               </div>
             </div>
             <p className="text-xs text-muted-foreground max-w-md leading-relaxed">
@@ -323,7 +324,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
           </div>
         </div>
         <div className="border-t border-border/40 py-4 text-center text-[10px] font-mono tracking-[0.3em] text-muted-foreground">
-          © {new Date().getFullYear()} CRUZERCC.SHOP · ALL RIGHTS RESERVED
+          © {new Date().getFullYear()} {settings.shop_name.toUpperCase()} · ALL RIGHTS RESERVED
         </div>
       </footer>
     </div>
