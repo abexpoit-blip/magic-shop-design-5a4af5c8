@@ -202,16 +202,19 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
               </div>
             </NavLink>
 
-            {canSell && (
+            {/* One-way switch: buyers with a seller account can promote to
+                seller mode, but seller mode is locked — they must sign out and
+                sign in as a buyer to revert. Prevents accidental auto-switch
+                away from seller during a session. */}
+            {canSell && effectiveRole === "buyer" && (
               <button
                 onClick={() => {
-                  const next = effectiveRole === "seller" ? "buyer" : "seller";
-                  setActiveRole(next);
-                  nav(next === "seller" ? "/seller" : "/");
+                  setActiveRole("seller");
+                  nav("/seller");
                 }}
                 className="nav-icon-btn hidden md:inline-flex"
-                title={`Switch to ${effectiveRole === "seller" ? "buyer" : "seller"} mode`}
-                aria-label={`Switch to ${effectiveRole === "seller" ? "buyer" : "seller"} mode`}
+                title="Switch to seller mode"
+                aria-label="Switch to seller mode"
               >
                 <Repeat className="nav-icon" strokeWidth={1.75} />
               </button>
