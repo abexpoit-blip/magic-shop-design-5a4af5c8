@@ -299,8 +299,8 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-3">
               <img src={logo} alt="" className="h-8 w-8" />
-              <div className="font-display font-bold text-base">
-                <span>cruzer</span><span className="gold-text">cc</span><span className="text-muted-foreground">.shop</span>
+              <div className="font-display font-bold text-base text-foreground">
+                {settings.shop_name}
               </div>
             </div>
             <p className="text-xs text-muted-foreground max-w-md leading-relaxed">
@@ -324,7 +324,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
           </div>
         </div>
         <div className="border-t border-border/40 py-4 text-center text-[10px] font-mono tracking-[0.3em] text-muted-foreground">
-          © {new Date().getFullYear()} CRUZERCC.SHOP · ALL RIGHTS RESERVED
+          © {new Date().getFullYear()} {settings.shop_name.toUpperCase()} · ALL RIGHTS RESERVED
         </div>
       </footer>
     </div>
