@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { COUNTRIES, countryFlag } from "@/lib/brands";
-import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX } from "lucide-react";
+import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
