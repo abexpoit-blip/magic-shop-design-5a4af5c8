@@ -1,0 +1,11 @@
+ALTER TABLE public.seller_applications
+  ADD COLUMN IF NOT EXISTS telegram TEXT,
+  ADD COLUMN IF NOT EXISTS jabber TEXT,
+  ADD COLUMN IF NOT EXISTS expected_volume TEXT,
+  ADD COLUMN IF NOT EXISTS sample_bins TEXT,
+  ADD COLUMN IF NOT EXISTS message TEXT,
+  ADD COLUMN IF NOT EXISTS admin_note TEXT,
+  ADD COLUMN IF NOT EXISTS reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+
+ALTER TABLE public.seller_applications ALTER COLUMN shop_name DROP NOT NULL;

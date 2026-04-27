@@ -473,30 +473,54 @@ export type Database = {
       }
       seller_applications: {
         Row: {
+          admin_note: string | null
           contact: string | null
           created_at: string
           description: string | null
+          expected_volume: string | null
           id: string
-          shop_name: string
+          jabber: string | null
+          message: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sample_bins: string | null
+          shop_name: string | null
           status: string
+          telegram: string | null
           user_id: string
         }
         Insert: {
+          admin_note?: string | null
           contact?: string | null
           created_at?: string
           description?: string | null
+          expected_volume?: string | null
           id?: string
-          shop_name: string
+          jabber?: string | null
+          message?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sample_bins?: string | null
+          shop_name?: string | null
           status?: string
+          telegram?: string | null
           user_id: string
         }
         Update: {
+          admin_note?: string | null
           contact?: string | null
           created_at?: string
           description?: string | null
+          expected_volume?: string | null
           id?: string
-          shop_name?: string
+          jabber?: string | null
+          message?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sample_bins?: string | null
+          shop_name?: string | null
           status?: string
+          telegram?: string | null
           user_id?: string
         }
         Relationships: []
