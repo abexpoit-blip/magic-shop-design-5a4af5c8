@@ -68,15 +68,32 @@ const SellerUpload = () => {
   };
 
   const publish = async () => {
-    if (!user || parsed.length === 0) return;
+    if (!user) return;
+
+    // Auto-fix sweep right before publish: re-parse raw + re-dedupe so nothing
+    // dirty slips into the shop, even if the seller edited after the last preview.
+    let toPublish = parsed;
+    if (autoFixOnPublish) {
+      const source = raw.trim() ? raw : parsed.map((p) => Object.values(p).join("|")).join("\n");
+      const { lines, failed: f } = parseAndFormat(source);
+      const { unique, dropped } = dedupe(lines);
+      toPublish = unique;
+      setParsed(unique);
+      setFailed(f);
+      if (dropped > 0 || f.length > 0) {
+        toast.message(`Auto-fix swept input: ${unique.length} clean, ${dropped} duplicates, ${f.length} unparseable`);
+      }
+    }
+
+    if (toPublish.length === 0) { toast.error("Nothing to publish"); return; }
     setBusy(true);
 
     // Dedupe against existing stock by cc_number
-    const numbers = parsed.map((p) => p.cc);
+    const numbers = toPublish.map((p) => p.cc);
     const { data: existing } = await supabase.from("cards").select("cc_number").in("cc_number", numbers);
     const existingSet = new Set((existing ?? []).map((c: { cc_number: string | null }) => c.cc_number));
-    const fresh = parsed.filter((p) => !existingSet.has(p.cc));
-    const skipped = parsed.length - fresh.length;
+    const fresh = toPublish.filter((p) => !existingSet.has(p.cc));
+    const skipped = toPublish.length - fresh.length;
 
     const rows = fresh.map((p) => {
       const brand = detectBrand(p.cc);
