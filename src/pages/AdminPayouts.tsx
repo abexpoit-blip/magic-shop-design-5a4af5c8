@@ -24,6 +24,16 @@ const AdminPayouts = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkRunning, setBulkRunning] = useState(false);
 
+  // Filters & sort for the payout list
+  const [payoutQuery, setPayoutQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "paid" | "rejected">("all");
+  const [sellerFilter, setSellerFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [sortBy, setSortBy] = useState<"created_desc" | "created_asc" | "amount_desc" | "amount_asc">("created_desc");
+
   const load = async () => {
     const [u, p] = await Promise.all([
       supabase.from("profiles")
