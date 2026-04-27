@@ -48,6 +48,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="min-h-screen flex flex-col w-full bg-background relative">
+      <BuildBadge />
       {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-gradient-glow opacity-60" />
 
