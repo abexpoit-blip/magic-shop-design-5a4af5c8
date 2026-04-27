@@ -356,8 +356,14 @@ export const AdminRoute = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let active = true;
 
-    if (!user || roles.includes("admin")) {
+    if (!user) {
       setVerifiedAdmin(false);
+      setCheckingAdmin(false);
+      return;
+    }
+
+    if (roles.includes("admin")) {
+      setVerifiedAdmin(true);
       setCheckingAdmin(false);
       return;
     }
