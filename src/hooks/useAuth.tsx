@@ -21,6 +21,10 @@ interface AuthCtx {
   session: Session | null;
   profile: Profile | null;
   roles: Role[];
+  /** Which mode the user is operating in (buyer/seller). Honors the user's
+   *  pick at login for accounts that hold multiple roles. */
+  activeRole: ActiveRole;
+  setActiveRole: (role: ActiveRole) => void;
   loading: boolean;
   /** True when profile load failed or timed out. UI should show error + retry. */
   profileError: string | null;
