@@ -118,10 +118,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           /* ignore */
         }
       }
-    })().finally(() => {
-      inFlight.current = null;
-      setLoading(false);
-    });
+    })()
+      .catch((err: unknown) => {
+        // Profile load failed or timed out. Surface a friendly error so the
+        // navbar can swap skeletons for a retry chip instead of spinning.
+        const msg =
+          err instanceof Error && err.message === "profile-load-timeout"
+            ? "Profile took too long to load"
+            : err instanceof Error
+            ? err.message
+            : "Couldn't load profile";
+        setProfileError(msg);
+        // Re-throw so callers can also catch if they want.
+        throw err;
+      })
+      .finally(() => {
+        inFlight.current = null;
+        setLoading(false);
+      });
 
     inFlight.current = run;
     return run;
@@ -155,7 +169,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const uid = sess.user.id;
       const email = sess.user.email;
       setTimeout(() => {
-        loadProfile(uid, email).catch(() => setLoading(false));
+        loadProfile(uid, email).catch(() => {
+          // Already handled inside loadProfile (sets profileError + loading=false).
+        });
       }, 0);
     });
 
@@ -173,7 +189,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <Ctx.Provider value={{ user, session, profile, roles, loading, refresh, signOut }}>
+    <Ctx.Provider value={{ user, session, profile, roles, loading, profileError, refresh, signOut }}>
       {children}
     </Ctx.Provider>
   );
