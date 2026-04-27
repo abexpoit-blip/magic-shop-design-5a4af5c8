@@ -68,11 +68,36 @@ const Auth = () => {
         nav(role === "seller" ? "/seller/apply" : "/");
       } else {
         const loginEmail = username.includes("@") ? username : `${username.toLowerCase()}@cruzercc.shop`;
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email: loginEmail,
           password,
         });
         if (error) throw error;
+
+        // Validate the chosen role against the user's actual backend roles.
+        // This blocks "buyer logs in as seller" or vice-versa when their account
+        // doesn't carry that role.
+        const uid = signInData.user?.id;
+        if (uid) {
+          const { data: roleRows } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", uid);
+          const userRoles = (roleRows ?? []).map((r) => r.role as string);
+          const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
+
+          if (role === "seller" && !isSeller) {
+            await supabase.auth.signOut();
+            toast.error("This account isn't a seller. Apply for a seller account or sign in as a buyer.");
+            setLoading(false);
+            return;
+          }
+
+          // Persist the chosen mode so navbar/redirects honour the user's pick
+          // even when their account holds multiple roles (e.g. admin+seller+user).
+          setActiveRole(uid, role);
+        }
+
         toast.success("Welcome back, hunter");
         // Route by selected role: sellers go to seller panel, buyers to shop.
         nav(role === "seller" ? "/seller" : "/");
