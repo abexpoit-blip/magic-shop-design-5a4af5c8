@@ -71,7 +71,8 @@ const Auth = () => {
         });
         if (error) throw error;
         toast.success("Welcome back, hunter");
-        nav("/");
+        // Route by selected role: sellers go to seller panel, buyers to shop.
+        nav(role === "seller" ? "/seller" : "/");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Authentication failed";
