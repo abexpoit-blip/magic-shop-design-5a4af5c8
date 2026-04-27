@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Check, X, Shield, Users, Megaphone, Ticket, DollarSign, ShoppingBag, TrendingUp,
-  CreditCard, Ban, UserCheck, Wallet, Upload, Trash2,
+  CreditCard, Ban, UserCheck, Wallet, Upload, Trash2, Eye, EyeOff, BadgeCheck, Search, ExternalLink,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { BRANDS, COUNTRIES } from "@/lib/brands";
 
 interface Application { id: string; user_id: string; shop_name: string | null; contact: string | null; description: string | null; status: string; telegram?: string | null; jabber?: string | null; expected_volume?: string | null; sample_bins?: string | null; message?: string | null; admin_note?: string | null; created_at: string; }
@@ -467,5 +468,123 @@ const TicketAdminRow = ({ ticket, onReply }: { ticket: TicketRow; onReply: (id: 
     </div>
   );
 };
+
+
+const SellerControls = ({ users, onUpdate }: { users: Profile[]; onUpdate: (id: string, patch: Record<string, unknown>) => void }) => {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "visible" | "hidden" | "verified">("all");
+
+  const sellers = users.filter((u) => u.is_seller);
+  const filtered = sellers.filter((u) => {
+    if (query && !u.username.toLowerCase().includes(query.toLowerCase()) && !(u.seller_display_name ?? "").toLowerCase().includes(query.toLowerCase())) return false;
+    if (filter === "visible") return !!u.is_seller_visible;
+    if (filter === "hidden") return !u.is_seller_visible;
+    if (filter === "verified") return !!u.is_seller_verified;
+    return true;
+  });
+
+  const visibleCount = sellers.filter((u) => u.is_seller_visible).length;
+  const verifiedCount = sellers.filter((u) => u.is_seller_verified).length;
+
+  return (
+    <section className="glass rounded-2xl p-6">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <UserCheck className="h-5 w-5 text-primary-glow" />
+        <h2 className="font-display tracking-wider text-primary-glow">SELLER CONTROLS</h2>
+        <span className="ml-auto text-xs text-muted-foreground flex gap-3">
+          <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3 text-success" />{visibleCount} visible</span>
+          <span className="inline-flex items-center gap-1"><BadgeCheck className="h-3 w-3 text-primary-glow" />{verifiedCount} verified</span>
+          <span>· {sellers.length} total</span>
+        </span>
+      </div>
+
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search sellers…" className="bg-input/60 pl-9" />
+        </div>
+        <div className="flex gap-1">
+          {(["all", "visible", "hidden", "verified"] as const).map((f) => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`px-3 py-2 rounded-lg text-xs uppercase tracking-wider transition ${
+                filter === f ? "bg-primary/20 border border-primary/60 text-primary-glow" : "bg-secondary/40 border border-border/40 text-muted-foreground hover:bg-secondary/60"
+              }`}>{f}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-xs uppercase tracking-wider text-muted-foreground bg-secondary/40">
+            <tr>
+              <th className="p-3 text-left">Seller</th>
+              <th className="p-3 text-center">Verified</th>
+              <th className="p-3 text-center">Visible on shop</th>
+              <th className="p-3 text-center">Commission %</th>
+              <th className="p-3 text-right">Profile</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((u) => (
+              <tr key={u.id} className="border-t border-border/40 hover:bg-secondary/20">
+                <td className="p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{u.seller_display_name || u.username}</span>
+                    {u.is_seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary-glow" />}
+                    {u.is_seller_visible
+                      ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/20 text-success border border-success/40">PUBLIC</span>
+                      : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/60 text-muted-foreground border border-border">HIDDEN</span>}
+                  </div>
+                  <p className="text-[10px] font-mono text-muted-foreground mt-0.5">@{u.username}</p>
+                </td>
+                <td className="p-3 text-center">
+                  <ToggleSwitch checked={!!u.is_seller_verified}
+                    onChange={(v) => onUpdate(u.id, { is_seller_verified: v })}
+                    onColor="bg-primary" />
+                </td>
+                <td className="p-3 text-center">
+                  <ToggleSwitch checked={!!u.is_seller_visible}
+                    onChange={(v) => onUpdate(u.id, { is_seller_visible: v })}
+                    onColor="bg-success" />
+                </td>
+                <td className="p-3 text-center">
+                  <Input type="number" step="0.5" min={0} max={100} defaultValue={u.commission_percent ?? 20}
+                    onBlur={(e) => {
+                      const v = Number(e.target.value);
+                      if (v !== Number(u.commission_percent ?? 20)) onUpdate(u.id, { commission_percent: v });
+                    }}
+                    className="bg-input/60 h-8 w-20 mx-auto text-center" />
+                </td>
+                <td className="p-3 text-right">
+                  {u.is_seller_visible ? (
+                    <Link to={`/seller/${u.id}`} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary-glow hover:underline">
+                      View <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><EyeOff className="h-3 w-3" />Private</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={5} className="p-8 text-center text-muted-foreground text-sm">
+                {sellers.length === 0 ? "No approved sellers yet." : "No sellers match this filter."}
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+};
+
+const ToggleSwitch = ({ checked, onChange, onColor = "bg-primary" }: { checked: boolean; onChange: (v: boolean) => void; onColor?: string }) => (
+  <button type="button" onClick={() => onChange(!checked)}
+    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${checked ? onColor : "bg-secondary border border-border"}`}
+    aria-pressed={checked}>
+    <span className={`inline-block h-4 w-4 rounded-full bg-background shadow transition transform ${checked ? "translate-x-6" : "translate-x-1"}`} />
+  </button>
+);
 
 export default Admin;
