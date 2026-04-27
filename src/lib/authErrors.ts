@@ -7,13 +7,13 @@ export interface FriendlyAuthError {
   hint?: string;
 }
 
-export function describeAuthError(err: unknown): FriendlyAuthError {
+export function isTransientAuthServiceError(err: unknown): boolean {
   const raw = err instanceof Error ? err.message : typeof err === "string" ? err : "";
   const msg = raw.toLowerCase();
 
-  // Backend / database outage signals
-  if (
+  return (
     msg.includes("503") ||
+    msg.includes("500") ||
     msg.includes("service unavailable") ||
     msg.includes("database error") ||
     msg.includes("querying schema") ||
@@ -21,10 +21,18 @@ export function describeAuthError(err: unknown): FriendlyAuthError {
     msg.includes("upstream") ||
     msg.includes("bad gateway") ||
     msg.includes("502")
-  ) {
+  );
+}
+
+export function describeAuthError(err: unknown): FriendlyAuthError {
+  const raw = err instanceof Error ? err.message : typeof err === "string" ? err : "";
+  const msg = raw.toLowerCase();
+
+  // Backend / database outage signals
+  if (isTransientAuthServiceError(err)) {
     return {
-      title: "Backend is temporarily unavailable",
-      hint: "The authentication database returned a 503. This is usually transient — wait 10–30 seconds and try again.",
+      title: "Login is temporarily unavailable",
+      hint: "The backend could not verify your account just now. Wait 10–30 seconds and try again — your role has not been changed.",
     };
   }
 
