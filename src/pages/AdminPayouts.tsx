@@ -277,18 +277,39 @@ const AdminPayouts = () => {
           )}
         </div>
 
-        {tab === "pending" && pending.length > 0 && (
+        {tab === "pending" && pending.length > 0 && (() => {
+          const filtersActive =
+            payoutQuery.trim() !== "" ||
+            statusFilter !== "all" ||
+            sellerFilter !== "all" ||
+            dateFrom !== "" ||
+            dateTo !== "" ||
+            minAmount !== "" ||
+            maxAmount !== "";
+          const allSelected = selectedPayouts.size === pending.length && pending.length > 0;
+          const filteredTotal = pending.reduce((s, p) => s + Number(p.amount), 0).toFixed(2);
+          return (
           <div className="mb-3 flex items-center gap-3 flex-wrap">
             <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
               <input
                 type="checkbox"
-                checked={selectedPayouts.size === pending.length}
+                checked={allSelected}
                 ref={(el) => { if (el) el.indeterminate = selectedPayouts.size > 0 && selectedPayouts.size < pending.length; }}
-                onChange={() => setSelectedPayouts(selectedPayouts.size === pending.length ? new Set() : new Set(pending.map((p) => p.id)))}
+                onChange={() => setSelectedPayouts(allSelected ? new Set() : new Set(pending.map((p) => p.id)))}
                 className="accent-primary cursor-pointer"
               />
               Select all pending ({pending.length})
             </label>
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={() => setSelectedPayouts(new Set(pending.map((p) => p.id)))}
+                className="text-xs px-2 py-1 rounded-md border border-primary/40 bg-primary/10 text-primary-glow hover:bg-primary/20 font-display"
+                title="Selects every pending payout that matches your active filters"
+              >
+                ✓ Select all filtered ({pending.length}) · ${filteredTotal}
+              </button>
+            )}
             {selectedPayouts.size > 0 && (
               <div className="flex items-center gap-2 flex-wrap ml-auto">
                 <span className="text-xs text-primary-glow font-display">
