@@ -1,7 +1,8 @@
-// Resolves a login identifier (username, email, or display name) to the
-// actual auth.users email so the frontend can call signInWithPassword().
-// Public endpoint: returns ONLY an email string (no PII beyond what the user
-// already provided), or 404 if no match. Rate-limit at the gateway level.
+// Resolves a login identifier (username or email) to the actual auth.users
+// email so the frontend can call signInWithPassword(). Hardened version:
+// - Rejects callers without a valid SUPABASE anon apikey header (default).
+// - Only consults the `profiles` table; never scans listUsers().
+// - Returns a uniform 404 for any miss to avoid user enumeration timing.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -19,13 +20,18 @@ Deno.serve(async (req) => {
   try {
     const { identifier } = await req.json().catch(() => ({ identifier: "" }));
     const raw = String(identifier ?? "").trim();
-    if (!raw) {
-      return json({ error: "identifier required" }, 400);
+    if (!raw || raw.length > 254) {
+      return json({ error: "not_found" }, 404);
     }
 
     // If it already looks like a valid email, just return it as-is.
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) {
       return json({ email: raw });
+    }
+
+    // Reject anything that doesn't look like a sane username to limit abuse.
+    if (!/^[A-Za-z0-9._-]{2,64}$/.test(raw)) {
+      return json({ error: "not_found" }, 404);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -34,40 +40,27 @@ Deno.serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    // 1. Try profiles.username (case-insensitive).
+    // Only look up via profiles.username (case-insensitive). Do NOT fall back
+    // to scanning auth.admin.listUsers — that enables full enumeration.
     const { data: profile } = await admin
       .from("profiles")
       .select("id")
       .ilike("username", raw)
       .maybeSingle();
 
-    let userId = profile?.id as string | undefined;
-
-    // 2. Fall back to auth metadata username scan.
-    if (!userId) {
-      const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      const lower = raw.toLowerCase();
-      const match = list?.users?.find((u) => {
-        const meta = (u.user_metadata?.username ?? "").toString().toLowerCase();
-        const emailLocal = (u.email ?? "").toLowerCase().split("@")[0];
-        return meta === lower || emailLocal === lower;
-      });
-      if (match) userId = match.id;
-    }
-
-    if (!userId) {
+    if (!profile?.id) {
       return json({ error: "not_found" }, 404);
     }
 
-    const { data: userRes, error: userErr } = await admin.auth.admin.getUserById(userId);
+    const { data: userRes, error: userErr } = await admin.auth.admin.getUserById(profile.id);
     if (userErr || !userRes?.user?.email) {
       return json({ error: "not_found" }, 404);
     }
 
     return json({ email: userRes.user.email });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "resolve-login-email failed";
-    return json({ error: message }, 500);
+  } catch {
+    // Never leak internal error details — return uniform 404.
+    return json({ error: "not_found" }, 404);
   }
 });
 

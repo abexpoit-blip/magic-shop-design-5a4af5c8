@@ -19,8 +19,21 @@ const Cart = () => {
   const load = async () => {
     if (!user) return;
     const { data } = await supabase.from("cart_items")
-      .select("id, card:cards(*)").eq("user_id", user.id);
-    const list = (data ?? []).filter((x: { card: Card | null }) => x.card) as Item[];
+      .select("id, card_id").eq("user_id", user.id);
+    const rows = (data ?? []) as { id: string; card_id: string }[];
+    const ids = rows.map((r) => r.card_id);
+    let cards: Card[] = [];
+    if (ids.length) {
+      const { data: cardRows } = await supabase
+        .from("cards_public" as never)
+        .select("id,bin,brand,country,price,base,exp_month,exp_year")
+        .in("id", ids);
+      cards = (cardRows ?? []) as Card[];
+    }
+    const cardMap = new Map(cards.map((c) => [c.id, c]));
+    const list: Item[] = rows
+      .map((r) => ({ id: r.id, card: cardMap.get(r.card_id) }))
+      .filter((x): x is Item => !!x.card);
     setItems(list);
     setSelected(new Set(list.map((i) => i.id)));
   };
@@ -47,14 +60,39 @@ const Cart = () => {
       const { data: order, error } = await supabase.from("orders")
         .insert({ user_id: user.id, total }).select().single();
       if (error) throw error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const orderItems = selectedItems.map((i) => ({
+      const cardIds = selectedItems.map((i) => i.card.id);
+      // Insert order_items first with metadata snapshot (id is required so the
+      // RLS policy "Buyer view purchased card" matches on the next fetch).
+      const initialItems = selectedItems.map((i) => ({
         order_id: order.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         card_snapshot: JSON.parse(JSON.stringify(i.card)) as any,
         price: Number(i.card.price),
       }));
-      await supabase.from("order_items").insert(orderItems);
-      await supabase.from("cards").update({ status: "sold" }).in("id", selectedItems.map((i) => i.card.id));
+      const { data: insertedItems, error: oiErr } = await supabase
+        .from("order_items").insert(initialItems).select();
+      if (oiErr) throw oiErr;
+
+      // Now buyer can read full card data via RLS; backfill the snapshot with
+      // sensitive fields so it remains visible after the card row changes.
+      const { data: full } = await supabase
+        .from("cards")
+        .select("id,bin,brand,country,price,base,exp_month,exp_year,cc_number,cvv,holder_name,email,phone,address,state,city,zip")
+        .in("id", cardIds);
+      const fullMap = new Map((full ?? []).map((c) => [(c as { id: string }).id, c]));
+      await Promise.all(
+        (insertedItems ?? []).map((row) => {
+          const snap = (row as unknown as { card_snapshot: { id: string } }).card_snapshot;
+          const merged = { ...snap, ...(fullMap.get(snap.id) ?? {}) };
+          return supabase
+            .from("order_items")
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .update({ card_snapshot: merged as any })
+            .eq("id", (row as { id: string }).id);
+        })
+      );
+
+      await supabase.from("cards").update({ status: "sold" }).in("id", cardIds);
       await supabase.from("cart_items").delete().in("id", selectedItems.map((i) => i.id));
       await supabase.from("profiles").update({ balance: Number(profile.balance) - total }).eq("id", user.id);
       await supabase.from("transactions").insert({ user_id: user.id, amount: -total, kind: "purchase", note: `Order ${order.id}` });

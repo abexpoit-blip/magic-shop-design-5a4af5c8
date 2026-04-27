@@ -8,21 +8,17 @@ import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
 import { describeAuthError } from "@/lib/authErrors";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
-import { PRIMARY_ADMIN_EMAIL } from "@/lib/adminAccess";
 
 const AdminLogin = () => {
   const nav = useNavigate();
   const loc = useLocation();
   const fromPath = (loc.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-  // Only honor admin-area redirects; ignore anything outside /admin to avoid
-  // sending an admin to a public page after their secure login.
   const safeAdminFrom = fromPath && fromPath.startsWith("/admin") && fromPath !== "/admin-login"
     ? fromPath
     : null;
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [bootstrapping, setBootstrapping] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [statusBanner, setStatusBanner] = useState<{ kind: "info" | "error"; title: string; hint?: string } | null>(null);
 
@@ -39,8 +35,16 @@ const AdminLogin = () => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      const signedInEmail = (data.user?.email ?? email).toLowerCase();
-      if (signedInEmail !== PRIMARY_ADMIN_EMAIL) {
+      // Verify admin role server-side via user_roles RLS.
+      const userId = data.user?.id;
+      if (!userId) throw new Error("Login failed");
+      const { data: roleRow, error: rerr } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (rerr || !roleRow) {
         await supabase.auth.signOut();
         throw new Error("This account does not have admin privileges.");
       }
@@ -55,7 +59,6 @@ const AdminLogin = () => {
         setStatusBanner({
           kind: "error",
           title: "Email or password is incorrect",
-          hint: "Click 'Bootstrap admin account' below if you haven't created the admin yet.",
         });
       } else if (message.includes("admin privileges")) {
         setStatusBanner({ kind: "error", title: "Not an admin account", hint: "This login is for the configured admin only." });
@@ -64,28 +67,6 @@ const AdminLogin = () => {
       }
       toast.error(friendly.title, friendly.hint ? { description: friendly.hint } : undefined);
     } finally { setLoading(false); }
-  };
-
-  const provision = async () => {
-    setBootstrapping(true);
-    setStatusBanner(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("bootstrap-admin", { body: {} });
-      if (error) throw error;
-      const res = data as { ok?: boolean; error?: string; email?: string };
-      if (res?.error) throw new Error(res.error);
-      setStatusBanner({
-        kind: "info",
-        title: "Admin account is ready",
-        hint: res?.email ? `Sign in below using ${res.email} and the configured password.` : "Sign in below.",
-      });
-      if (res?.email) setIdentifier(res.email);
-      toast.success("Admin account ready — sign in below");
-    } catch (err) {
-      const friendly = describeAuthError(err);
-      setStatusBanner({ kind: "error", title: friendly.title, hint: friendly.hint });
-      toast.error(friendly.title, friendly.hint ? { description: friendly.hint } : undefined);
-    } finally { setBootstrapping(false); }
   };
 
   return (
@@ -132,7 +113,7 @@ const AdminLogin = () => {
 
           <form onSubmit={submit} className="space-y-4">
             <div>
-              <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Admin email or username</Label>
+              <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Admin email</Label>
               <div className="relative mt-2">
                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} required autoComplete="username"
@@ -159,14 +140,6 @@ const AdminLogin = () => {
             <button type="button" onClick={() => setForgotOpen(true)}
               className="text-xs text-muted-foreground hover:text-primary-glow underline-offset-4 hover:underline">
               Forgot admin password?
-            </button>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-border/40 text-center">
-            <p className="text-[10px] text-muted-foreground mb-2">First time, or just rotated admin info? Apply the configured secrets.</p>
-            <button type="button" onClick={provision} disabled={bootstrapping}
-              className="text-xs text-primary-glow hover:text-primary underline-offset-4 hover:underline disabled:opacity-50">
-              {bootstrapping ? "Provisioning…" : "Bootstrap / refresh admin account"}
             </button>
           </div>
         </div>

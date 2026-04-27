@@ -55,7 +55,7 @@ const Shop = () => {
 
   const load = async (auto = false) => {
     setLoading(true);
-    let q = supabase.from("cards").select("*").eq("status", "available").order("created_at", { ascending: false }).limit(200);
+    let q = supabase.from("cards_public" as never).select("*").order("created_at", { ascending: false }).limit(200);
     if (bin) q = q.ilike("bin", `${bin}%`);
     if (base !== "all") q = q.ilike("base", `%${base}%`);
     if (country) q = q.ilike("country", `${country}%`);
