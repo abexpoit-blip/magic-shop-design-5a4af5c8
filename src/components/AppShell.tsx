@@ -103,38 +103,38 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 
           {/* Right cluster */}
           <div className="nav-right flex items-center shrink-0">
-            <button className="nav-icon-btn hidden md:inline-flex" aria-label="Search">
-              <Search className="nav-icon" strokeWidth={1.75} />
+            <button className="nav-icon-btn hidden md:inline-flex !text-foreground/90 hover:!text-primary-glow" aria-label="Search">
+              <Search className="nav-icon" strokeWidth={2} />
             </button>
-            <button className="nav-icon-btn hidden md:inline-flex relative" aria-label="Notifications">
-              <Bell className="nav-icon" strokeWidth={1.75} />
-              <span className="absolute top-2.5 right-2.5 h-1.5 w-1.5 rounded-full bg-gold animate-pulse" />
+            <button className="nav-icon-btn hidden md:inline-flex relative !text-foreground/90 hover:!text-primary-glow" aria-label="Notifications">
+              <Bell className="nav-icon" strokeWidth={2} />
+              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-gold animate-pulse ring-2 ring-background" />
             </button>
 
             <button
               onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}
-              className="nav-icon-btn inline-flex"
+              className="nav-icon-btn inline-flex !text-foreground/90 hover:!text-primary-glow"
               aria-label={`Switch to ${density === "compact" ? "comfortable" : "compact"} density`}
               title={density === "compact" ? "Switch to comfortable" : "Switch to compact"}
             >
-              {density === "compact" ? <Maximize2 className="nav-icon" strokeWidth={1.75} /> : <Minimize2 className="nav-icon" strokeWidth={1.75} />}
+              {density === "compact" ? <Maximize2 className="nav-icon" strokeWidth={2} /> : <Minimize2 className="nav-icon" strokeWidth={2} />}
             </button>
 
-            <div className="nav-balance hidden sm:flex items-center rounded-full bg-gradient-to-r from-primary/15 to-gold/10 border border-primary/30">
-              <Wallet className="nav-icon text-primary-glow" strokeWidth={1.75} />
-              <span className="nav-balance-label uppercase tracking-[0.2em] text-muted-foreground">Balance</span>
+            <div className="nav-balance hidden sm:flex items-center rounded-full bg-gradient-to-r from-primary/25 to-gold/15 border border-primary/50 shadow-[0_0_18px_-6px_hsl(268_90%_62%/0.6)]">
+              <Wallet className="nav-icon text-primary-glow" strokeWidth={2} />
+              <span className="nav-balance-label uppercase tracking-[0.2em] text-foreground/70">Balance</span>
               {profileLoading ? (
                 <span className="nav-balance-value nav-skeleton nav-skeleton-balance" aria-hidden="true" />
               ) : (
-                <span className="nav-balance-value font-display font-semibold gold-text">${Number(profile?.balance ?? 0).toFixed(2)}</span>
+                <span className="nav-balance-value font-display font-bold gold-text drop-shadow-[0_0_8px_hsl(43_96%_56%/0.5)]">${Number(profile?.balance ?? 0).toFixed(2)}</span>
               )}
             </div>
 
-            <NavLink to="/settings" className="nav-profile flex items-center rounded-full border border-border/50 group" aria-label="Profile settings">
+            <NavLink to="/settings" className="nav-profile flex items-center rounded-full border border-primary/40 bg-secondary/30 hover:border-primary/70 hover:bg-secondary/50 transition-colors group" aria-label="Profile settings">
               {profileLoading ? (
                 <span className="nav-profile-avatar nav-skeleton rounded-full" aria-hidden="true" />
               ) : (
-                <div className="nav-profile-avatar rounded-full bg-gradient-primary flex items-center justify-center font-semibold text-primary-foreground shadow-neon transition-transform duration-300 group-hover:scale-105">
+                <div className="nav-profile-avatar rounded-full bg-gradient-primary flex items-center justify-center font-bold text-primary-foreground shadow-neon transition-transform duration-300 group-hover:scale-105">
                   {profile?.username?.[0]?.toUpperCase() ?? "U"}
                 </div>
               )}
@@ -146,8 +146,8 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
                   </>
                 ) : (
                   <>
-                    <div className="nav-profile-name font-semibold text-foreground -mb-0.5">{profile?.username}</div>
-                    <div className="nav-profile-role text-muted-foreground uppercase tracking-[0.22em]">
+                    <div className="nav-profile-name font-bold text-foreground -mb-0.5">{profile?.username}</div>
+                    <div className="nav-profile-role text-primary-glow/90 uppercase tracking-[0.22em] font-semibold">
                       {roles.includes("admin") ? "Admin" : roles.includes("seller") ? "Seller" : "Member"}
                     </div>
                   </>
