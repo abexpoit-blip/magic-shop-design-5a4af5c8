@@ -9,6 +9,8 @@ import { ProtectedRoute, AdminRoute } from "@/components/AppShell";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminLogin from "./pages/AdminLogin";
+import ResetPassword from "./pages/ResetPassword";
+import AdminSettings from "./pages/AdminSettings";
 import Shop from "./pages/Shop";
 import Cart from "./pages/Cart";
 import Orders from "./pages/Orders";
@@ -39,6 +41,9 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/admin/reset-password" element={<ResetPassword />} />
+            <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute><Shop /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
