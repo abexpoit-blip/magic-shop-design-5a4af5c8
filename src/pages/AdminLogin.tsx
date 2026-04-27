@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
 import { describeAuthError, withAuthRetry, isTransientAuthServiceError } from "@/lib/authErrors";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
+import { verifyAdminAccess } from "@/lib/adminAccess";
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -72,15 +73,11 @@ const AdminLogin = () => {
       }
       if (!signedIn) throw lastErr ?? new Error("Login failed");
 
-      // Verify admin role server-side via user_roles. If missing, sign out.
+      // Verify admin role with the resilient helper so transient DB/RLS issues
+      // don't bounce valid admins out after a successful password login.
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No session after login");
-      const { data: roleRows, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-      if (rolesError) throw rolesError;
-      const isAdmin = (roleRows ?? []).some((r: { role: string }) => r.role === "admin");
+      const isAdmin = await verifyAdminAccess(user.id);
       if (!isAdmin) {
         await supabase.auth.signOut();
         throw new Error("This account does not have admin privileges.");
