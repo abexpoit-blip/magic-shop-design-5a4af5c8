@@ -330,10 +330,10 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 };
 
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading, signOut, profileError } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  if (loading && !profileError) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
   if (!user) return <Navigate to="/auth" replace state={{ from: loc }} />;
   if (profile?.banned) {
     return (
@@ -350,7 +350,7 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 };
 
 export const AdminRoute = ({ children }: { children: ReactNode }) => {
-  const { roles, loading, user } = useAuth();
+  const { roles, loading, user, profileError } = useAuth();
   const loc = useLocation();
   const [verifiedAdmin, setVerifiedAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(false);
@@ -393,7 +393,7 @@ export const AdminRoute = ({ children }: { children: ReactNode }) => {
     };
   }, [roles, user]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
+  if (loading && !profileError) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
   // Not signed in → bounce straight to admin login, remembering where they tried to go.
   if (!user) return <Navigate to="/admin-login" replace state={{ from: loc }} />;
   if (!roles.includes("admin") && checkingAdmin) {
