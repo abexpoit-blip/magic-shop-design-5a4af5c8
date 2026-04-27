@@ -17,8 +17,11 @@ const baseNav = [
 ];
 
 export const AppShell = ({ children }: { children: ReactNode }) => {
-  const { profile, roles, signOut, loading } = useAuth();
-  const profileLoading = loading || !profile;
+  const { profile, roles, signOut, loading, user } = useAuth();
+  // Show skeleton only while auth is genuinely initializing. Once loading is
+  // done, render the balance ($0.00 if profile somehow missing) instead of an
+  // infinite skeleton.
+  const profileLoading = loading && !profile && !!user;
   const nav = useNavigate();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
