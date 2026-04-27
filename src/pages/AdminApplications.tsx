@@ -167,8 +167,8 @@ const AdminApplications = () => {
                 notes={notes.get(a.id) ?? []}
                 authors={authors}
                 currentUserId={user?.id}
-                onAdd={(t) => addNote(a.id, t)}
-                onDelete={(noteId) => deleteNote(a.id, noteId)}
+                onAdd={async (t) => { await addNote(a.id, t); }}
+                onDelete={async (noteId) => { await deleteNote(a.id, noteId); }}
               />
             </div>
           ))}
