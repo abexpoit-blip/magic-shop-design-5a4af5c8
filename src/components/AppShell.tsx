@@ -19,7 +19,18 @@ const baseNav = [
 ];
 
 export const AppShell = ({ children }: { children: ReactNode }) => {
-  const { profile, roles, signOut, loading, user, profileError, refresh } = useAuth();
+  const { profile, roles, activeRole, setActiveRole, signOut, loading, user, profileError, refresh } = useAuth();
+  const canSell = roles.includes("seller") || roles.includes("admin");
+  // Effective mode honours the user's pick at login but falls back safely for
+  // accounts that don't actually carry the seller role.
+  const effectiveRole: "buyer" | "seller" = activeRole === "seller" && canSell ? "seller" : "buyer";
+  const roleLabel = roles.includes("admin")
+    ? "Admin"
+    : effectiveRole === "seller"
+    ? "Seller"
+    : canSell
+    ? "Buyer" // multi-role account currently shopping as a buyer
+    : "Member";
   // Skeleton ONLY while genuinely fetching for a logged-in user with no error.
   // The hook guarantees `loading` flips to false within 8s (timeout) so this
   // can never be stuck "true" forever.
