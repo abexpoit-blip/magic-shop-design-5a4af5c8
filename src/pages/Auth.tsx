@@ -129,6 +129,25 @@ const Auth = () => {
           </div>
 
           <div className="glass-neon rounded-2xl p-7 panther-claw">
+            {/* Role selector: buyer vs seller. Same backend, different post-login destination. */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {(["buyer", "seller"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r)}
+                  className={`py-2 rounded-lg text-[11px] font-display tracking-[0.2em] uppercase border transition ${
+                    role === r
+                      ? r === "seller"
+                        ? "bg-gold/15 border-gold/50 text-gold shadow-[0_0_16px_hsl(var(--gold)/0.35)]"
+                        : "bg-primary/15 border-primary/50 text-primary-glow shadow-neon"
+                      : "border-border/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {r === "buyer" ? "I'm a buyer" : "I'm a seller"}
+                </button>
+              ))}
+            </div>
             <div className="flex gap-2 mb-6 p-1 rounded-xl bg-secondary/50 border border-border/50">
               {(["login", "signup"] as const).map((m) => (
                 <button
