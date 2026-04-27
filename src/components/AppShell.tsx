@@ -401,10 +401,10 @@ export const AdminRoute = ({ children }: { children: ReactNode }) => {
     };
   }, [isPrimaryAdmin, roles, user]);
 
-  if (loading && !profileError) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
   // Not signed in → bounce straight to admin login, remembering where they tried to go.
   if (!user) return <Navigate to="/admin-login" replace state={{ from: loc }} />;
   if (isPrimaryAdmin) return <>{children}</>;
+  if (loading && !profileError) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
   if (!roles.includes("admin") && checkingAdmin) {
     return <div className="min-h-screen flex items-center justify-center">Checking admin access…</div>;
   }
