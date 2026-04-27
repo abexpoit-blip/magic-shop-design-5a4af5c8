@@ -62,9 +62,11 @@ const AdminLogin = () => {
 
       let lastErr: unknown = null;
       let signedIn = false;
+      let authSession: { access_token?: string | null; user?: { id?: string; email?: string | null } | null } | null = null;
       for (const email of candidates) {
         try {
-          await tryLogin(email);
+          const authData = await tryLogin(email);
+          authSession = authData.session;
           signedIn = true;
           break;
         } catch (err) {
@@ -77,7 +79,10 @@ const AdminLogin = () => {
       // don't bounce valid admins out after a successful password login.
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No session after login");
-      const isAdmin = await verifyAdminAccess(user.id);
+      const isAdmin = await verifyAdminAccess(user.id, {
+        accessToken: authSession?.access_token ?? null,
+        email: authSession?.user?.email ?? user.email ?? null,
+      });
       if (!isAdmin) {
         await supabase.auth.signOut();
         throw new Error("This account does not have admin privileges.");
