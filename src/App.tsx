@@ -20,6 +20,10 @@ import SellerUpload from "./pages/SellerUpload";
 import SellerFormat from "./pages/SellerFormat";
 import SellerProfile from "./pages/SellerProfile";
 import Admin from "./pages/Admin";
+import AdminApplications from "./pages/AdminApplications";
+import AdminPayouts from "./pages/AdminPayouts";
+import AdminCards from "./pages/AdminCards";
+import AdminRefunds from "./pages/AdminRefunds";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +50,10 @@ const App = () => (
             <Route path="/seller/format" element={<ProtectedRoute><SellerFormat /></ProtectedRoute>} />
             <Route path="/seller/:id" element={<ProtectedRoute><SellerProfile /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+            <Route path="/admin/applications" element={<AdminRoute><AdminApplications /></AdminRoute>} />
+            <Route path="/admin/payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
+            <Route path="/admin/cards" element={<AdminRoute><AdminCards /></AdminRoute>} />
+            <Route path="/admin/refunds" element={<AdminRoute><AdminRefunds /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
