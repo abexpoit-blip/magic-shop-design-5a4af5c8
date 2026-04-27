@@ -18,6 +18,8 @@ const AdminPayouts = () => {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<"pending" | "history">("pending");
+  const [selectedPayouts, setSelectedPayouts] = useState<Set<string>>(new Set());
+  const [payoutBulkRunning, setPayoutBulkRunning] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkRunning, setBulkRunning] = useState(false);
 
