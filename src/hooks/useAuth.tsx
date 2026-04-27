@@ -21,8 +21,24 @@ interface AuthCtx {
   profile: Profile | null;
   roles: Role[];
   loading: boolean;
+  /** True when profile load failed or timed out. UI should show error + retry. */
+  profileError: string | null;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
+}
+
+// Hard ceiling for profile load. After this we stop showing skeletons and
+// flip into an error state so the navbar never spins forever.
+const PROFILE_LOAD_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(p: Promise<T>, ms: number, label = "timeout"): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(label)), ms);
+    p.then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
+  });
 }
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
@@ -34,6 +50,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [profileError, setProfileError] = useState<string | null>(null);
+
   // Track which user id we last loaded for, so a TOKEN_REFRESHED event for the
   // same user does not trigger a redundant profile reload.
   const loadedForUid = useRef<string | null>(null);
@@ -43,11 +61,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // De-dupe concurrent loads for the same uid
     if (loadedForUid.current === uid && inFlight.current) return inFlight.current;
 
+    setProfileError(null);
+
+    const fetchAll = Promise.all([
+      supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", uid),
+    ]);
+
     const run = (async () => {
-      const [{ data: p }, { data: r }] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", uid),
-      ]);
+      const [{ data: p }, { data: r }] = await withTimeout(
+        fetchAll,
+        PROFILE_LOAD_TIMEOUT_MS,
+        "profile-load-timeout",
+      );
 
       let prof = p as Profile | null;
       const userRoles = ((r as { role: Role }[] | null) ?? []).map((x) => x.role);
