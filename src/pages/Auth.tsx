@@ -13,6 +13,8 @@ import logo from "@/assets/panther-logo.png";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/accountSwitcher";
 import { setActiveRole } from "@/lib/activeRole";
 import { describeAuthError, isTransientAuthServiceError } from "@/lib/authErrors";
+import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
+import { Loader2 } from "lucide-react";
 
 type Role = "buyer" | "seller";
 
@@ -26,6 +28,8 @@ const Auth = () => {
   const [captcha, setCaptcha] = useState("");
   const [captchaOk, setCaptchaOk] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [statusBanner, setStatusBanner] = useState<{ kind: "info" | "error"; title: string; hint?: string } | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
 
   useEffect(() => {
@@ -51,7 +55,11 @@ const Auth = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!captchaOk) return toast.error("Verification code is incorrect");
+    setStatusBanner(null);
+    if (!captchaOk) {
+      setStatusBanner({ kind: "error", title: "Verification code is incorrect", hint: "Re-enter the captcha shown above." });
+      return toast.error("Verification code is incorrect");
+    }
     setLoading(true);
     try {
       if (mode === "signup") {
@@ -118,6 +126,7 @@ const Auth = () => {
         await supabase.auth.signOut();
       }
       const friendly = describeAuthError(err);
+      setStatusBanner({ kind: "error", title: friendly.title, hint: friendly.hint });
       toast.error(friendly.title, friendly.hint ? { description: friendly.hint } : undefined);
     } finally { setLoading(false); }
   };
