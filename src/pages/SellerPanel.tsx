@@ -246,7 +246,12 @@ const SellerPanel = () => {
         {/* LISTING */}
         <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
           <h2 className="font-display text-xl text-primary-glow tracking-wider">YOUR LISTINGS</h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <a href="/seller/format">
+              <Button variant="outline" className="border-primary/40 text-primary-glow">
+                <Wallet className="h-4 w-4 mr-1" />Format fixer
+              </Button>
+            </a>
             <a href="/seller/upload">
               <Button variant="outline" className="border-primary/40 text-primary-glow">
                 <Upload className="h-4 w-4 mr-1" />Auto-format upload
