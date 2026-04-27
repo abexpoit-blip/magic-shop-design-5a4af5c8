@@ -11,6 +11,7 @@ interface Profile {
   id: string; username: string; balance: number; is_seller: boolean;
   is_seller_verified?: boolean; is_seller_visible?: boolean;
   commission_percent?: number; seller_display_name?: string | null;
+  trust_tier?: "none" | "verified" | "trusted" | "vip";
 }
 interface Payout { id: string; seller_id: string; amount: number; method: string; address: string; status: string; created_at: string; paid_at?: string | null; }
 
