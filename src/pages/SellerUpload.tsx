@@ -289,6 +289,80 @@ const SellerUpload = () => {
                 {parsed.length > 10 && `\n… and ${parsed.length - 10} more`}
               </pre>
             </div>
+
+            {/* Shop layout preview — exactly how cleaned fields appear after publish */}
+            <div className="pt-4 border-t border-border/40">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-primary-glow" />
+                  <h3 className="font-display tracking-wider text-primary-glow text-sm">SHOP PREVIEW</h3>
+                  <span className="text-[10px] text-muted-foreground">how buyers will see it</span>
+                </div>
+                <div className="inline-flex rounded-md border border-border/60 overflow-hidden text-[11px]">
+                  <button
+                    onClick={() => setPreviewMode("desktop")}
+                    className={`px-3 py-1 transition ${previewMode === "desktop" ? "bg-primary/20 text-primary-glow" : "text-muted-foreground hover:bg-secondary/40"}`}
+                  >Desktop</button>
+                  <button
+                    onClick={() => setPreviewMode("mobile")}
+                    className={`px-3 py-1 transition ${previewMode === "mobile" ? "bg-primary/20 text-primary-glow" : "text-muted-foreground hover:bg-secondary/40"}`}
+                  >Mobile (375px)</button>
+                </div>
+              </div>
+
+              <div className={`mx-auto transition-all ${previewMode === "mobile" ? "max-w-[375px] border-x border-border/40 rounded-xl" : "w-full"}`}>
+                <div className="overflow-x-auto rounded-lg border border-border/40 bg-background/60">
+                  <table className="w-full text-xs">
+                    <thead className="bg-secondary/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <tr>
+                        <th className="p-2 text-left">bin</th>
+                        <th className="p-2">refund</th>
+                        <th className="p-2">mm/yy</th>
+                        <th className="p-2">city</th>
+                        <th className="p-2">state</th>
+                        <th className="p-2">zip</th>
+                        <th className="p-2">country</th>
+                        <th className="p-2">tel</th>
+                        <th className="p-2">email</th>
+                        <th className="p-2">price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewLines.map((c, i) => {
+                        const brand = detectBrand(c.cc);
+                        const country = c.country !== "null" ? c.country.toUpperCase() : "US";
+                        const price = matchPrice(brand, country);
+                        return (
+                          <tr key={i} className={`border-t border-border/40 ${i % 2 ? "bg-secondary/10" : ""}`}>
+                            <td className="p-2 font-mono whitespace-nowrap">
+                              <div>{c.cc.slice(0, 6)}<span className="text-muted-foreground">********</span></div>
+                              <span className="mt-1 inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary-glow">
+                                <Store className="h-2.5 w-2.5" />you
+                                <BadgeCheck className="h-2.5 w-2.5" />
+                              </span>
+                            </td>
+                            <td className="p-2 text-center text-muted-foreground">{refundable ? "YES" : "NO"}</td>
+                            <td className="p-2 text-center font-mono">{c.month !== "null" ? c.month : "—"}/{c.year !== "null" ? c.year : "—"}</td>
+                            <td className="p-2 text-center max-w-[100px] truncate" title={c.city}>{c.city !== "null" ? c.city : "—"}</td>
+                            <td className="p-2 text-center">{c.state !== "null" ? c.state : "—"}</td>
+                            <td className="p-2 text-center font-mono">{c.zip !== "null" ? c.zip : "—"}</td>
+                            <td className="p-2 text-center whitespace-nowrap">{countryFlag(country)} {country}</td>
+                            <td className="p-2 text-center text-[10px]">{c.tel !== "null" ? <span className="text-success">yes</span> : <span className="text-muted-foreground">no</span>}</td>
+                            <td className="p-2 text-center text-[10px]">{c.email !== "null" ? <span className="text-success">yes</span> : <span className="text-muted-foreground">no</span>}</td>
+                            <td className="p-2 text-center font-display text-primary-glow">{price.toFixed(2)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {parsed.length > previewLines.length && (
+                  <p className="text-[10px] text-muted-foreground text-center mt-2">
+                    Showing first {previewLines.length} of {parsed.length} — all rows will look like these.
+                  </p>
+                )}
+              </div>
+            </div>
           </section>
         )}
 
