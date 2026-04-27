@@ -12,6 +12,7 @@ import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIc
 import logo from "@/assets/panther-logo.png";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/accountSwitcher";
 import { setActiveRole } from "@/lib/activeRole";
+import { describeAuthError, isTransientAuthServiceError } from "@/lib/authErrors";
 
 type Role = "buyer" | "seller";
 
@@ -79,12 +80,22 @@ const Auth = () => {
         // doesn't carry that role.
         const uid = signInData.user?.id;
         if (uid) {
-          const { data: roleRows } = await supabase
+          const { data: roleRows, error: rolesError } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", uid);
+          if (rolesError) {
+            await supabase.auth.signOut();
+            throw rolesError;
+          }
           const userRoles = (roleRows ?? []).map((r) => r.role as string);
           const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
+
+          if (isSeller && role !== "seller") {
+            toast.info("This account is locked to seller mode.", {
+              description: "Seller access stays on the seller dashboard and cannot switch back to buyer mode.",
+            });
+          }
 
           if (role === "seller" && !isSeller) {
             await supabase.auth.signOut();
@@ -92,18 +103,20 @@ const Auth = () => {
             setLoading(false);
             return;
           }
+          setActiveRole(uid, isSeller ? "seller" : "buyer");
 
-          // Persist the chosen mode so navbar/redirects honour the user's pick
-          // even when their account holds multiple roles (e.g. admin+seller+user).
-          setActiveRole(uid, role);
+          toast.success("Welcome back, hunter");
+          nav(isSeller ? "/seller" : "/");
+          return;
         }
 
         toast.success("Welcome back, hunter");
-        // Route by selected role: sellers go to seller panel, buyers to shop.
-        nav(role === "seller" ? "/seller" : "/");
+        nav("/");
       }
     } catch (err: unknown) {
-      const { describeAuthError } = await import("@/lib/authErrors");
+      if (mode === "login" && isTransientAuthServiceError(err)) {
+        await supabase.auth.signOut();
+      }
       const friendly = describeAuthError(err);
       toast.error(friendly.title, friendly.hint ? { description: friendly.hint } : undefined);
     } finally { setLoading(false); }

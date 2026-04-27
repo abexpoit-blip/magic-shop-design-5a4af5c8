@@ -48,9 +48,12 @@ const AdminLogin = () => {
       toast.success("Admin console unlocked");
       nav("/admin");
     } catch (err) {
+      await supabase.auth.signOut();
       const message = err instanceof Error ? err.message : "Login failed";
       if (message.includes("Could not verify admin access")) {
-        toast.error("Backend checked in but admin permission lookup failed. Please try again now.");
+        toast.error("Admin login could not verify permissions right now.", {
+          description: "The backend is responding inconsistently. Wait a few seconds and try again.",
+        });
       } else {
         const friendly = describeAuthError(err);
         toast.error(friendly.title, friendly.hint ? { description: friendly.hint } : undefined);
