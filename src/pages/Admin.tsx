@@ -318,45 +318,7 @@ const Admin = () => {
         </Section>
 
         {/* SELLER CONTROLS — verified badge, public visibility, commission % */}
-        <Section icon={UserCheck} title="SELLER CONTROLS">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-muted-foreground">
-                <tr>
-                  <th className="p-2 text-left">Username</th>
-                  <th className="p-2">Verified</th>
-                  <th className="p-2">Visible on shop</th>
-                  <th className="p-2">Commission %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.filter((u) => u.is_seller).map((u) => (
-                  <tr key={u.id} className="border-t border-border/40">
-                    <td className="p-2 font-medium">{u.username}</td>
-                    <td className="p-2 text-center">
-                      <input type="checkbox" checked={!!u.is_seller_verified}
-                        onChange={(e) => updateSellerProfile(u.id, { is_seller_verified: e.target.checked })}
-                        className="accent-primary cursor-pointer" />
-                    </td>
-                    <td className="p-2 text-center">
-                      <input type="checkbox" checked={!!u.is_seller_visible}
-                        onChange={(e) => updateSellerProfile(u.id, { is_seller_visible: e.target.checked })}
-                        className="accent-primary cursor-pointer" />
-                    </td>
-                    <td className="p-2 text-center">
-                      <Input type="number" step="0.5" defaultValue={u.commission_percent ?? 20}
-                        onBlur={(e) => updateSellerProfile(u.id, { commission_percent: Number(e.target.value) })}
-                        className="bg-input/60 h-8 w-20 mx-auto text-center" />
-                    </td>
-                  </tr>
-                ))}
-                {users.filter((u) => u.is_seller).length === 0 && (
-                  <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">No approved sellers yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Section>
+        <SellerControls users={users} onUpdate={updateSellerProfile} />
 
         {/* REFUND QUEUE */}
         <Section icon={Wallet} title={`REFUND REQUESTS (${refunds.filter((r) => r.status === "pending").length} pending)`}>
