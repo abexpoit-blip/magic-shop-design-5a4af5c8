@@ -19,26 +19,28 @@ Deno.serve(async (req) => {
       });
     }
 
+    const accessToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!accessToken) {
+      return new Response(JSON.stringify({ error: "Missing authorization" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
 
-    const { data: userData, error: userError } = await userClient.auth.getUser();
+    const { data: userData, error: userError } = await adminClient.auth.getUser(accessToken);
     if (userError || !userData.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
 
     const { data: roles, error: rolesError } = await adminClient
       .from("user_roles")
