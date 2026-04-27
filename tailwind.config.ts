@@ -57,6 +57,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          foreground: "hsl(var(--gold-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -64,26 +68,35 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        display: ["Orbitron", "sans-serif"],
-        sans: ["Inter", "system-ui", "sans-serif"],
+        display: ["Cinzel", "serif"],
+        sans: ["Sora", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
       },
       backgroundImage: {
         "gradient-primary": "var(--gradient-primary)",
+        "gradient-gold": "var(--gradient-gold)",
         "gradient-glow": "var(--gradient-glow)",
         "gradient-card": "var(--gradient-card)",
-        "gradient-neon": "var(--gradient-neon)",
+        "gradient-hero": "var(--gradient-hero)",
+        "gradient-text": "var(--gradient-text)",
       },
       boxShadow: {
         neon: "var(--shadow-neon)",
+        gold: "var(--shadow-gold)",
         glass: "var(--shadow-glass)",
         card: "var(--shadow-card)",
+        elev: "var(--shadow-elev)",
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
         "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 20px hsl(354 84% 52% / 0.4)" },
-          "50%": { boxShadow: "0 0 36px hsl(354 84% 52% / 0.7)" },
+          "0%, 100%": { boxShadow: "0 0 20px hsl(268 90% 60% / 0.4)" },
+          "50%": { boxShadow: "0 0 40px hsl(268 90% 60% / 0.75)" },
+        },
+        "float": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-8px)" },
         },
         "fade-up": {
           from: { opacity: "0", transform: "translateY(12px)" },
@@ -100,6 +113,7 @@ export default {
         "pulse-glow": "pulse-glow 2.4s ease-in-out infinite",
         "fade-up": "fade-up 0.5s cubic-bezier(0.22,1,0.36,1) both",
         "shimmer": "shimmer 2.4s linear infinite",
+        "float": "float 5s ease-in-out infinite",
       },
     },
   },
