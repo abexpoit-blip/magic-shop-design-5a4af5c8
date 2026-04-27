@@ -115,14 +115,17 @@ const SellerProfile = () => {
             </div>
             <div className="text-right">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Available cards</p>
-              <p className="font-display text-3xl gold-text">{cards.length}</p>
+              <p className="font-display text-3xl gold-text">{totalCount}</p>
             </div>
           </div>
         </section>
 
         <section className="glass rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-border/40">
+          <div className="p-4 border-b border-border/40 flex items-center justify-between">
             <h2 className="font-display tracking-wider text-primary-glow">LISTINGS</h2>
+            <span className="text-xs text-muted-foreground">
+              Showing <span className="text-foreground font-mono">{cards.length}</span> of <span className="text-foreground font-mono">{totalCount}</span>
+            </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -161,6 +164,21 @@ const SellerProfile = () => {
               </tbody>
             </table>
           </div>
+          {hasMore && (
+            <div className="p-4 border-t border-border/40 flex justify-center">
+              <Button onClick={loadMore} disabled={loadingMore} variant="outline"
+                className="border-primary/40 text-primary-glow hover:bg-primary/10 min-w-[180px]">
+                {loadingMore
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Loading…</>
+                  : <>Load more ({totalCount - cards.length} remaining)</>}
+              </Button>
+            </div>
+          )}
+          {!hasMore && cards.length > 0 && totalCount > PAGE_SIZE && (
+            <div className="p-4 border-t border-border/40 text-center text-xs text-muted-foreground">
+              You've reached the end · {totalCount} cards total
+            </div>
+          )}
         </section>
       </div>
     </AppShell>
