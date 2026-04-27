@@ -7,6 +7,14 @@ import { authRouter } from "./routes/auth.js";
 import { profileRouter } from "./routes/profile.js";
 import { sellerAppsRouter } from "./routes/seller-applications.js";
 import { adminRouter } from "./routes/admin.js";
+import { cardsRouter } from "./routes/cards.js";
+import { cartRouter } from "./routes/cart.js";
+import { ordersRouter } from "./routes/orders.js";
+import { walletRouter } from "./routes/wallet.js";
+import { depositsRouter } from "./routes/deposits.js";
+import { payoutsRouter } from "./routes/payouts.js";
+import { ticketsRouter } from "./routes/tickets.js";
+import { announcementsRouter } from "./routes/announcements.js";
 
 const app = express();
 
@@ -21,6 +29,14 @@ app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/seller-applications", sellerAppsRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/cards", cardsRouter);
+app.use("/api/cart", cartRouter);
+app.use("/api/orders", ordersRouter);
+app.use("/api/wallet", walletRouter);
+app.use("/api/deposits", depositsRouter);
+app.use("/api/payouts", payoutsRouter);
+app.use("/api/tickets", ticketsRouter);
+app.use("/api/announcements", announcementsRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("[error]", err);
