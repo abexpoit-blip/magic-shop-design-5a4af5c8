@@ -142,27 +142,228 @@
   .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(268 90% 62% / 0.5); border-radius: 4px; }
 
+  /* ──────────────────────────────────────────────────────────
+     NAVBAR · responsive + density-aware ($1000 luxury system)
+     Density variants: data-density="comfortable" (default) | "compact"
+  ────────────────────────────────────────────────────────── */
+  :root {
+    --nav-h: 64px;
+    --nav-px: 1rem;
+    --nav-gap: 0.75rem;
+    --nav-brand-logo: 38px;
+    --nav-brand-name: 17px;
+    --nav-brand-tag: 8.5px;
+    --nav-brand-tag-tracking: 0.28em;
+    --nav-pills-pad: 4px;
+    --nav-pill-px: 0.85rem;
+    --nav-pill-py: 0.5rem;
+    --nav-pill-fs: 12.5px;
+    --nav-pill-icon: 14px;
+    --nav-pill-gap: 0.5rem;
+    --nav-icon-btn: 38px;
+    --nav-icon: 15px;
+    --nav-balance-pl: 0.85rem;
+    --nav-balance-pr: 1rem;
+    --nav-balance-h: 38px;
+    --nav-balance-gap: 0.5rem;
+    --nav-balance-label-fs: 9.5px;
+    --nav-balance-value-fs: 13px;
+    --nav-profile-h: 38px;
+    --nav-profile-pl: 4px;
+    --nav-profile-pr: 0.85rem;
+    --nav-profile-gap: 0.55rem;
+    --nav-profile-avatar: 30px;
+    --nav-profile-name-fs: 12px;
+    --nav-profile-role-fs: 8.5px;
+    --nav-right-gap: 0.4rem;
+  }
+  @media (min-width: 640px) {
+    :root {
+      --nav-h: 72px; --nav-px: 1.25rem; --nav-gap: 1.25rem;
+      --nav-brand-logo: 40px; --nav-brand-name: 18px; --nav-brand-tag: 9px;
+      --nav-pills-pad: 5px; --nav-pill-px: 0.95rem; --nav-pill-py: 0.55rem; --nav-pill-fs: 13px;
+      --nav-icon-btn: 40px; --nav-balance-h: 40px; --nav-profile-h: 40px;
+      --nav-profile-avatar: 32px; --nav-right-gap: 0.5rem;
+    }
+  }
+  @media (min-width: 768px) {
+    :root {
+      --nav-h: 76px; --nav-px: 1.5rem; --nav-gap: 1.75rem;
+      --nav-brand-logo: 42px; --nav-brand-name: 19px; --nav-brand-tag: 9.25px; --nav-brand-tag-tracking: 0.32em;
+      --nav-pill-px: 1rem; --nav-pill-py: 0.58rem;
+      --nav-icon-btn: 42px; --nav-balance-h: 42px; --nav-balance-pl: 0.95rem; --nav-balance-pr: 1.15rem;
+      --nav-profile-h: 42px; --nav-right-gap: 0.55rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    :root {
+      --nav-h: 80px; --nav-px: 2rem; --nav-gap: 2.25rem;
+      --nav-brand-name: 19.5px; --nav-brand-tag: 9.5px; --nav-brand-tag-tracking: 0.34em;
+      --nav-pills-pad: 6px; --nav-pill-px: 1.05rem; --nav-pill-py: 0.6rem; --nav-pill-icon: 15px;
+      --nav-balance-value-fs: 14px;
+      --nav-profile-avatar: 34px; --nav-profile-name-fs: 13px; --nav-right-gap: 0.6rem;
+    }
+  }
+  @media (min-width: 1280px) {
+    :root {
+      --nav-h: 84px; --nav-px: 2.5rem; --nav-gap: 2.5rem;
+      --nav-brand-logo: 44px; --nav-brand-name: 20px; --nav-brand-tag-tracking: 0.36em;
+      --nav-pill-px: 1.1rem; --nav-pill-py: 0.62rem; --nav-pill-fs: 13.5px;
+      --nav-icon-btn: 44px; --nav-balance-h: 44px; --nav-balance-pl: 1rem; --nav-balance-pr: 1.25rem; --nav-balance-value-fs: 15px;
+      --nav-profile-h: 44px; --nav-profile-pl: 6px; --nav-profile-pr: 1rem;
+    }
+  }
+
+  /* COMPACT density — overrides at every breakpoint */
+  html[data-density="compact"] {
+    --nav-h: 56px;
+    --nav-brand-logo: 34px; --nav-brand-name: 16px; --nav-brand-tag: 8px;
+    --nav-pills-pad: 3px; --nav-pill-px: 0.75rem; --nav-pill-py: 0.4rem; --nav-pill-fs: 12px; --nav-pill-icon: 13px;
+    --nav-icon-btn: 34px; --nav-icon: 14px;
+    --nav-balance-h: 34px; --nav-balance-pl: 0.75rem; --nav-balance-pr: 0.9rem; --nav-balance-label-fs: 9px; --nav-balance-value-fs: 12.5px;
+    --nav-profile-h: 34px; --nav-profile-avatar: 28px; --nav-profile-name-fs: 11.5px;
+    --nav-right-gap: 0.35rem; --nav-gap: 1rem;
+  }
+  @media (min-width: 1024px) {
+    html[data-density="compact"] {
+      --nav-h: 60px; --nav-brand-logo: 36px; --nav-brand-name: 17px;
+      --nav-pill-px: 0.85rem; --nav-pill-py: 0.45rem;
+      --nav-icon-btn: 36px; --nav-balance-h: 36px; --nav-profile-h: 36px; --nav-profile-avatar: 30px;
+    }
+  }
+
+  /* Layout primitives */
+  .nav-inner { height: var(--nav-h); padding-left: var(--nav-px); padding-right: var(--nav-px); gap: var(--nav-gap); transition: height 0.45s var(--transition-smooth), padding 0.45s var(--transition-smooth); }
+  .nav-brand-logo { height: var(--nav-brand-logo); width: var(--nav-brand-logo); transition: height 0.45s var(--transition-smooth), width 0.45s var(--transition-smooth); }
+  .nav-brand-name { font-size: var(--nav-brand-name); transition: font-size 0.45s var(--transition-smooth); }
+  .nav-brand-tag { font-size: var(--nav-brand-tag); letter-spacing: var(--nav-brand-tag-tracking); }
+  @media (max-width: 639px) { .nav-brand-tag { display: none; } }
+
+  .nav-pills { padding: var(--nav-pills-pad); gap: 2px; transition: padding 0.45s var(--transition-smooth); }
+  .nav-right { gap: var(--nav-right-gap); }
+
   /* Premium navigation pill */
   .nav-pill {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.6rem 1.1rem;
+    gap: var(--nav-pill-gap);
+    padding: var(--nav-pill-py) var(--nav-pill-px);
     border-radius: 999px;
     font-family: 'Manrope', sans-serif;
-    font-size: 0.8125rem;
+    font-size: var(--nav-pill-fs);
     font-weight: 500;
     letter-spacing: -0.005em;
     color: hsl(240 5% 70%);
-    transition: color 0.25s var(--transition-smooth), background 0.25s var(--transition-smooth), box-shadow 0.25s var(--transition-smooth);
+    overflow: hidden;
+    transition:
+      color 0.35s var(--transition-smooth),
+      background 0.35s var(--transition-smooth),
+      box-shadow 0.4s var(--transition-smooth),
+      transform 0.4s var(--transition-smooth),
+      padding 0.45s var(--transition-smooth),
+      font-size 0.45s var(--transition-smooth);
   }
-  .nav-pill:hover { color: hsl(45 20% 96%); background: hsl(0 0% 100% / 0.04); }
+  .nav-pill::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 2px 0;
+    height: 2px;
+    margin: 0 auto;
+    width: 60%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, hsl(268 90% 62%), transparent);
+    transform: scaleX(0);
+    opacity: 0;
+    transition: transform 0.45s var(--transition-smooth), opacity 0.4s var(--transition-smooth);
+  }
+  .nav-pill:hover {
+    color: hsl(45 20% 98%);
+    background: hsl(0 0% 100% / 0.045);
+    transform: translateY(-1px);
+  }
+  .nav-pill:hover::after { transform: scaleX(0.7); opacity: 0.85; }
+  .nav-pill:active { transform: translateY(0); transition-duration: 0.15s; }
   .nav-pill[data-active="true"] {
     color: hsl(45 20% 98%);
-    background: linear-gradient(135deg, hsl(268 90% 62% / 0.22), hsl(290 80% 48% / 0.10));
-    box-shadow: inset 0 0 0 1px hsl(268 90% 62% / 0.45), 0 6px 22px -8px hsl(268 90% 62% / 0.55);
+    background: linear-gradient(135deg, hsl(268 90% 62% / 0.24), hsl(290 80% 48% / 0.10));
+    box-shadow: inset 0 0 0 1px hsl(268 90% 62% / 0.5), 0 8px 24px -10px hsl(268 90% 62% / 0.6);
   }
+  .nav-pill[data-active="true"]::after { transform: scaleX(1); opacity: 1; }
+  .nav-pill-icon { height: var(--nav-pill-icon); width: var(--nav-pill-icon); transition: transform 0.4s var(--transition-smooth); }
+  .nav-pill:hover .nav-pill-icon { transform: rotate(-4deg) scale(1.08); }
+
+  /* Right cluster icon button */
+  .nav-icon-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--nav-icon-btn);
+    width: var(--nav-icon-btn);
+    border-radius: 999px;
+    border: 1px solid hsl(var(--border) / 0.85);
+    color: hsl(var(--muted-foreground));
+    background: hsl(0 0% 100% / 0.015);
+    overflow: hidden;
+    transition:
+      color 0.35s var(--transition-smooth),
+      border-color 0.35s var(--transition-smooth),
+      background 0.35s var(--transition-smooth),
+      box-shadow 0.4s var(--transition-smooth),
+      transform 0.35s var(--transition-smooth),
+      height 0.45s var(--transition-smooth),
+      width 0.45s var(--transition-smooth);
+  }
+  .nav-icon-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 50% 120%, hsl(268 90% 62% / 0.45), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.4s var(--transition-smooth);
+  }
+  .nav-icon-btn:hover {
+    color: hsl(280 100% 82%);
+    border-color: hsl(268 90% 62% / 0.55);
+    background: hsl(0 0% 100% / 0.04);
+    box-shadow: 0 6px 22px -10px hsl(268 90% 62% / 0.6);
+    transform: translateY(-1px);
+  }
+  .nav-icon-btn:hover::before { opacity: 1; }
+  .nav-icon-btn:active { transform: translateY(0); transition-duration: 0.12s; }
+  .nav-icon-btn-danger:hover {
+    color: hsl(var(--destructive));
+    border-color: hsl(var(--destructive) / 0.55);
+    box-shadow: 0 6px 22px -10px hsl(var(--destructive) / 0.55);
+  }
+  .nav-icon-btn-danger:hover::before { background: radial-gradient(circle at 50% 120%, hsl(var(--destructive) / 0.45), transparent 70%); }
+  .nav-icon { height: var(--nav-icon); width: var(--nav-icon); position: relative; z-index: 1; transition: transform 0.4s var(--transition-smooth); }
+  .nav-icon-btn:hover .nav-icon { transform: scale(1.12); }
+
+  /* Balance pill */
+  .nav-balance {
+    height: var(--nav-balance-h);
+    padding-left: var(--nav-balance-pl);
+    padding-right: var(--nav-balance-pr);
+    gap: var(--nav-balance-gap);
+    transition: height 0.45s var(--transition-smooth), padding 0.45s var(--transition-smooth);
+  }
+  .nav-balance-label { font-size: var(--nav-balance-label-fs); }
+  .nav-balance-value { font-size: var(--nav-balance-value-fs); }
+  @media (max-width: 767px) { .nav-balance-label { display: none; } }
+
+  /* Profile chip */
+  .nav-profile {
+    height: var(--nav-profile-h);
+    padding-left: var(--nav-profile-pl);
+    padding-right: var(--nav-profile-pr);
+    gap: var(--nav-profile-gap);
+    transition: height 0.45s var(--transition-smooth);
+  }
+  .nav-profile-avatar { height: var(--nav-profile-avatar); width: var(--nav-profile-avatar); font-size: calc(var(--nav-profile-avatar) * 0.4); transition: height 0.45s var(--transition-smooth), width 0.45s var(--transition-smooth); }
+  .nav-profile-name { font-size: var(--nav-profile-name-fs); }
+  .nav-profile-role { font-size: var(--nav-profile-role-fs); }
 
   /* Premium luxury button */
   .btn-luxe {
