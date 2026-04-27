@@ -412,6 +412,8 @@
   .nav-balance-label { font-size: var(--nav-balance-label-fs); }
   .nav-balance-value { font-size: var(--nav-balance-value-fs); }
   @media (max-width: 767px) { .nav-balance-label { display: none; } }
+  /* On very small phones, hide top-bar balance — it's shown in drawer header */
+  @media (max-width: 419px) { .nav-balance { display: none !important; } }
   @media (hover: hover) and (pointer: fine) {
     .nav-balance { transition: border-color 0.3s var(--transition-smooth), box-shadow 0.35s var(--transition-smooth); }
   }
@@ -440,6 +442,23 @@
     from { opacity: 0; transform: translate3d(0, -6px, 0); }
     to   { opacity: 1; transform: translate3d(0, 0, 0); }
   }
+  .nav-drawer-header {
+    padding: var(--nav-drawer-py) var(--nav-drawer-px);
+    border-bottom: 1px solid hsl(var(--border) / 0.5);
+    background: linear-gradient(180deg, hsl(268 90% 62% / 0.06), transparent);
+  }
+  .nav-drawer-avatar {
+    height: 40px; width: 40px;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  html[data-density="compact"] .nav-drawer-avatar { height: 34px; width: 34px; font-size: 14px; }
+  .nav-drawer-name { font-size: 14px; line-height: 1.2; }
+  .nav-drawer-role { font-size: 9.5px; line-height: 1.4; margin-top: 2px; }
+  .nav-drawer-skeleton-name { width: 60%; max-width: 140px; height: 13px; border-radius: 6px; }
+  .nav-drawer-skeleton-role { width: 38%; max-width: 70px; height: 9px; border-radius: 6px; }
+  .nav-drawer-skeleton-balance { width: 44px; height: 12px; border-radius: 999px; }
+
   .nav-drawer-inner {
     padding: var(--nav-drawer-py) var(--nav-drawer-px);
     gap: var(--nav-drawer-gap);
