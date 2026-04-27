@@ -30,100 +30,17 @@ const AdminLogin = () => {
     document.title = "Admin · Secure Console";
   }, []);
 
-  const resolveAdminLoginEmail = async (rawIdentifier: string) => {
-    const raw = rawIdentifier.trim().toLowerCase();
-
-    try {
-      const { data, error } = await supabase.functions.invoke("resolve-login-email", {
-        body: { identifier: raw },
-      });
-
-      if (!error && data?.email) {
-        return String(data.email).toLowerCase();
-      }
-    } catch {
-      // Ignore lookup failures and continue through the local fallback candidates.
-    }
-
-    return null;
-  };
-
-  const tryLogin = async (loginEmail: string) => {
-    const res = await withAuthRetry(
-      () => supabase.auth.signInWithPassword({ email: loginEmail, password }),
-      {
-        attempts: 5,
-        delayMs: 900,
-        onRetry: (n) => setStatusBanner({
-          kind: "info",
-          title: `Auth service hiccup — retrying (${n}/4)…`,
-          hint: "Hold on, the backend pool blipped. Auto-retrying.",
-        }),
-      }
-    );
-    if (res.error) {
-      if (isTransientAuthServiceError(res.error)) throw res.error;
-      throw res.error;
-    }
-    return res.data;
-  };
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatusBanner(null);
     setLoading(true);
-    let shouldCleanupSession = false;
     try {
-      // Build a list of candidate emails to try, so admins can use either
-      // their email OR their username without us hardcoding anything.
-      const raw = identifier.trim().toLowerCase();
-      const localPart = raw.includes("@") ? raw.split("@")[0] : raw;
-      const candidates = new Set<string>();
-      const resolvedEmail = await resolveAdminLoginEmail(raw);
+      const email = identifier.trim().toLowerCase();
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
 
-      if (resolvedEmail) {
-        candidates.add(resolvedEmail);
-      }
-
-      if (EMAIL_PATTERN.test(raw)) {
-        candidates.add(raw);
-      } else {
-        candidates.add(`${raw}@cruzercc.shop`);
-        candidates.add(`${raw}@gmail.com`);
-        if (localPart && localPart !== raw) {
-          candidates.add(`${localPart}@cruzercc.shop`);
-          candidates.add(`${localPart}@gmail.com`);
-        }
-      }
-
-      let lastErr: unknown = null;
-      let signedIn = false;
-      let signedInUser: { id?: string; email?: string | null } | null = null;
-      let authSession: { access_token?: string | null; refresh_token?: string | null; user?: { id?: string; email?: string | null } | null } | null = null;
-      for (const email of candidates) {
-        try {
-          const authData = await tryLogin(email);
-          authSession = authData.session;
-          signedInUser = authData.user ?? authData.session?.user ?? null;
-          shouldCleanupSession = true;
-          signedIn = true;
-          break;
-        } catch (err) {
-          lastErr = err;
-        }
-      }
-      if (!signedIn) throw lastErr ?? new Error("Login failed");
-
-      // Verify admin role with the resilient helper so transient DB/RLS issues
-      // don't bounce valid admins out after a successful password login.
-      const user = signedInUser ?? authSession?.user ?? null;
-      if (!user) throw new Error("No session after login");
-      const isAdmin = await verifyAdminAccess(user.id, {
-        accessToken: authSession?.access_token ?? null,
-        refreshToken: authSession?.refresh_token ?? null,
-        email: authSession?.user?.email ?? user.email ?? null,
-      });
-      if (!isAdmin) {
+      const signedInEmail = (data.user?.email ?? email).toLowerCase();
+      if (signedInEmail !== PRIMARY_ADMIN_EMAIL) {
         await supabase.auth.signOut();
         throw new Error("This account does not have admin privileges.");
       }
@@ -131,20 +48,17 @@ const AdminLogin = () => {
       toast.success("Admin console unlocked");
       nav(safeAdminFrom ?? "/admin", { replace: true });
     } catch (err) {
-      if (shouldCleanupSession) {
-        await supabase.auth.signOut().catch(() => {});
-      }
       const message = err instanceof Error ? err.message : "Login failed";
       const friendly = describeAuthError(err);
       const lower = message.toLowerCase();
       if (lower.includes("invalid login") || lower.includes("invalid_grant") || lower.includes("invalid credentials")) {
         setStatusBanner({
           kind: "error",
-          title: "Email/username or password is incorrect",
-          hint: "If you just rotated the admin info, click 'Bootstrap admin account' below to apply it.",
+          title: "Email or password is incorrect",
+          hint: "Click 'Bootstrap admin account' below if you haven't created the admin yet.",
         });
       } else if (message.includes("admin privileges")) {
-        setStatusBanner({ kind: "error", title: "Not an admin account", hint: "This login is for admins only." });
+        setStatusBanner({ kind: "error", title: "Not an admin account", hint: "This login is for the configured admin only." });
       } else {
         setStatusBanner({ kind: "error", title: friendly.title, hint: friendly.hint });
       }
