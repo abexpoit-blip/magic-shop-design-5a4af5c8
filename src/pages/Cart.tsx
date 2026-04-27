@@ -49,8 +49,8 @@ const Cart = () => {
       if (error) throw error;
       const orderItems = selectedItems.map((i) => ({
         order_id: order.id,
-        card_snapshot: i.card,
-        price: i.card.price,
+        card_snapshot: i.card as unknown as Record<string, unknown>,
+        price: Number(i.card.price),
       }));
       await supabase.from("order_items").insert(orderItems);
       await supabase.from("cards").update({ status: "sold" }).in("id", selectedItems.map((i) => i.card.id));
