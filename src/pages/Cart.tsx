@@ -73,13 +73,13 @@ const Cart = () => {
         .from("order_items").insert(initialItems).select();
       if (oiErr) throw oiErr;
 
-      // Now buyer can read full card data via RLS; backfill the snapshot with
-      // sensitive fields so it remains visible after the card row changes.
-      const { data: full } = await supabase
-        .from("cards")
-        .select("id,bin,brand,country,price,base,exp_month,exp_year,cc_number,cvv,holder_name,email,phone,address,state,city,zip")
-        .in("id", cardIds);
-      const fullMap = new Map((full ?? []).map((c) => [(c as { id: string }).id, c]));
+      // Buyer fetches full card data via SECURITY DEFINER RPC that verifies
+      // ownership server-side. Backfill snapshot with sensitive fields.
+      const { data: full } = await (supabase as unknown as {
+        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>;
+      }).rpc("get_purchased_card_full", { _card_ids: cardIds });
+      const fullArr = (Array.isArray(full) ? full : []) as Array<Record<string, unknown> & { id: string }>;
+      const fullMap = new Map(fullArr.map((c) => [c.id, c]));
       await Promise.all(
         (insertedItems ?? []).map((row) => {
           const snap = (row as unknown as { card_snapshot: { id: string } }).card_snapshot;

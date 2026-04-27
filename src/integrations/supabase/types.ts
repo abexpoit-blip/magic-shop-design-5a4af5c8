@@ -178,13 +178,6 @@ export type Database = {
             referencedRelation: "cards"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "cart_items_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "cards_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       deposit_addresses: {
@@ -505,13 +498,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "refund_requests_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "cards_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "refund_requests_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -716,54 +702,60 @@ export type Database = {
           status: string | null
           zip: string | null
         }
-        Insert: {
-          base?: string | null
-          bin?: string | null
-          brand?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          exp_month?: string | null
-          exp_year?: string | null
-          has_email?: boolean | null
-          has_phone?: boolean | null
-          id?: string | null
-          price?: number | null
-          refundable?: boolean | null
-          seller_id?: string | null
-          state?: string | null
-          status?: string | null
-          zip?: string | null
-        }
-        Update: {
-          base?: string | null
-          bin?: string | null
-          brand?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          exp_month?: string | null
-          exp_year?: string | null
-          has_email?: boolean | null
-          has_phone?: boolean | null
-          id?: string | null
-          price?: number | null
-          refundable?: boolean | null
-          seller_id?: string | null
-          state?: string | null
-          status?: string | null
-          zip?: string | null
-        }
         Relationships: []
       }
     }
     Functions: {
+      get_purchased_card_full: {
+        Args: { _card_ids: string[] }
+        Returns: {
+          address: string
+          base: string
+          bin: string
+          brand: string
+          cc_number: string
+          city: string
+          country: string
+          cvv: string
+          email: string
+          exp_month: string
+          exp_year: string
+          holder_name: string
+          id: string
+          phone: string
+          price: number
+          state: string
+          zip: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      list_available_cards: {
+        Args: never
+        Returns: {
+          base: string
+          bin: string
+          brand: string
+          city: string
+          country: string
+          created_at: string
+          exp_month: string
+          exp_year: string
+          has_email: boolean
+          has_phone: boolean
+          id: string
+          price: number
+          refundable: boolean
+          seller_id: string
+          state: string
+          status: string
+          zip: string
+        }[]
       }
     }
     Enums: {
