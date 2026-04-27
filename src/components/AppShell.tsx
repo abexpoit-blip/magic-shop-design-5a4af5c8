@@ -112,7 +112,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 
             <button
               onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}
-              className="nav-icon-btn hidden md:inline-flex"
+              className="nav-icon-btn inline-flex"
               aria-label={`Switch to ${density === "compact" ? "comfortable" : "compact"} density`}
               title={density === "compact" ? "Switch to comfortable" : "Switch to compact"}
             >
@@ -150,19 +150,19 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 
         {/* Mobile drawer */}
         {open && (
-          <div className="lg:hidden border-t border-border/50 bg-background/95 backdrop-blur-2xl animate-fade-up">
-            <div className="px-4 py-4 grid grid-cols-2 gap-2">
+          <div className="nav-drawer lg:hidden border-t border-border/50 bg-background/95 backdrop-blur-2xl">
+            <div className="nav-drawer-inner grid grid-cols-2">
               {items.map((it) => (
                 <NavLink key={it.to} to={it.to} end={it.to === "/"} onClick={() => setOpen(false)}
-                  className={({ isActive }) => `flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-medium transition ${
-                    isActive ? "bg-primary/15 text-primary-glow border border-primary/30" : "bg-secondary/40 border border-border/40 text-muted-foreground"
-                  }`}>
-                  <it.icon className="h-4 w-4" /> {it.label}
+                  className="nav-drawer-item"
+                  data-active={isActive(it.to) ? "true" : undefined}>
+                  <it.icon className="nav-drawer-icon" strokeWidth={1.75} />
+                  <span>{it.label}</span>
                 </NavLink>
               ))}
               <button onClick={async () => { await signOut(); nav("/auth"); }}
-                className="col-span-2 flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-medium bg-destructive/10 text-destructive border border-destructive/30">
-                <LogOut className="h-4 w-4" /> Sign out
+                className="nav-drawer-item nav-drawer-item-danger col-span-2 justify-center">
+                <LogOut className="nav-drawer-icon" strokeWidth={1.75} /> Sign out
               </button>
             </div>
           </div>
