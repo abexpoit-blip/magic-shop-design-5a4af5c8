@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIcon, X } from "lucide-react";
 import logo from "@/assets/panther-logo.png";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/accountSwitcher";
+import { setActiveRole } from "@/lib/activeRole";
 
 type Role = "buyer" | "seller";
 
