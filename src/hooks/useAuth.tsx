@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { getActiveRole, setActiveRole as persistActiveRole, clearActiveRole, type ActiveRole } from "@/lib/activeRole";
 
 type Role = "admin" | "seller" | "user";
 
