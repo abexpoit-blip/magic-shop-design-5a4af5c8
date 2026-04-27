@@ -5,6 +5,7 @@ export const PRIMARY_ADMIN_EMAIL = "samexpoit@gmail.com";
 
 interface VerifyAdminAccessOptions {
   accessToken?: string | null;
+  refreshToken?: string | null;
   email?: string | null;
 }
 
@@ -27,6 +28,24 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 export async function verifyAdminAccess(userId: string, options: VerifyAdminAccessOptions = {}): Promise<boolean> {
   let email = options.email?.toLowerCase() ?? null;
   let accessToken = options.accessToken ?? null;
+  const refreshToken = options.refreshToken ?? null;
+
+  if (accessToken && refreshToken) {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token !== accessToken) {
+        await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+      }
+    } catch {
+      // Ignore session hydration errors here and continue with the remaining checks.
+    }
+  }
 
   if (!email) {
     const { data: authUser } = await supabase.auth.getUser();
@@ -69,17 +88,35 @@ export async function verifyAdminAccess(userId: string, options: VerifyAdminAcce
     }
   }
 
-  const { data, error } = await withTimeout<{ data: RoleRow[] | null; error: unknown }>(
-    Promise.resolve(supabase.from("user_roles").select("role").eq("user_id", userId)) as Promise<{
-      data: RoleRow[] | null;
-      error: unknown;
-    }>,
-    2500,
-    "admin-role-timeout",
-  );
+  const delays = [0, 250, 800];
+  let lastRoleError: unknown = null;
 
-  if (!error) {
-    return ((data as RoleRow[] | null) ?? []).some((row) => row.role === "admin");
+  for (const delay of delays) {
+    if (delay > 0) {
+      await new Promise((resolve) => window.setTimeout(resolve, delay));
+    }
+
+    try {
+      const { data, error } = await withTimeout<{ data: RoleRow[] | null; error: unknown }>(
+        Promise.resolve(supabase.from("user_roles").select("role").eq("user_id", userId)) as Promise<{
+          data: RoleRow[] | null;
+          error: unknown;
+        }>,
+        2500,
+        "admin-role-timeout",
+      );
+
+      if (!error) {
+        const rows = (data as RoleRow[] | null) ?? [];
+        if (rows.length > 0) {
+          return rows.some((row) => row.role === "admin");
+        }
+      } else {
+        lastRoleError = error;
+      }
+    } catch (error) {
+      lastRoleError = error;
+    }
   }
 
   try {
@@ -110,6 +147,9 @@ export async function verifyAdminAccess(userId: string, options: VerifyAdminAcce
 
     return Boolean((fallback as { isAdmin?: boolean } | null)?.isAdmin);
   } catch (fallbackError) {
+    if (lastRoleError instanceof Error && lastRoleError.message) {
+      throw lastRoleError;
+    }
     if (email === PRIMARY_ADMIN_EMAIL) {
       return true;
     }

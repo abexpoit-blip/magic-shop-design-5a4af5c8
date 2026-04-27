@@ -101,7 +101,7 @@ const AdminLogin = () => {
       let lastErr: unknown = null;
       let signedIn = false;
       let signedInUser: { id?: string; email?: string | null } | null = null;
-      let authSession: { access_token?: string | null; user?: { id?: string; email?: string | null } | null } | null = null;
+      let authSession: { access_token?: string | null; refresh_token?: string | null; user?: { id?: string; email?: string | null } | null } | null = null;
       for (const email of candidates) {
         try {
           const authData = await tryLogin(email);
@@ -122,6 +122,7 @@ const AdminLogin = () => {
       if (!user) throw new Error("No session after login");
       const isAdmin = await verifyAdminAccess(user.id, {
         accessToken: authSession?.access_token ?? null,
+        refreshToken: authSession?.refresh_token ?? null,
         email: authSession?.user?.email ?? user.email ?? null,
       });
       if (!isAdmin) {

@@ -31,26 +31,43 @@ Deno.serve(async (req) => {
 
     // 1) Find or create the auth user.
     let userId: string | null = null;
-    const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-    const found = list?.users?.find((u) => u.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase());
-    if (found) {
-      userId = found.id;
-      // Reset password & confirm email to keep it consistent with the secret.
-      await admin.auth.admin.updateUserById(userId, {
-        password: ADMIN_PASSWORD,
-        email_confirm: true,
-        user_metadata: { username: ADMIN_USERNAME },
-      });
-    } else {
+    let { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    let found = list?.users?.find((u) => u.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+
+    if (!found) {
       const { data: created, error: cErr } = await admin.auth.admin.createUser({
         email: ADMIN_EMAIL,
         password: ADMIN_PASSWORD,
         email_confirm: true,
         user_metadata: { username: ADMIN_USERNAME },
       });
-      if (cErr) throw cErr;
-      userId = created.user!.id;
+
+      if (cErr) {
+        const message = cErr.message?.toLowerCase?.() ?? "";
+        if (!message.includes("already been registered")) {
+          throw cErr;
+        }
+
+        const retry = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+        list = retry.data;
+        found = list?.users?.find((u) => u.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+        if (!found) throw cErr;
+      } else {
+        found = created.user ?? null;
+      }
     }
+
+    if (!found) {
+      throw new Error("Admin account could not be located or created");
+    }
+
+    userId = found.id;
+    await admin.auth.admin.updateUserById(userId, {
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+      email_confirm: true,
+      user_metadata: { username: ADMIN_USERNAME },
+    });
 
     // 2) Ensure profile (handle_new_user trigger may have done it).
     await admin.from("profiles").upsert({
