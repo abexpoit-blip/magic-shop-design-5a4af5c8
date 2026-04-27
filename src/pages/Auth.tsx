@@ -315,6 +315,12 @@ const Auth = () => {
             redirectPath="/reset-password"
           />
 
+          <div className="mt-5 text-center">
+            <a href="/admin-login" className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground hover:text-destructive transition">
+              Admin? Sign in here →
+            </a>
+          </div>
+
           <p className="text-center text-[10px] font-mono tracking-[0.3em] text-muted-foreground mt-6 lg:hidden">
             © {new Date().getFullYear()} CRUZERCC.SHOP
           </p>
