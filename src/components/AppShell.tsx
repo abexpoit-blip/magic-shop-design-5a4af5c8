@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/panther-logo.png";
 import { Button } from "@/components/ui/button";
 import { BuildBadge } from "@/components/BuildBadge";
-import { PRIMARY_ADMIN_EMAIL, verifyAdminAccess } from "@/lib/adminAccess";
+// Admin access is purely role-based (server-side via user_roles + RLS).
 
 type Density = "comfortable" | "compact";
 
