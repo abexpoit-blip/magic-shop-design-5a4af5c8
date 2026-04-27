@@ -12,8 +12,9 @@ import {
 } from "lucide-react";
 import { BRANDS, COUNTRIES } from "@/lib/brands";
 
-interface Application { id: string; user_id: string; shop_name: string; contact: string | null; description: string | null; status: string; }
-interface Profile { id: string; username: string; balance: number; is_seller: boolean; banned: boolean; }
+interface Application { id: string; user_id: string; shop_name: string | null; contact: string | null; description: string | null; status: string; telegram?: string | null; jabber?: string | null; expected_volume?: string | null; sample_bins?: string | null; message?: string | null; admin_note?: string | null; created_at: string; }
+interface Profile { id: string; username: string; balance: number; is_seller: boolean; banned: boolean; is_seller_verified?: boolean; is_seller_visible?: boolean; commission_percent?: number; seller_display_name?: string | null; }
+interface RefundRequest { id: string; buyer_id: string; seller_id: string; card_id: string | null; kind: string; reason: string | null; status: string; created_at: string; }
 interface TicketRow { id: string; user_id: string; subject: string; message: string; reply: string | null; status: string; }
 interface Order { id: string; user_id: string; total: number; status: string; created_at: string; }
 interface Deposit { id: string; user_id: string; amount: number; method: string; txid: string | null; status: string; created_at: string; }
