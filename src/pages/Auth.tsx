@@ -158,10 +158,9 @@ const Auth = () => {
                 </div>
               </div>
 
-              <Button type="submit" disabled={loading}
-                className="w-full h-12 bg-gradient-primary hover:opacity-95 text-primary-foreground font-display tracking-[0.2em] shadow-neon text-sm">
-                {loading ? "PLEASE WAIT…" : mode === "login" ? "SIGN IN" : "CREATE ACCOUNT"}
-              </Button>
+              <button type="submit" disabled={loading} className="btn-luxe w-full h-12 disabled:opacity-60">
+                {loading ? "Please wait…" : mode === "login" ? "Sign in to your account" : "Create your account"}
+              </button>
             </form>
           </div>
 
