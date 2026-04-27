@@ -19,6 +19,7 @@ interface Card {
 interface Seller {
   id: string; username: string; seller_display_name: string | null; display_name: string | null;
   is_seller_verified: boolean;
+  trust_tier?: "none" | "verified" | "trusted" | "vip";
 }
 
 const Shop = () => {
@@ -46,7 +47,7 @@ const Shop = () => {
   const loadSellers = async () => {
     const { data } = await supabase
       .from("profiles")
-      .select("id,username,seller_display_name,display_name,is_seller_verified")
+      .select("id,username,seller_display_name,display_name,is_seller_verified,trust_tier")
       .eq("is_seller_visible", true);
     setSellers((data ?? []) as Seller[]);
   };
