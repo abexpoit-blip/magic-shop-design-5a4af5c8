@@ -25,7 +25,7 @@ const Auth = () => {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const fakeEmail = email || `${username.toLowerCase()}@blackpanther.shop`;
+        const fakeEmail = email || `${username.toLowerCase()}@cruzercc.shop`;
         const { error } = await supabase.auth.signUp({
           email: fakeEmail,
           password,
@@ -38,7 +38,7 @@ const Auth = () => {
         toast.success("Account created — entering the den…");
         nav("/");
       } else {
-        const loginEmail = username.includes("@") ? username : `${username.toLowerCase()}@blackpanther.shop`;
+        const loginEmail = username.includes("@") ? username : `${username.toLowerCase()}@cruzercc.shop`;
         const { error } = await supabase.auth.signInWithPassword({
           email: loginEmail,
           password,
@@ -61,23 +61,23 @@ const Auth = () => {
 
       <div className="hidden lg:flex flex-col justify-between w-[48%] p-14 relative z-10">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Black Panther" width={56} height={56}
+          <img src={logo} alt="cruzercc.shop" width={56} height={56}
             className="h-14 w-14 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-float" />
           <div>
-            <div className="font-display text-2xl font-black neon-text tracking-[0.18em]">BLACK PANTHER</div>
-            <div className="text-[10px] font-mono tracking-[0.4em] text-gold/80 mt-1">CMS · MARKETPLACE</div>
+            <div className="font-display text-2xl font-black neon-text tracking-[0.18em]">CRUZERCC.SHOP</div>
+            <div className="text-[10px] font-mono tracking-[0.4em] text-gold/80 mt-1">GIFT CARD · CC PROVIDER</div>
           </div>
         </div>
 
         <div>
           <h1 className="font-display text-6xl xl:text-7xl font-black leading-[1.05] mb-6">
-            <span className="block text-foreground">STALK.</span>
-            <span className="block neon-text">STRIKE.</span>
-            <span className="block gold-text">SUCCEED.</span>
+            <span className="block text-foreground">PREMIUM.</span>
+            <span className="block neon-text">VERIFIED.</span>
+            <span className="block gold-text">INSTANT.</span>
           </h1>
           <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
-            A premium content & commerce platform for elite traders.
-            Verified inventory, instant settlement, vibranium-grade security.
+            Your trusted Gift Card and CC provider. Verified inventory, instant
+            delivery, vault-grade security — every order, every time.
           </p>
 
           <div className="mt-10 grid grid-cols-3 gap-4 max-w-md">
@@ -88,17 +88,17 @@ const Auth = () => {
         </div>
 
         <div className="text-xs text-muted-foreground font-mono tracking-wider">
-          © {new Date().getFullYear()} BLACK PANTHER · ALL RIGHTS RESERVED
+          © {new Date().getFullYear()} CRUZERCC.SHOP · ALL RIGHTS RESERVED
         </div>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-6 relative z-10">
         <div className="w-full max-w-md animate-fade-up">
           <div className="lg:hidden flex flex-col items-center mb-6">
-            <img src={logo} alt="Black Panther logo" width={84} height={84}
+            <img src={logo} alt="cruzercc.shop logo" width={84} height={84}
               className="h-20 w-20 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-pulse-glow" />
-            <h1 className="font-display text-3xl font-black neon-text mt-4 tracking-[0.18em]">BLACK PANTHER</h1>
-            <p className="text-[10px] font-mono tracking-[0.4em] text-gold/80 mt-1">CMS · MARKETPLACE</p>
+            <h1 className="font-display text-3xl font-black neon-text mt-4 tracking-[0.18em]">CRUZERCC.SHOP</h1>
+            <p className="text-[10px] font-mono tracking-[0.4em] text-gold/80 mt-1">GIFT CARD · CC PROVIDER</p>
           </div>
 
           <div className="glass-neon rounded-2xl p-7 panther-claw">
@@ -118,7 +118,7 @@ const Auth = () => {
             </div>
 
             <p className="text-center text-xs text-muted-foreground mb-5">
-              Telegram: <span className="gold-text font-semibold">@blackpanther_cms</span>
+              Telegram: <span className="gold-text font-semibold">@cruzercc_shop</span>
             </p>
 
             <form onSubmit={submit} className="space-y-4">
@@ -160,13 +160,13 @@ const Auth = () => {
 
               <Button type="submit" disabled={loading}
                 className="w-full h-12 bg-gradient-primary hover:opacity-95 text-primary-foreground font-display tracking-[0.2em] shadow-neon text-sm">
-                {loading ? "PLEASE WAIT…" : mode === "login" ? "ENTER THE DEN" : "JOIN THE PRIDE"}
+                {loading ? "PLEASE WAIT…" : mode === "login" ? "SIGN IN" : "CREATE ACCOUNT"}
               </Button>
             </form>
           </div>
 
           <p className="text-center text-[10px] font-mono tracking-[0.3em] text-muted-foreground mt-6 lg:hidden">
-            © {new Date().getFullYear()} BLACK PANTHER
+            © {new Date().getFullYear()} CRUZERCC.SHOP
           </p>
         </div>
       </div>

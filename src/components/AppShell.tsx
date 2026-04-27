@@ -33,10 +33,10 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-64 shrink-0 border-r border-border/60 bg-sidebar/80 backdrop-blur-xl sticky top-0 h-screen">
         <div className="px-5 py-5 flex items-center gap-3 border-b border-border/60">
-          <img src={logo} alt="Scorpion Shop logo" className="h-9 w-9 drop-shadow-[0_0_12px_hsl(354_84%_52%/0.7)]" width={36} height={36} />
+          <img src={logo} alt="cruzercc.shop logo" className="h-9 w-9 drop-shadow-[0_0_12px_hsl(268_90%_60%/0.7)]" width={36} height={36} />
           <div>
-            <div className="font-display text-lg font-black neon-text leading-none">SCORPION</div>
-            <div className="text-[10px] tracking-[0.3em] text-muted-foreground mt-0.5">PREMIUM SHOP</div>
+            <div className="font-display text-lg font-black neon-text leading-none">CRUZERCC</div>
+            <div className="text-[10px] tracking-[0.3em] text-muted-foreground mt-0.5">GIFT CARD · CC</div>
           </div>
         </div>
 
@@ -75,7 +75,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
         <header className="sticky top-0 z-30 h-16 px-4 md:px-8 flex items-center justify-between border-b border-border/60 bg-background/70 backdrop-blur-xl">
           <div className="md:hidden flex items-center gap-2">
             <img src={logo} alt="" className="h-8 w-8 drop-shadow-[0_0_10px_hsl(268_90%_60%/0.6)]" width={32} height={32} />
-            <span className="font-display font-black neon-text tracking-widest text-sm">BLACK PANTHER</span>
+            <span className="font-display font-black neon-text tracking-widest text-sm">CRUZERCC.SHOP</span>
           </div>
           <div className="hidden md:block text-sm text-muted-foreground">
             {loc.pathname === "/" ? "Welcome back" : ""}
