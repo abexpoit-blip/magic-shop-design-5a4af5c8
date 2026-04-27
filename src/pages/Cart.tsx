@@ -78,7 +78,8 @@ const Cart = () => {
       const { data: full } = await (supabase as unknown as {
         rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>;
       }).rpc("get_purchased_card_full", { _card_ids: cardIds });
-      const fullMap = new Map((full ?? []).map((c) => [(c as { id: string }).id, c]));
+      const fullArr = (Array.isArray(full) ? full : []) as Array<Record<string, unknown> & { id: string }>;
+      const fullMap = new Map(fullArr.map((c) => [c.id, c]));
       await Promise.all(
         (insertedItems ?? []).map((row) => {
           const snap = (row as unknown as { card_snapshot: { id: string } }).card_snapshot;
