@@ -294,21 +294,98 @@ const Admin = () => {
           {apps.length === 0 && <p className="text-sm text-muted-foreground">No applications.</p>}
           <div className="space-y-2">
             {apps.map((a) => (
-              <div key={a.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-border/40 flex-wrap gap-2">
-                <div>
-                  <p className="font-medium">{a.shop_name} <span className="text-xs text-muted-foreground">· {a.contact}</span></p>
-                  <p className="text-xs text-muted-foreground">{a.description}</p>
-                  <p className="text-[10px] mt-1">status: <span className={a.status === "pending" ? "text-warning" : "text-muted-foreground"}>{a.status}</span></p>
-                </div>
-                {a.status === "pending" && (
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => decideApp(a, true)} className="bg-success text-white"><Check className="h-3 w-3 mr-1" />Approve</Button>
-                    <Button size="sm" variant="destructive" onClick={() => decideApp(a, false)}><X className="h-3 w-3 mr-1" />Reject</Button>
+              <div key={a.id} className="p-3 rounded-lg bg-secondary/40 border border-border/40">
+                <div className="flex items-start justify-between flex-wrap gap-2">
+                  <div className="space-y-0.5 text-sm">
+                    {a.telegram && <p>📱 Telegram: <span className="font-mono text-primary-glow">{a.telegram}</span></p>}
+                    {a.jabber && <p>💬 Jabber: <span className="font-mono text-primary-glow">{a.jabber}</span></p>}
+                    {a.expected_volume && <p className="text-xs text-muted-foreground">Volume: {a.expected_volume}</p>}
+                    {a.sample_bins && <p className="text-xs text-muted-foreground">BINs: <span className="font-mono">{a.sample_bins}</span></p>}
+                    {(a.shop_name || a.contact) && <p className="text-xs text-muted-foreground">{a.shop_name} · {a.contact}</p>}
+                    {(a.message || a.description) && <p className="text-xs text-muted-foreground italic mt-1">"{a.message || a.description}"</p>}
+                    <p className="text-[10px] mt-1">status: <span className={a.status === "pending" ? "text-warning" : a.status === "approved" ? "text-success" : "text-muted-foreground"}>{a.status}</span> · {new Date(a.created_at).toLocaleString()}</p>
                   </div>
-                )}
+                  {a.status === "pending" && (
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => decideApp(a, true)} className="bg-success text-white"><Check className="h-3 w-3 mr-1" />Approve</Button>
+                      <Button size="sm" variant="destructive" onClick={() => { const note = prompt("Reason for rejection (optional):") ?? undefined; decideApp(a, false, note); }}><X className="h-3 w-3 mr-1" />Reject</Button>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
+        </Section>
+
+        {/* SELLER CONTROLS — verified badge, public visibility, commission % */}
+        <Section icon={UserCheck} title="SELLER CONTROLS">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground">
+                <tr>
+                  <th className="p-2 text-left">Username</th>
+                  <th className="p-2">Verified</th>
+                  <th className="p-2">Visible on shop</th>
+                  <th className="p-2">Commission %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.filter((u) => u.is_seller).map((u) => (
+                  <tr key={u.id} className="border-t border-border/40">
+                    <td className="p-2 font-medium">{u.username}</td>
+                    <td className="p-2 text-center">
+                      <input type="checkbox" checked={!!u.is_seller_verified}
+                        onChange={(e) => updateSellerProfile(u.id, { is_seller_verified: e.target.checked })}
+                        className="accent-primary cursor-pointer" />
+                    </td>
+                    <td className="p-2 text-center">
+                      <input type="checkbox" checked={!!u.is_seller_visible}
+                        onChange={(e) => updateSellerProfile(u.id, { is_seller_visible: e.target.checked })}
+                        className="accent-primary cursor-pointer" />
+                    </td>
+                    <td className="p-2 text-center">
+                      <Input type="number" step="0.5" defaultValue={u.commission_percent ?? 20}
+                        onBlur={(e) => updateSellerProfile(u.id, { commission_percent: Number(e.target.value) })}
+                        className="bg-input/60 h-8 w-20 mx-auto text-center" />
+                    </td>
+                  </tr>
+                ))}
+                {users.filter((u) => u.is_seller).length === 0 && (
+                  <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">No approved sellers yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+
+        {/* REFUND QUEUE */}
+        <Section icon={Wallet} title={`REFUND REQUESTS (${refunds.filter((r) => r.status === "pending").length} pending)`}>
+          {refunds.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No refund requests.</p>
+          ) : (
+            <div className="space-y-2">
+              {refunds.map((r) => {
+                const buyer = users.find((u) => u.id === r.buyer_id);
+                const card = cards.find((c) => c.id === r.card_id);
+                return (
+                  <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-border/40 flex-wrap gap-2">
+                    <div className="text-sm">
+                      <p><span className="font-mono text-primary-glow">{r.kind.toUpperCase()}</span> · buyer: {buyer?.username ?? r.buyer_id.slice(0, 8)}</p>
+                      <p className="text-xs text-muted-foreground">Card: {card ? `${card.brand} ${card.bin}` : "n/a"} · ${card ? Number(card.price).toFixed(2) : "?"}</p>
+                      {r.reason && <p className="text-xs italic text-muted-foreground">"{r.reason}"</p>}
+                      <p className="text-[10px] mt-1">status: <span className={r.status === "pending" ? "text-warning" : r.status === "approved" ? "text-success" : "text-muted-foreground"}>{r.status}</span></p>
+                    </div>
+                    {r.status === "pending" && (
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => decideRefund(r, true)} className="bg-success text-white"><Check className="h-3 w-3 mr-1" />Approve & credit</Button>
+                        <Button size="sm" variant="destructive" onClick={() => decideRefund(r, false)}><X className="h-3 w-3 mr-1" />Reject</Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Section>
 
         {/* ADMIN UPLOAD CARDS */}
