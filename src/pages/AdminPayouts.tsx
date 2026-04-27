@@ -38,7 +38,7 @@ const AdminPayouts = () => {
   const load = async () => {
     const [u, p] = await Promise.all([
       supabase.from("profiles")
-        .select("id,username,balance,is_seller,is_seller_verified,is_seller_visible,commission_percent,seller_display_name")
+        .select("id,username,balance,is_seller,is_seller_verified,is_seller_visible,commission_percent,seller_display_name,trust_tier")
         .eq("is_seller", true).order("created_at", { ascending: false }).limit(500),
       supabase.from("payouts").select("*").order("created_at", { ascending: false }).limit(200),
     ]);
