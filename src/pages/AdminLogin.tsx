@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { BuildBadge } from "@/components/BuildBadge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -95,6 +96,7 @@ const AdminLogin = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
+      <BuildBadge />
       <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-destructive/15 blur-[140px] pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full bg-primary/15 blur-[140px] pointer-events-none" />
       <div className="absolute inset-0 grid-bg opacity-30 pointer-events-none" />

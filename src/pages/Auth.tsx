@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Captcha } from "@/components/Captcha";
+import { BuildBadge } from "@/components/BuildBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -82,6 +83,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-stretch relative overflow-hidden bg-background">
+      <BuildBadge />
       <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-primary/25 blur-[140px] pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-gold/15 blur-[140px] pointer-events-none" />
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
