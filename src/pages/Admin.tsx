@@ -37,24 +37,26 @@ const Admin = () => {
   const [bulk, setBulk] = useState("");
 
   const load = async () => {
-    const [a, u, t, o, d, p, c, da] = await Promise.all([
+    const [a, u, t, o, d, p, c, da, rf] = await Promise.all([
       supabase.from("seller_applications").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("id,username,balance,is_seller,banned").order("created_at", { ascending: false }).limit(100),
+      supabase.from("profiles").select("id,username,balance,is_seller,banned,is_seller_verified,is_seller_visible,commission_percent,seller_display_name").order("created_at", { ascending: false }).limit(100),
       supabase.from("tickets").select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("deposits").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("payouts").select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("cards").select("*").order("created_at", { ascending: false }).limit(200),
       supabase.from("deposit_addresses").select("*"),
+      (supabase.from("refund_requests" as never) as any).select("*").order("created_at", { ascending: false }).limit(50),
     ]);
-    setApps((a.data ?? []) as Application[]);
-    setUsers((u.data ?? []) as Profile[]);
+    setApps(((a as any).data ?? []) as Application[]);
+    setUsers(((u as any).data ?? []) as Profile[]);
     setTickets((t.data ?? []) as TicketRow[]);
     setOrders((o.data ?? []) as Order[]);
     setDeposits((d.data ?? []) as Deposit[]);
     setPayouts((p.data ?? []) as Payout[]);
     setCards((c.data ?? []) as Card[]);
     setAddresses((da.data ?? []) as DepositAddress[]);
+    setRefunds(((rf as any).data ?? []) as RefundRequest[]);
   };
   useEffect(() => { load(); }, []);
 
