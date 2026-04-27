@@ -24,6 +24,31 @@ export function isTransientAuthServiceError(err: unknown): boolean {
   );
 }
 
+/**
+ * Retry an auth call up to `attempts` times when the backend returns a
+ * transient 5xx / EOF / "database error" — these are pool drops on the
+ * managed auth service, not credential problems. Uses linear backoff.
+ */
+export async function withAuthRetry<T>(
+  fn: () => Promise<T>,
+  opts: { attempts?: number; delayMs?: number; onRetry?: (attempt: number) => void } = {}
+): Promise<T> {
+  const attempts = opts.attempts ?? 3;
+  const delayMs = opts.delayMs ?? 800;
+  let lastErr: unknown = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientAuthServiceError(err) || i === attempts - 1) throw err;
+      opts.onRetry?.(i + 1);
+      await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 export function describeAuthError(err: unknown): FriendlyAuthError {
   const raw = err instanceof Error ? err.message : typeof err === "string" ? err : "";
   const msg = raw.toLowerCase();
