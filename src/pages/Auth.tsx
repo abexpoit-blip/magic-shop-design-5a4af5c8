@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Captcha } from "@/components/Captcha";
 import { BuildBadge } from "@/components/BuildBadge";
+import { ApiHealthBadge } from "@/components/ApiHealthBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -123,6 +124,9 @@ const Auth = () => {
 
       <div className="flex-1 flex items-center justify-center p-6 relative z-10">
         <div className="w-full max-w-md animate-fade-up">
+          <div className="flex justify-center mb-4">
+            <ApiHealthBadge />
+          </div>
           <div className="lg:hidden flex flex-col items-center mb-6">
             <img src={logo} alt="cruzercc.shop logo" width={84} height={84}
               className="h-20 w-20 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-pulse-glow" />
