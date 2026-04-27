@@ -354,9 +354,33 @@ const SellerPanel = () => {
         </section>
 
         <div className="glass rounded-2xl overflow-hidden">
+          {selected.size > 0 && (
+            <div className="p-3 bg-primary/10 border-b border-primary/40 flex items-center gap-2 flex-wrap">
+              <span className="font-display text-sm text-primary-glow">{selected.size} selected</span>
+              <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border/40">
+                <DollarSign className="h-3.5 w-3.5 text-primary-glow" />
+                <Input
+                  value={bulkPrice}
+                  onChange={(e) => setBulkPrice(e.target.value)}
+                  type="number"
+                  step="0.01"
+                  placeholder="New price"
+                  className="bg-input/60 h-8 w-28 text-xs"
+                />
+                <Button size="sm" onClick={bulkUpdatePrice} className="bg-gradient-primary">Set price</Button>
+              </div>
+              <Button size="sm" variant="destructive" onClick={bulkDelete}>
+                <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+              </Button>
+              <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear</button>
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
+                <th className="p-3 w-10 text-center">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-primary cursor-pointer" />
+                </th>
                 <th className="p-3 text-left">Brand</th>
                 <th className="p-3 text-left">BIN</th>
                 <th className="p-3 text-left">Country</th>
@@ -367,11 +391,38 @@ const SellerPanel = () => {
             </thead>
             <tbody>
               {cards.map((c) => (
-                <tr key={c.id} className="border-t border-border/40 hover:bg-secondary/30">
+                <tr key={c.id} className={`border-t border-border/40 ${selected.has(c.id) ? "bg-primary/5" : ""} hover:bg-secondary/30`}>
+                  <td className="p-3 text-center">
+                    <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="accent-primary cursor-pointer" />
+                  </td>
                   <td className="p-3"><BrandLogo brand={c.brand} /></td>
                   <td className="p-3 font-mono">{c.bin}</td>
                   <td className="p-3">{countryFlag(c.country)} {c.country}</td>
-                  <td className="p-3 text-right font-display text-primary-glow">${Number(c.price).toFixed(2)}</td>
+                  <td className="p-3 text-right font-display text-primary-glow">
+                    {editingId === c.id ? (
+                      <div className="flex items-center justify-end gap-1">
+                        <Input
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(e.target.value)}
+                          type="number"
+                          step="0.01"
+                          className="bg-input/60 h-7 w-20 text-xs text-right"
+                          autoFocus
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(c.id); if (e.key === "Escape") setEditingId(null); }}
+                        />
+                        <button onClick={() => saveEdit(c.id)} className="text-success hover:text-success/80"><Check className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setEditingId(c.id); setEditPrice(String(c.price)); }}
+                        className="hover:underline"
+                        title="Click to edit price"
+                      >
+                        ${Number(c.price).toFixed(2)}
+                      </button>
+                    )}
+                  </td>
                   <td className="p-3">
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       c.status === "available" ? "bg-success/20 text-success" :
@@ -386,7 +437,7 @@ const SellerPanel = () => {
                 </tr>
               ))}
               {cards.length === 0 && (
-                <tr><td colSpan={6} className="p-12 text-center text-muted-foreground">No cards listed yet.</td></tr>
+                <tr><td colSpan={7} className="p-12 text-center text-muted-foreground">No cards listed yet.</td></tr>
               )}
             </tbody>
           </table>
