@@ -111,6 +111,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setRoles(userRoles);
       loadedForUid.current = uid;
 
+      // Anti-auto-switch: if the persisted activeRole is "seller" but this
+      // account doesn't actually carry the seller/admin role, fall back to
+      // "buyer" — and conversely, if the user IS a seller but no choice was
+      // ever stored, pin them to "seller" so a stale buyer default can't
+      // silently downgrade an active seller session.
+      const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
+      const stored = getActiveRole(uid);
+      if (stored === "seller" && !isSeller) {
+        setActiveRoleState("buyer");
+        clearActiveRole();
+      } else if (!stored && isSeller) {
+        setActiveRoleState("seller");
+        persistActiveRole(uid, "seller");
+      }
+
       if (prof && email && !prof.banned) {
         try {
           const { saveAccount } = await import("@/lib/accountSwitcher");
