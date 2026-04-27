@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { COUNTRIES, countryFlag } from "@/lib/brands";
 import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, BadgeCheck, Store } from "lucide-react";
+import { TrustBadge } from "@/components/TrustBadge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -196,9 +197,9 @@ const Shop = () => {
             <div className="flex items-center gap-2 text-sm">
               <Store className="h-4 w-4 text-primary-glow" />
               <span className="text-muted-foreground">Filtering by seller:</span>
-              <Link to={`/seller/${seller}`} className="font-display text-primary-glow hover:underline inline-flex items-center gap-1">
+              <Link to={`/seller/${seller}`} className="font-display text-primary-glow hover:underline inline-flex items-center gap-1.5">
                 {sellerMap.get(seller)!.seller_display_name || sellerMap.get(seller)!.display_name || sellerMap.get(seller)!.username}
-                {sellerMap.get(seller)!.is_seller_verified && <BadgeCheck className="h-3.5 w-3.5" />}
+                <TrustBadge tier={sellerMap.get(seller)!.trust_tier} size="xs" />
               </Link>
             </div>
             <button onClick={() => setSeller("all")} className="text-xs text-muted-foreground hover:text-destructive inline-flex items-center gap-1">
