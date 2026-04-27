@@ -158,10 +158,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!sess?.user) {
         setProfile(null);
         setRoles([]);
+        setActiveRoleState("buyer");
+        clearActiveRole();
         loadedForUid.current = null;
         setLoading(false);
         return;
       }
+
+      // Restore the user's chosen mode (buyer/seller) from localStorage.
+      const stored = getActiveRole(sess.user.id);
+      if (stored) setActiveRoleState(stored);
 
       // Skip refetch on token refresh for the same user — the JWT changed
       // but profile/roles did not.
@@ -191,11 +197,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   const signOut = async () => {
+    clearActiveRole();
     await supabase.auth.signOut();
   };
 
+  const setActiveRole = (role: ActiveRole) => {
+    if (user) persistActiveRole(user.id, role);
+    setActiveRoleState(role);
+  };
+
   return (
-    <Ctx.Provider value={{ user, session, profile, roles, loading, profileError, refresh, signOut }}>
+    <Ctx.Provider value={{ user, session, profile, roles, activeRole, setActiveRole, loading, profileError, refresh, signOut }}>
       {children}
     </Ctx.Provider>
   );
