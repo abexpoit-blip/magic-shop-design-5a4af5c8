@@ -474,6 +474,68 @@
   .nav-drawer-item-danger:active { background-color: hsl(var(--destructive) / 0.14); }
   .nav-drawer-icon { height: var(--nav-drawer-item-icon); width: var(--nav-drawer-item-icon); flex-shrink: 0; }
 
+  /* ============ FOCUS-VISIBLE RINGS — premium keyboard nav ============ */
+  .nav-pill:focus-visible,
+  .nav-icon-btn:focus-visible,
+  .nav-balance:focus-visible,
+  .nav-profile:focus-visible,
+  .nav-drawer-item:focus-visible,
+  .nav-brand:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px hsl(268 90% 62% / 0.85),
+      0 0 22px hsl(268 90% 62% / 0.55);
+    color: hsl(45 20% 98%);
+    z-index: 2;
+  }
+  .nav-icon-btn-danger:focus-visible {
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px hsl(var(--destructive) / 0.85),
+      0 0 22px hsl(var(--destructive) / 0.5);
+  }
+  .nav-drawer-item-danger:focus-visible {
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 3px hsl(var(--destructive) / 0.8);
+  }
+  .nav-pill[data-active="true"]:focus-visible {
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px hsl(268 90% 62% / 0.9),
+      inset 0 0 0 1px hsl(268 90% 62% / 0.5),
+      0 8px 24px -10px hsl(268 90% 62% / 0.6);
+  }
+
+  /* ============ SKELETON PLACEHOLDERS — prevent navbar jump ============ */
+  .nav-skeleton {
+    display: inline-block;
+    background: linear-gradient(
+      90deg,
+      hsl(240 10% 14% / 0.6) 0%,
+      hsl(240 10% 22% / 0.85) 50%,
+      hsl(240 10% 14% / 0.6) 100%
+    );
+    background-size: 200% 100%;
+    border-radius: 6px;
+    animation: nav-skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-skeleton { animation: none; }
+  }
+  @keyframes nav-skeleton-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .nav-skeleton-balance {
+    width: 56px;
+    height: calc(var(--nav-balance-value-fs) * 1.05);
+    border-radius: 999px;
+  }
+  .nav-skeleton-name { width: 76px; height: calc(var(--nav-profile-name-fs) * 1.1); margin-bottom: 4px; }
+  .nav-skeleton-role { width: 48px; height: calc(var(--nav-profile-role-fs) * 1.1); }
+
   /* ============ REDUCED MOTION — kill non-essential motion ============ */
   @media (prefers-reduced-motion: reduce) {
     .nav-inner, .nav-brand-logo, .nav-brand-name, .nav-pills,
