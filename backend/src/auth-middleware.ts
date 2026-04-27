@@ -12,8 +12,11 @@ declare global {
 }
 
 export function signToken(payload: { sub: string; email: string; username: string }) {
-  const secret = process.env.JWT_SECRET!;
-  return jwt.sign(payload, secret, { expiresIn: process.env.JWT_EXPIRES_IN ?? "7d" });
+  const secret: jwt.Secret = process.env.JWT_SECRET!;
+  const options: jwt.SignOptions = {
+    expiresIn: (process.env.JWT_EXPIRES_IN ?? "7d") as jwt.SignOptions["expiresIn"],
+  };
+  return jwt.sign(payload, secret, options);
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {

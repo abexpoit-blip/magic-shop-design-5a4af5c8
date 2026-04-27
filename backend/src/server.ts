@@ -47,7 +47,7 @@ app.use("/api/announcements", announcementsRouter);
 app.get("/api/docs.json", (_req, res) => res.json(openapiSpec));
 app.use(
   "/api/docs",
-  (req, _res, next) => {
+  (req: express.Request, _res: express.Response, next: express.NextFunction) => {
     // strip the global helmet CSP for this subtree
     req.res?.removeHeader("Content-Security-Policy");
     next();
