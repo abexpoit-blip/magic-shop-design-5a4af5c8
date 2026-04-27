@@ -289,7 +289,7 @@ const TrustItem = ({ icon: Icon, label }: { icon: React.ComponentType<{ classNam
 
 const FeaturePill = ({ icon: Icon, label }: { icon: React.ComponentType<{ className?: string }>; label: string }) => (
   <div className="group relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-border/60 bg-secondary/20 px-4 py-4 backdrop-blur-xl transition-all hover:border-primary/50 hover:bg-secondary/40">
-    <Icon className="h-5 w-5 text-primary-glow transition-transform group-hover:scale-110" strokeWidth={1.75} />
+    <Icon className="h-5 w-5 text-primary-glow transition-transform group-hover:scale-110" />
     <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground/90">{label}</span>
   </div>
 );
