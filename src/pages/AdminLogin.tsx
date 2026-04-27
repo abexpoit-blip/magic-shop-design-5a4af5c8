@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BuildBadge } from "@/components/BuildBadge";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,13 @@ const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const AdminLogin = () => {
   const nav = useNavigate();
+  const loc = useLocation();
+  const fromPath = (loc.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+  // Only honor admin-area redirects; ignore anything outside /admin to avoid
+  // sending an admin to a public page after their secure login.
+  const safeAdminFrom = fromPath && fromPath.startsWith("/admin") && fromPath !== "/admin-login"
+    ? fromPath
+    : null;
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -74,7 +81,7 @@ const AdminLogin = () => {
       }
 
       toast.success("Admin console unlocked");
-      nav("/admin");
+      nav(safeAdminFrom ?? "/admin", { replace: true });
     } catch (err) {
       await supabase.auth.signOut().catch(() => {});
       const message = err instanceof Error ? err.message : "Login failed";
