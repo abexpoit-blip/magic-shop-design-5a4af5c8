@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Captcha } from "@/components/Captcha";
 import { BuildBadge } from "@/components/BuildBadge";
@@ -20,6 +20,13 @@ type Role = "buyer" | "seller";
 
 const Auth = () => {
   const nav = useNavigate();
+  const loc = useLocation();
+  // Where to send the user after a successful sign-in. Falls back to /shop so
+  // they never get bounced back to /auth.
+  const fromPath = (loc.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+  const safeFrom = fromPath && !fromPath.startsWith("/auth") && !fromPath.startsWith("/admin-login")
+    ? fromPath
+    : null;
   const [role, setRole] = useState<Role>("buyer");
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [username, setUsername] = useState("");
@@ -74,7 +81,7 @@ const Auth = () => {
         });
         if (error) throw error;
         toast.success(role === "seller" ? "Account created — apply to become a seller next" : "Account created — entering the den…");
-        nav(role === "seller" ? "/seller/apply" : "/");
+        nav(role === "seller" ? "/seller/apply" : (safeFrom ?? "/shop"), { replace: true });
       } else {
         const loginEmail = username.includes("@") ? username : `${username.toLowerCase()}@cruzercc.shop`;
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
@@ -114,12 +121,12 @@ const Auth = () => {
           setActiveRole(uid, isSeller ? "seller" : "buyer");
 
           toast.success("Welcome back, hunter");
-          nav(isSeller ? "/seller" : "/");
+          nav(isSeller ? "/seller" : (safeFrom ?? "/shop"), { replace: true });
           return;
         }
 
         toast.success("Welcome back, hunter");
-        nav("/");
+        nav(safeFrom ?? "/shop", { replace: true });
       }
     } catch (err: unknown) {
       if (mode === "login" && isTransientAuthServiceError(err)) {

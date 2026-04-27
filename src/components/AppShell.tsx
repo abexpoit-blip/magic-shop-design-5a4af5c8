@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, Settings, ShieldCheck, PackagePlus, LogOut, Menu, X, Search, Bell, Maximize2, Minimize2, AlertTriangle, RefreshCw, Repeat } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/panther-logo.png";
@@ -332,8 +332,9 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, profile, loading, signOut } = useAuth();
   const nav = useNavigate();
+  const loc = useLocation();
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
-  if (!user) { nav("/auth"); return null; }
+  if (!user) return <Navigate to="/auth" replace state={{ from: loc }} />;
   if (profile?.banned) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center">
@@ -350,6 +351,7 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
 export const AdminRoute = ({ children }: { children: ReactNode }) => {
   const { roles, loading, user } = useAuth();
+  const loc = useLocation();
   const [verifiedAdmin, setVerifiedAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(false);
 
@@ -392,10 +394,14 @@ export const AdminRoute = ({ children }: { children: ReactNode }) => {
   }, [roles, user]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
-  if (user && !roles.includes("admin") && checkingAdmin) {
+  // Not signed in → bounce straight to admin login, remembering where they tried to go.
+  if (!user) return <Navigate to="/admin-login" replace state={{ from: loc }} />;
+  if (!roles.includes("admin") && checkingAdmin) {
     return <div className="min-h-screen flex items-center justify-center">Checking admin access…</div>;
   }
-  if (!user || (!roles.includes("admin") && !verifiedAdmin))
-    return <div className="p-8"><Button onClick={() => history.back()}>Go back</Button><p className="mt-4">Admin access required.</p></div>;
+  // Signed in but not an admin → friendly redirect to /admin-login (not a dead-end page).
+  if (!roles.includes("admin") && !verifiedAdmin) {
+    return <Navigate to="/admin-login" replace state={{ from: loc, reason: "not-admin" }} />;
+  }
   return <>{children}</>;
 };
