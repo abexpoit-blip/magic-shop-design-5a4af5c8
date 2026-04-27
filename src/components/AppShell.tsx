@@ -195,7 +195,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
                   <>
                     <div className="nav-profile-name font-bold text-foreground -mb-0.5">{profile?.username}</div>
                     <div className="nav-profile-role text-primary-glow/90 uppercase tracking-[0.22em] font-semibold">
-                      {roles.includes("admin") ? "Admin" : roles.includes("seller") ? "Seller" : "Member"}
+                      {roleLabel}
                     </div>
                   </>
                 )}
