@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2 } from "lucide-react";
+import { describeAuthError } from "@/lib/authErrors";
 
 const ADMIN_EMAIL = "samexpoit@gmail.com";
 const ADMIN_USERNAME = "admin@cruzercc";
