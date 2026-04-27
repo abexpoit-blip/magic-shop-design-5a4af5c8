@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import AdminLogin from "./pages/AdminLogin";
 import ResetPassword from "./pages/ResetPassword";
 import AdminSettings from "./pages/AdminSettings";
+import AdminSiteSettings from "./pages/AdminSiteSettings";
 import Shop from "./pages/Shop";
 import Cart from "./pages/Cart";
 import Orders from "./pages/Orders";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin/reset-password" element={<ResetPassword />} />
             <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+            <Route path="/admin/site" element={<AdminRoute><AdminSiteSettings /></AdminRoute>} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute><Shop /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
