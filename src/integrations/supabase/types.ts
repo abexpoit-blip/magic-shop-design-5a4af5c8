@@ -130,6 +130,72 @@ export type Database = {
           },
         ]
       }
+      deposit_addresses: {
+        Row: {
+          address: string
+          id: string
+          method: string
+          network: string | null
+          qr_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          id?: string
+          method: string
+          network?: string | null
+          qr_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          id?: string
+          method?: string
+          network?: string | null
+          qr_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      deposits: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          method: string
+          note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          txid: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          method: string
+          note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          txid?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string
+          note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          txid?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       news_updates: {
         Row: {
           count: number
@@ -204,10 +270,47 @@ export type Database = {
         }
         Relationships: []
       }
+      payouts: {
+        Row: {
+          address: string
+          amount: number
+          created_at: string
+          id: string
+          method: string
+          note: string | null
+          paid_at: string | null
+          seller_id: string
+          status: string
+        }
+        Insert: {
+          address: string
+          amount: number
+          created_at?: string
+          id?: string
+          method: string
+          note?: string | null
+          paid_at?: string | null
+          seller_id: string
+          status?: string
+        }
+        Update: {
+          address?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string
+          note?: string | null
+          paid_at?: string | null
+          seller_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           balance: number
+          banned: boolean
           created_at: string
           display_name: string | null
           id: string
@@ -219,6 +322,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           balance?: number
+          banned?: boolean
           created_at?: string
           display_name?: string | null
           id: string
@@ -230,6 +334,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           balance?: number
+          banned?: boolean
           created_at?: string
           display_name?: string | null
           id?: string
