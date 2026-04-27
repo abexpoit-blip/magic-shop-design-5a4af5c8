@@ -88,9 +88,9 @@ const Index = () => {
             <h2 className="font-display font-bold tracking-wider mb-4">CONTACT</h2>
             <p className="text-sm text-muted-foreground mb-4">Beware of fake support — only contact us through the channels below.</p>
             <div className="space-y-2">
-              <ContactRow label="Telegram channel" value="@scorpionccstore01" />
-              <ContactRow label="Sales" value="@Scorpion_ccsale" />
-              <ContactRow label="Support" value="@scorpioncc_shop_002" />
+              <ContactRow label="Telegram channel" value="@blackpanther_cms" />
+              <ContactRow label="Sales" value="@panther_sales" />
+              <ContactRow label="Support" value="@panther_support" />
             </div>
             <div className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/30 text-sm text-primary-glow flex items-center gap-2">
               <Send className="h-4 w-4" /> Sellers welcome — apply via Seller Panel after registration.
