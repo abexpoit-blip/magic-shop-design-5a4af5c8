@@ -50,7 +50,10 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   }, [density]);
 
   const items = [...baseNav];
-  if (roles.includes("seller") || roles.includes("admin")) {
+  // Only surface the Seller panel link when the user is currently in seller mode
+  // (or is an admin). Buyers in buyer-mode shouldn't see the seller nav even if
+  // their account also holds the seller role.
+  if ((effectiveRole === "seller" && canSell) || roles.includes("admin")) {
     items.splice(5, 0, { to: "/seller", label: "Seller", icon: PackagePlus });
   }
   if (roles.includes("admin")) {
