@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, Settings, ShieldCheck, PackagePlus, LogOut, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import logo from "@/assets/scorpion-logo.png";
+import logo from "@/assets/panther-logo.png";
 import { Button } from "@/components/ui/button";
 
 const baseNav = [
@@ -74,8 +74,8 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="sticky top-0 z-30 h-16 px-4 md:px-8 flex items-center justify-between border-b border-border/60 bg-background/70 backdrop-blur-xl">
           <div className="md:hidden flex items-center gap-2">
-            <img src={logo} alt="" className="h-7 w-7" width={28} height={28} />
-            <span className="font-display font-bold neon-text">SCORPION</span>
+            <img src={logo} alt="" className="h-8 w-8 drop-shadow-[0_0_10px_hsl(268_90%_60%/0.6)]" width={32} height={32} />
+            <span className="font-display font-black neon-text tracking-widest text-sm">BLACK PANTHER</span>
           </div>
           <div className="hidden md:block text-sm text-muted-foreground">
             {loc.pathname === "/" ? "Welcome back" : ""}
