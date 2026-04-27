@@ -1,1 +1,4 @@
 project_id = "oprrdzgrmysotzlwnzeu"
+
+[functions.resolve-login-email]
+verify_jwt = false

@@ -83,7 +83,27 @@ const Auth = () => {
         toast.success(role === "seller" ? "Account created — apply to become a seller next" : "Account created — entering the den…");
         nav(role === "seller" ? "/seller/apply" : (safeFrom ?? "/shop"), { replace: true });
       } else {
-        const loginEmail = username.includes("@") ? username : `${username.toLowerCase()}@cruzercc.shop`;
+        // Resolve username -> real auth email via edge function. This handles
+        // legacy accounts whose auth email doesn't match the @cruzercc.shop
+        // pattern (e.g. users who signed up with a real personal email).
+        let loginEmail = username.trim();
+        const looksLikeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail);
+        if (!looksLikeEmail) {
+          try {
+            const { data: resolved, error: resolveErr } = await supabase.functions.invoke(
+              "resolve-login-email",
+              { body: { identifier: loginEmail } },
+            );
+            if (!resolveErr && resolved?.email) {
+              loginEmail = resolved.email as string;
+            } else {
+              // Fallback to legacy convention so existing users still work.
+              loginEmail = `${loginEmail.toLowerCase()}@cruzercc.shop`;
+            }
+          } catch {
+            loginEmail = `${loginEmail.toLowerCase()}@cruzercc.shop`;
+          }
+        }
         const { data: signInData, error } = await withAuthRetry(
           () => supabase.auth.signInWithPassword({ email: loginEmail, password }),
           { onRetry: (n) => setStatusBanner({ kind: "info", title: `Auth service hiccup — retrying (${n}/2)…`, hint: "Hold on, this happens when the backend pool blips." }) }
