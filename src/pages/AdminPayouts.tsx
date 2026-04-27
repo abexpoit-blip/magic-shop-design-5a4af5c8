@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Wallet, Check, X, BadgeCheck, Eye, EyeOff, UserCheck, Search, ArrowUpDown, RotateCcw } from "lucide-react";
+import { TrustBadge, TRUST_TIERS, type TrustTier } from "@/components/TrustBadge";
 import { toast } from "sonner";
 
 interface Profile {
@@ -413,6 +414,7 @@ const AdminPayouts = () => {
                     onChange={toggleAll} className="accent-primary cursor-pointer" />
                 </th>
                 <th className="p-3 text-left">Seller</th>
+                <th className="p-3 text-center">Trust tier</th>
                 <th className="p-3 text-center">Verified</th>
                 <th className="p-3 text-center">Visible</th>
                 <th className="p-3 text-center">Commission %</th>
