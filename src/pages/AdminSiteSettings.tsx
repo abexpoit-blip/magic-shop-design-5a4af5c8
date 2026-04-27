@@ -28,10 +28,10 @@ const AdminSiteSettings = () => {
   const save = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("site_settings" as never)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .update({ ...s, updated_at: new Date().toISOString() } as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tbl = supabase.from("site_settings" as never) as any;
+      const { error } = await tbl
+        .update({ ...s, updated_at: new Date().toISOString() })
         .eq("id", 1);
       if (error) throw error;
       await refreshSiteSettings();
