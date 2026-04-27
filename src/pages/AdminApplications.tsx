@@ -161,6 +161,15 @@ const AdminApplications = () => {
                   </div>
                 )}
               </div>
+
+              <NotesPanel
+                appId={a.id}
+                notes={notes.get(a.id) ?? []}
+                authors={authors}
+                currentUserId={user?.id}
+                onAdd={(t) => addNote(a.id, t)}
+                onDelete={(noteId) => deleteNote(a.id, noteId)}
+              />
             </div>
           ))}
         </div>
