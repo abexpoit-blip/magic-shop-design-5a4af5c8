@@ -190,6 +190,22 @@ const Shop = () => {
           </div>
         </div>
 
+        {seller !== "all" && sellerMap.get(seller) && (
+          <div className="glass-neon rounded-xl p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <Store className="h-4 w-4 text-primary-glow" />
+              <span className="text-muted-foreground">Filtering by seller:</span>
+              <Link to={`/seller/${seller}`} className="font-display text-primary-glow hover:underline inline-flex items-center gap-1">
+                {sellerMap.get(seller)!.seller_display_name || sellerMap.get(seller)!.display_name || sellerMap.get(seller)!.username}
+                {sellerMap.get(seller)!.is_seller_verified && <BadgeCheck className="h-3.5 w-3.5" />}
+              </Link>
+            </div>
+            <button onClick={() => setSeller("all")} className="text-xs text-muted-foreground hover:text-destructive inline-flex items-center gap-1">
+              <X className="h-3 w-3" />Clear
+            </button>
+          </div>
+        )}
+
         {/* Results table */}
         <div className="glass rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
@@ -230,7 +246,15 @@ const Shop = () => {
                       <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} className="accent-primary cursor-pointer" />
                     </td>
                     <td className="p-3 font-mono text-foreground whitespace-nowrap">
-                      {c.bin}<span className="text-muted-foreground">********</span>
+                      <div>{c.bin}<span className="text-muted-foreground">********</span></div>
+                      {sellerMap.get(c.seller_id) && (
+                        <Link to={`/seller/${c.seller_id}`} onClick={(e) => e.stopPropagation()}
+                          className="mt-1 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary-glow hover:bg-primary/20 transition">
+                          <Store className="h-2.5 w-2.5" />
+                          {sellerMap.get(c.seller_id)!.seller_display_name || sellerMap.get(c.seller_id)!.display_name || sellerMap.get(c.seller_id)!.username}
+                          {sellerMap.get(c.seller_id)!.is_seller_verified && <BadgeCheck className="h-2.5 w-2.5" />}
+                        </Link>
+                      )}
                     </td>
                     <td className="p-3 text-center text-muted-foreground">{c.refundable ? "YES" : "NO"}</td>
                     <td className="p-3 text-center font-mono">{c.exp_month ?? "—"}</td>
