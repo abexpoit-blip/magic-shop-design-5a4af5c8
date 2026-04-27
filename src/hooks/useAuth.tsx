@@ -70,17 +70,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     setProfileError(null);
 
-    const fetchAll = Promise.all([
-      supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", uid),
-    ]);
-
-    const run = (async () => {
-      const [{ data: p, error: profileFetchError }, { data: r, error: rolesFetchError }] = await withTimeout(
-        fetchAll,
+    // Try the fetch up to 4 times with exponential backoff so transient
+    // database hiccups (recovery mode, brief connection drops on the hosted
+    // backend) don't permanently flip the navbar into the red "Tap to retry"
+    // state. Only retry on transient/timeout errors.
+    const fetchOnce = () =>
+      withTimeout(
+        Promise.all([
+          supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
+          supabase.from("user_roles").select("role").eq("user_id", uid),
+        ]),
         PROFILE_LOAD_TIMEOUT_MS,
         "profile-load-timeout",
       );
+
+    const attemptWithRetry = async () => {
+      const delays = [400, 1000, 2500];
+      let lastErr: unknown;
+      for (let attempt = 0; attempt <= delays.length; attempt++) {
+        try {
+          return await fetchOnce();
+        } catch (err) {
+          lastErr = err;
+          const transient =
+            (err instanceof Error && err.message === "profile-load-timeout") ||
+            isTransientAuthServiceError(err);
+          if (!transient || attempt === delays.length) throw err;
+          await new Promise((r) => setTimeout(r, delays[attempt]));
+        }
+      }
+      throw lastErr;
+    };
+
+    const run = (async () => {
+      const [{ data: p, error: profileFetchError }, { data: r, error: rolesFetchError }] = await attemptWithRetry();
 
       if (profileFetchError) {
         throw profileFetchError;
