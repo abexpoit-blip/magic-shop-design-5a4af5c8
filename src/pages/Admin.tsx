@@ -473,6 +473,8 @@ const TicketAdminRow = ({ ticket, onReply }: { ticket: TicketRow; onReply: (id: 
 const SellerControls = ({ users, onUpdate }: { users: Profile[]; onUpdate: (id: string, patch: Record<string, unknown>) => void }) => {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "visible" | "hidden" | "verified">("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   const sellers = users.filter((u) => u.is_seller);
   const filtered = sellers.filter((u) => {
@@ -485,6 +487,32 @@ const SellerControls = ({ users, onUpdate }: { users: Profile[]; onUpdate: (id: 
 
   const visibleCount = sellers.filter((u) => u.is_seller_visible).length;
   const verifiedCount = sellers.filter((u) => u.is_seller_verified).length;
+
+  const toggleOne = (id: string) =>
+    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const allFilteredSelected = filtered.length > 0 && filtered.every((u) => selected.has(u.id));
+  const someFilteredSelected = filtered.some((u) => selected.has(u.id));
+  const toggleAll = () =>
+    setSelected((s) => {
+      const n = new Set(s);
+      if (allFilteredSelected) filtered.forEach((u) => n.delete(u.id));
+      else filtered.forEach((u) => n.add(u.id));
+      return n;
+    });
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkApply = async (patch: Record<string, unknown>, label: string) => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setBulkRunning(true);
+    const { error } = await (supabase.from("profiles") as any).update(patch).in("id", ids);
+    setBulkRunning(false);
+    if (error) return toast.error(error.message);
+    toast.success(`${label} applied to ${ids.length} seller${ids.length === 1 ? "" : "s"}`);
+    clearSelection();
+    // trigger parent reload via any update call to refresh list
+    onUpdate(ids[0], patch);
+  };
 
   return (
     <section className="glass rounded-2xl p-6">
@@ -513,10 +541,45 @@ const SellerControls = ({ users, onUpdate }: { users: Profile[]; onUpdate: (id: 
         </div>
       </div>
 
+      {selected.size > 0 && (
+        <div className="mb-3 p-3 rounded-xl bg-primary/10 border border-primary/40 flex items-center gap-2 flex-wrap">
+          <span className="font-display text-sm text-primary-glow">{selected.size} selected</span>
+          <span className="text-xs text-muted-foreground">·</span>
+          <Button size="sm" disabled={bulkRunning} onClick={() => bulkApply({ is_seller_visible: true }, "Make visible")}
+            className="bg-success/20 text-success border border-success/40 hover:bg-success/30">
+            <Eye className="h-3.5 w-3.5 mr-1" />Make visible
+          </Button>
+          <Button size="sm" disabled={bulkRunning} onClick={() => bulkApply({ is_seller_visible: false }, "Hide")}
+            variant="outline" className="border-border/60">
+            <EyeOff className="h-3.5 w-3.5 mr-1" />Hide
+          </Button>
+          <span className="text-xs text-muted-foreground">·</span>
+          <Button size="sm" disabled={bulkRunning} onClick={() => bulkApply({ is_seller_verified: true }, "Verify")}
+            className="bg-primary/20 text-primary-glow border border-primary/40 hover:bg-primary/30">
+            <BadgeCheck className="h-3.5 w-3.5 mr-1" />Verify
+          </Button>
+          <Button size="sm" disabled={bulkRunning} onClick={() => bulkApply({ is_seller_verified: false }, "Unverify")}
+            variant="outline" className="border-border/60">
+            <X className="h-3.5 w-3.5 mr-1" />Unverify
+          </Button>
+          <button onClick={clearSelection} className="ml-auto text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+            <X className="h-3 w-3" />Clear selection
+          </button>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-xs uppercase tracking-wider text-muted-foreground bg-secondary/40">
             <tr>
+              <th className="p-3 w-10 text-center">
+                <input type="checkbox"
+                  checked={allFilteredSelected}
+                  ref={(el) => { if (el) el.indeterminate = !allFilteredSelected && someFilteredSelected; }}
+                  onChange={toggleAll}
+                  className="accent-primary cursor-pointer"
+                  aria-label="Select all" />
+              </th>
               <th className="p-3 text-left">Seller</th>
               <th className="p-3 text-center">Verified</th>
               <th className="p-3 text-center">Visible on shop</th>
@@ -526,7 +589,11 @@ const SellerControls = ({ users, onUpdate }: { users: Profile[]; onUpdate: (id: 
           </thead>
           <tbody>
             {filtered.map((u) => (
-              <tr key={u.id} className="border-t border-border/40 hover:bg-secondary/20">
+              <tr key={u.id} className={`border-t border-border/40 hover:bg-secondary/20 ${selected.has(u.id) ? "bg-primary/5" : ""}`}>
+                <td className="p-3 text-center">
+                  <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleOne(u.id)}
+                    className="accent-primary cursor-pointer" />
+                </td>
                 <td className="p-3">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{u.seller_display_name || u.username}</span>
@@ -568,7 +635,7 @@ const SellerControls = ({ users, onUpdate }: { users: Profile[]; onUpdate: (id: 
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={5} className="p-8 text-center text-muted-foreground text-sm">
+              <tr><td colSpan={6} className="p-8 text-center text-muted-foreground text-sm">
                 {sellers.length === 0 ? "No approved sellers yet." : "No sellers match this filter."}
               </td></tr>
             )}
