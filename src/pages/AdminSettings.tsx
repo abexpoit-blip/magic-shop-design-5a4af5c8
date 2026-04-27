@@ -61,7 +61,7 @@ const AdminSettings = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Credentials">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="h-12 w-12 rounded-full bg-primary/15 border border-primary/40 flex items-center justify-center">
