@@ -17,7 +17,8 @@ const baseNav = [
 ];
 
 export const AppShell = ({ children }: { children: ReactNode }) => {
-  const { profile, roles, signOut } = useAuth();
+  const { profile, roles, signOut, loading } = useAuth();
+  const profileLoading = loading || !profile;
   const nav = useNavigate();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
@@ -122,18 +123,35 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
             <div className="nav-balance hidden sm:flex items-center rounded-full bg-gradient-to-r from-primary/15 to-gold/10 border border-primary/30">
               <Wallet className="nav-icon text-primary-glow" strokeWidth={1.75} />
               <span className="nav-balance-label uppercase tracking-[0.2em] text-muted-foreground">Balance</span>
-              <span className="nav-balance-value font-display font-semibold gold-text">${Number(profile?.balance ?? 0).toFixed(2)}</span>
+              {profileLoading ? (
+                <span className="nav-balance-value nav-skeleton nav-skeleton-balance" aria-hidden="true" />
+              ) : (
+                <span className="nav-balance-value font-display font-semibold gold-text">${Number(profile?.balance ?? 0).toFixed(2)}</span>
+              )}
             </div>
 
-            <NavLink to="/settings" className="nav-profile flex items-center rounded-full border border-border/50 group">
-              <div className="nav-profile-avatar rounded-full bg-gradient-primary flex items-center justify-center font-semibold text-primary-foreground shadow-neon transition-transform duration-300 group-hover:scale-105">
-                {profile?.username?.[0]?.toUpperCase() ?? "U"}
-              </div>
-              <div className="hidden xl:block leading-tight pr-1">
-                <div className="nav-profile-name font-semibold text-foreground -mb-0.5">{profile?.username}</div>
-                <div className="nav-profile-role text-muted-foreground uppercase tracking-[0.22em]">
-                  {roles.includes("admin") ? "Admin" : roles.includes("seller") ? "Seller" : "Member"}
+            <NavLink to="/settings" className="nav-profile flex items-center rounded-full border border-border/50 group" aria-label="Profile settings">
+              {profileLoading ? (
+                <span className="nav-profile-avatar nav-skeleton rounded-full" aria-hidden="true" />
+              ) : (
+                <div className="nav-profile-avatar rounded-full bg-gradient-primary flex items-center justify-center font-semibold text-primary-foreground shadow-neon transition-transform duration-300 group-hover:scale-105">
+                  {profile?.username?.[0]?.toUpperCase() ?? "U"}
                 </div>
+              )}
+              <div className="hidden xl:block leading-tight pr-1">
+                {profileLoading ? (
+                  <>
+                    <span className="nav-skeleton nav-skeleton-name block -mb-0.5" aria-hidden="true" />
+                    <span className="nav-skeleton nav-skeleton-role block" aria-hidden="true" />
+                  </>
+                ) : (
+                  <>
+                    <div className="nav-profile-name font-semibold text-foreground -mb-0.5">{profile?.username}</div>
+                    <div className="nav-profile-role text-muted-foreground uppercase tracking-[0.22em]">
+                      {roles.includes("admin") ? "Admin" : roles.includes("seller") ? "Seller" : "Member"}
+                    </div>
+                  </>
+                )}
               </div>
             </NavLink>
 
