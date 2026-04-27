@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode } fro
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { getActiveRole, setActiveRole as persistActiveRole, clearActiveRole, type ActiveRole } from "@/lib/activeRole";
+import { isTransientAuthServiceError } from "@/lib/authErrors";
 
 type Role = "admin" | "seller" | "user";
 
@@ -75,11 +76,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     ]);
 
     const run = (async () => {
-      const [{ data: p }, { data: r }] = await withTimeout(
+      const [{ data: p, error: profileFetchError }, { data: r, error: rolesFetchError }] = await withTimeout(
         fetchAll,
         PROFILE_LOAD_TIMEOUT_MS,
         "profile-load-timeout",
       );
+
+      if (profileFetchError) {
+        throw profileFetchError;
+      }
+
+      if (rolesFetchError) {
+        throw rolesFetchError;
+      }
 
       let prof = p as Profile | null;
       const userRoles = ((r as { role: Role }[] | null) ?? []).map((x) => x.role);
@@ -121,9 +130,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (stored === "seller" && !isSeller) {
         setActiveRoleState("buyer");
         clearActiveRole();
-      } else if (!stored && isSeller) {
+      } else if (isSeller) {
         setActiveRoleState("seller");
         persistActiveRole(uid, "seller");
+      } else {
+        setActiveRoleState("buyer");
       }
 
       if (prof && email && !prof.banned) {
@@ -146,6 +157,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const msg =
           err instanceof Error && err.message === "profile-load-timeout"
             ? "Profile took too long to load"
+            : isTransientAuthServiceError(err)
+            ? "Backend is temporarily unavailable"
             : err instanceof Error
             ? err.message
             : "Couldn't load profile";
