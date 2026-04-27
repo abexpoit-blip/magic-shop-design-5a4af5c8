@@ -15,6 +15,10 @@ import { depositsRouter } from "./routes/deposits.js";
 import { payoutsRouter } from "./routes/payouts.js";
 import { ticketsRouter } from "./routes/tickets.js";
 import { announcementsRouter } from "./routes/announcements.js";
+import swaggerUi from "swagger-ui-express";
+import { openapiSpec } from "./openapi.js";
+import { listRoutes } from "./routes-introspect.js";
+import { requireAuth, requireRole } from "./auth-middleware.js";
 
 const app = express();
 
@@ -37,6 +41,30 @@ app.use("/api/deposits", depositsRouter);
 app.use("/api/payouts", payoutsRouter);
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/announcements", announcementsRouter);
+
+// Swagger / OpenAPI docs.
+// Use a dedicated CSP for the docs route — Swagger UI needs inline scripts/styles.
+app.get("/api/docs.json", (_req, res) => res.json(openapiSpec));
+app.use(
+  "/api/docs",
+  (req, _res, next) => {
+    // strip the global helmet CSP for this subtree
+    req.res?.removeHeader("Content-Security-Policy");
+    next();
+  },
+  swaggerUi.serveFiles(openapiSpec as any),
+  swaggerUi.setup(openapiSpec as any, {
+    customSiteTitle: "cruzercc API docs",
+  })
+);
+
+// Admin-only live route introspection. Confirms which routers are mounted.
+app.get(
+  "/api/admin/routes",
+  requireAuth,
+  requireRole("admin"),
+  (_req, res) => res.json(listRoutes(app))
+);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("[error]", err);
