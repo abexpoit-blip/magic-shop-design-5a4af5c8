@@ -80,13 +80,39 @@ const Admin = () => {
   }, [orders, deposits, payouts, cards, users]);
 
   // ============= ACTIONS =============
-  const decideApp = async (app: Application, approve: boolean) => {
-    await supabase.from("seller_applications").update({ status: approve ? "approved" : "rejected" }).eq("id", app.id);
+  const decideApp = async (app: Application, approve: boolean, note?: string) => {
+    await (supabase.from("seller_applications") as any).update({
+      status: approve ? "approved" : "rejected",
+      admin_note: note ?? null,
+      reviewed_at: new Date().toISOString(),
+    }).eq("id", app.id);
     if (approve) {
       await supabase.from("user_roles").insert({ user_id: app.user_id, role: "seller" });
-      await supabase.from("profiles").update({ is_seller: true, seller_status: "approved" }).eq("id", app.user_id);
+      await (supabase.from("profiles") as any).update({ is_seller: true, seller_status: "approved" }).eq("id", app.user_id);
     }
     toast.success(approve ? "Seller approved" : "Application rejected"); load();
+  };
+
+  const updateSellerProfile = async (id: string, patch: Record<string, unknown>) => {
+    const { error } = await (supabase.from("profiles") as any).update(patch).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Seller updated"); load();
+  };
+
+  const decideRefund = async (r: RefundRequest, approve: boolean) => {
+    await (supabase.from("refund_requests" as never) as any)
+      .update({ status: approve ? "approved" : "rejected", resolved_at: new Date().toISOString() })
+      .eq("id", r.id);
+    if (approve) {
+      // refund buyer balance for the card price
+      const card = cards.find((c) => c.id === r.card_id);
+      const buyer = users.find((u) => u.id === r.buyer_id);
+      if (card && buyer) {
+        await supabase.from("profiles").update({ balance: Number(buyer.balance) + Number(card.price) }).eq("id", buyer.id);
+        await supabase.from("transactions").insert({ user_id: buyer.id, amount: Number(card.price), kind: "refund", method: "admin", note: `Refund for card ${card.bin}` });
+      }
+    }
+    toast.success(approve ? "Refund approved & credited" : "Refund rejected"); load();
   };
 
   const adjustBalance = async (id: string, delta: number) => {
