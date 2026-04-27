@@ -91,6 +91,12 @@ const Auth = () => {
           const userRoles = (roleRows ?? []).map((r) => r.role as string);
           const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
 
+          if (isSeller && role !== "seller") {
+            toast.info("This account is locked to seller mode.", {
+              description: "Seller access stays on the seller dashboard and cannot switch back to buyer mode.",
+            });
+          }
+
           if (role === "seller" && !isSeller) {
             await supabase.auth.signOut();
             toast.error("This account isn't a seller. Apply for a seller account or sign in as a buyer.");
@@ -98,10 +104,14 @@ const Auth = () => {
             return;
           }
           setActiveRole(uid, isSeller ? "seller" : "buyer");
+
+          toast.success("Welcome back, hunter");
+          nav(isSeller ? "/seller" : "/");
+          return;
         }
 
         toast.success("Welcome back, hunter");
-        nav(role === "seller" ? "/seller" : "/");
+        nav("/");
       }
     } catch (err: unknown) {
       if (mode === "login" && isTransientAuthServiceError(err)) {
