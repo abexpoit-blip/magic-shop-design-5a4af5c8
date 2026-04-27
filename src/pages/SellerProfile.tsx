@@ -23,23 +23,49 @@ interface Card {
 
 const SellerProfile = () => {
   const { id } = useParams<{ id: string }>();
+  const PAGE_SIZE = 50;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState<number>(0);
+
+  const fetchPage = async (sellerId: string, from: number) => {
+    const { data, count } = await supabase
+      .from("cards")
+      .select("id,bin,brand,country,price,base,refundable,exp_month,exp_year", { count: "exact" })
+      .eq("seller_id", sellerId).eq("status", "available")
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    return { rows: (data ?? []) as Card[], count: count ?? 0 };
+  };
 
   useEffect(() => {
     if (!id) return;
     (async () => {
       setLoading(true);
-      const [p, c] = await Promise.all([
+      const [p, page] = await Promise.all([
         supabase.from("profiles").select("id,display_name,username,seller_display_name,seller_bio,is_seller_verified,is_seller_visible,avatar_url").eq("id", id).maybeSingle(),
-        supabase.from("cards").select("id,bin,brand,country,price,base,refundable,exp_month,exp_year").eq("seller_id", id).eq("status", "available").order("created_at", { ascending: false }).limit(100),
+        fetchPage(id, 0),
       ]);
       setProfile(p.data as Profile | null);
-      setCards((c.data ?? []) as Card[]);
+      setCards(page.rows);
+      setTotalCount(page.count);
+      setHasMore(page.rows.length < page.count);
       setLoading(false);
     })();
   }, [id]);
+
+  const loadMore = async () => {
+    if (!id || loadingMore) return;
+    setLoadingMore(true);
+    const page = await fetchPage(id, cards.length);
+    setCards((prev) => [...prev, ...page.rows]);
+    setTotalCount(page.count);
+    setHasMore(cards.length + page.rows.length < page.count);
+    setLoadingMore(false);
+  };
 
   if (loading) {
     return <AppShell><div className="glass rounded-2xl p-12 text-center text-muted-foreground">Loading seller…</div></AppShell>;
