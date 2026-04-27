@@ -10,8 +10,11 @@ import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIc
 import logo from "@/assets/panther-logo.png";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/accountSwitcher";
 
+type Role = "buyer" | "seller";
+
 const Auth = () => {
   const nav = useNavigate();
+  const [role, setRole] = useState<Role>("buyer");
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -58,8 +61,8 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast.success("Account created — entering the den…");
-        nav("/");
+        toast.success(role === "seller" ? "Account created — apply to become a seller next" : "Account created — entering the den…");
+        nav(role === "seller" ? "/seller/apply" : "/");
       } else {
         const loginEmail = username.includes("@") ? username : `${username.toLowerCase()}@cruzercc.shop`;
         const { error } = await supabase.auth.signInWithPassword({
@@ -68,7 +71,8 @@ const Auth = () => {
         });
         if (error) throw error;
         toast.success("Welcome back, hunter");
-        nav("/");
+        // Route by selected role: sellers go to seller panel, buyers to shop.
+        nav(role === "seller" ? "/seller" : "/");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Authentication failed";
@@ -125,6 +129,25 @@ const Auth = () => {
           </div>
 
           <div className="glass-neon rounded-2xl p-7 panther-claw">
+            {/* Role selector: buyer vs seller. Same backend, different post-login destination. */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {(["buyer", "seller"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r)}
+                  className={`py-2 rounded-lg text-[11px] font-display tracking-[0.2em] uppercase border transition ${
+                    role === r
+                      ? r === "seller"
+                        ? "bg-gold/15 border-gold/50 text-gold shadow-[0_0_16px_hsl(var(--gold)/0.35)]"
+                        : "bg-primary/15 border-primary/50 text-primary-glow shadow-neon"
+                      : "border-border/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {r === "buyer" ? "I'm a buyer" : "I'm a seller"}
+                </button>
+              ))}
+            </div>
             <div className="flex gap-2 mb-6 p-1 rounded-xl bg-secondary/50 border border-border/50">
               {(["login", "signup"] as const).map((m) => (
                 <button

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { COUNTRIES, countryFlag } from "@/lib/brands";
 import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, BadgeCheck, Store } from "lucide-react";
+import { TrustBadge } from "@/components/TrustBadge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -19,6 +20,7 @@ interface Card {
 interface Seller {
   id: string; username: string; seller_display_name: string | null; display_name: string | null;
   is_seller_verified: boolean;
+  trust_tier?: "none" | "verified" | "trusted" | "vip";
 }
 
 const Shop = () => {
@@ -46,7 +48,7 @@ const Shop = () => {
   const loadSellers = async () => {
     const { data } = await supabase
       .from("profiles")
-      .select("id,username,seller_display_name,display_name,is_seller_verified")
+      .select("id,username,seller_display_name,display_name,is_seller_verified,trust_tier")
       .eq("is_seller_visible", true);
     setSellers((data ?? []) as Seller[]);
   };
@@ -195,9 +197,9 @@ const Shop = () => {
             <div className="flex items-center gap-2 text-sm">
               <Store className="h-4 w-4 text-primary-glow" />
               <span className="text-muted-foreground">Filtering by seller:</span>
-              <Link to={`/seller/${seller}`} className="font-display text-primary-glow hover:underline inline-flex items-center gap-1">
+              <Link to={`/seller/${seller}`} className="font-display text-primary-glow hover:underline inline-flex items-center gap-1.5">
                 {sellerMap.get(seller)!.seller_display_name || sellerMap.get(seller)!.display_name || sellerMap.get(seller)!.username}
-                {sellerMap.get(seller)!.is_seller_verified && <BadgeCheck className="h-3.5 w-3.5" />}
+                <TrustBadge tier={sellerMap.get(seller)!.trust_tier} size="xs" />
               </Link>
             </div>
             <button onClick={() => setSeller("all")} className="text-xs text-muted-foreground hover:text-destructive inline-flex items-center gap-1">
@@ -252,7 +254,7 @@ const Shop = () => {
                           className="mt-1 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary-glow hover:bg-primary/20 transition">
                           <Store className="h-2.5 w-2.5" />
                           {sellerMap.get(c.seller_id)!.seller_display_name || sellerMap.get(c.seller_id)!.display_name || sellerMap.get(c.seller_id)!.username}
-                          {sellerMap.get(c.seller_id)!.is_seller_verified && <BadgeCheck className="h-2.5 w-2.5" />}
+                          <TrustBadge tier={sellerMap.get(c.seller_id)!.trust_tier} size="xs" />
                         </Link>
                       )}
                     </td>

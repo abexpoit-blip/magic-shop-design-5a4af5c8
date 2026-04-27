@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo, countryFlag } from "@/lib/brands";
 import { BadgeCheck, Store, ArrowLeft, ShoppingCart, Loader2 } from "lucide-react";
+import { TrustBadge } from "@/components/TrustBadge";
 import { Button } from "@/components/ui/button";
 
 interface Profile {
@@ -15,6 +16,7 @@ interface Profile {
   is_seller_verified: boolean;
   is_seller_visible: boolean;
   avatar_url: string | null;
+  trust_tier?: "none" | "verified" | "trusted" | "vip";
 }
 interface Card {
   id: string; bin: string; brand: string; country: string; price: number;
@@ -46,7 +48,7 @@ const SellerProfile = () => {
     (async () => {
       setLoading(true);
       const [p, page] = await Promise.all([
-        supabase.from("profiles").select("id,display_name,username,seller_display_name,seller_bio,is_seller_verified,is_seller_visible,avatar_url").eq("id", id).maybeSingle(),
+        supabase.from("profiles").select("id,display_name,username,seller_display_name,seller_bio,is_seller_verified,is_seller_visible,avatar_url,trust_tier").eq("id", id).maybeSingle(),
         fetchPage(id, 0),
       ]);
       setProfile(p.data as Profile | null);
@@ -101,7 +103,8 @@ const SellerProfile = () => {
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-display text-3xl font-black neon-text">{name}</h1>
-                {profile.is_seller_verified && (
+                <TrustBadge tier={profile.trust_tier} size="md" />
+                {profile.is_seller_verified && (profile.trust_tier === "none" || !profile.trust_tier) && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/20 border border-primary/40 text-xs text-primary-glow">
                     <BadgeCheck className="h-3.5 w-3.5" />Verified
                   </span>
