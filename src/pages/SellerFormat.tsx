@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { parseAndFormat, dedupe, toPipeFormat, detectBrand, ParsedCard } from "@/lib/cardFormatter";
 import { Wand2, Copy, Download, FileText, Trash2, AlertTriangle, CheckCircle2, ArrowRight, Upload, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { BrandLogo } from "@/lib/brands";
 
 const TEMPLATE = "cc|month|year|cvv|name|addr|city|state|zip|country|tel|email";
 
@@ -55,6 +56,10 @@ const SellerFormat = () => {
   };
 
   const output = useMemo(() => parsed.map(toPipeFormat).join("\n"), [parsed]);
+  const maskedOutput = useMemo(
+    () => parsed.map((card) => `${maskCardNumber(card.cc)}|${card.month}|${card.year}|***|${card.name}|${card.addr}|${card.city}|${card.state}|${card.zip}|${card.country}|${card.tel}|${card.email}`).join("\n"),
+    [parsed],
+  );
 
   const stats = useMemo(() => {
     const brands: Record<string, number> = {};
@@ -217,8 +222,9 @@ const SellerFormat = () => {
                 {/* CANONICAL OUTPUT */}
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Canonical output ({TEMPLATE})</p>
-                  <Textarea readOnly value={output} rows={Math.min(14, Math.max(4, parsed.length + 1))}
+                  <Textarea readOnly value={maskedOutput} rows={Math.min(14, Math.max(4, parsed.length + 1))}
                     className="bg-background/60 font-mono text-[11px]" />
+                  <p className="mt-2 text-[10px] text-muted-foreground">Preview masks card number and CVV. Copy and download still use the real formatted data.</p>
                 </div>
 
                 {/* TABLE PREVIEW */}
@@ -230,7 +236,6 @@ const SellerFormat = () => {
                           <th className="p-2 text-left">CC</th>
                           <th className="p-2">MM</th>
                           <th className="p-2">YY</th>
-                          <th className="p-2">CVV</th>
                           <th className="p-2 text-left">Name</th>
                           <th className="p-2 text-left">City</th>
                           <th className="p-2">ST</th>
@@ -243,10 +248,14 @@ const SellerFormat = () => {
                       <tbody>
                         {parsed.slice(0, 100).map((c, i) => (
                           <tr key={i} className={`border-t border-border/40 ${i % 2 ? "bg-secondary/20" : ""}`}>
-                            <td className="p-2 font-mono">{c.cc.slice(0, 6)}<span className="text-muted-foreground">…{c.cc.slice(-4)}</span></td>
+                            <td className="p-2 font-mono">
+                              <div className="flex items-center gap-2 whitespace-nowrap">
+                                <BrandLogo brand={detectBrand(c.cc)} className="h-4" />
+                                <span>{maskCardNumber(c.cc)}</span>
+                              </div>
+                            </td>
                             <Cell v={c.month} />
                             <Cell v={c.year} />
-                            <Cell v={c.cvv} />
                             <Cell v={c.name} truncate />
                             <Cell v={c.city} truncate />
                             <Cell v={c.state} />
@@ -307,5 +316,7 @@ const Cell = ({ v, truncate }: { v: string; truncate?: boolean }) => (
     {v}
   </td>
 );
+
+const maskCardNumber = (value: string) => (value && value !== "null" ? `${value.slice(0, 6)}••••••${value.slice(-4)}` : "null");
 
 export default SellerFormat;
