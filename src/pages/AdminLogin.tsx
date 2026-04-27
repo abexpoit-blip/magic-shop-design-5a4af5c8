@@ -6,6 +6,44 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2 } from "lucide-react";
 
+const ADMIN_EMAIL = "samexpoit@gmail.com";
+const ADMIN_USERNAME = "admin@cruzercc";
+const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+const normalizeAdminIdentifier = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === ADMIN_USERNAME || normalized === "admin") {
+    return ADMIN_EMAIL;
+  }
+
+  if (EMAIL_PATTERN.test(normalized)) {
+    return normalized;
+  }
+
+  return `${normalized}@cruzercc.shop`;
+};
+
+const fetchRolesWithRetry = async (userId: string) => {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+
+    if (!error) {
+      return data ?? [];
+    }
+
+    lastError = error;
+    await new Promise((resolve) => window.setTimeout(resolve, 350 * (attempt + 1)));
+  }
+
+  throw lastError ?? new Error("Could not verify admin access");
+};
+
 const AdminLogin = () => {
   const nav = useNavigate();
   const [identifier, setIdentifier] = useState("");
@@ -21,14 +59,11 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const loginEmail = identifier.includes("@") ? identifier : `${identifier.toLowerCase()}@cruzercc.shop`;
+      const loginEmail = normalizeAdminIdentifier(identifier);
       const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
       if (error) throw error;
-      // Verify the user is actually an admin before letting them in.
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user!.id);
+
+      const roles = await fetchRolesWithRetry(data.user!.id);
       const isAdmin = (roles ?? []).some((r) => r.role === "admin");
       if (!isAdmin) {
         await supabase.auth.signOut();
@@ -37,7 +72,12 @@ const AdminLogin = () => {
       toast.success("Admin console unlocked");
       nav("/admin");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Login failed");
+      const message = err instanceof Error ? err.message : "Login failed";
+      toast.error(
+        message.includes("Could not verify admin access")
+          ? "Backend checked in but admin permission lookup failed. Please try again now."
+          : message,
+      );
     } finally { setLoading(false); }
   };
 
