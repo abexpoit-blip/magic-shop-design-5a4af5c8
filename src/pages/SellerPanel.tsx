@@ -171,9 +171,16 @@ const SellerPanel = () => {
         {/* LISTING */}
         <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
           <h2 className="font-display text-xl text-primary-glow tracking-wider">YOUR LISTINGS</h2>
-          <Button onClick={() => setShowForm(!showForm)} className="bg-gradient-primary shadow-neon">
-            <Plus className="h-4 w-4 mr-1" />List new card
-          </Button>
+          <div className="flex gap-2">
+            <a href="/seller/upload">
+              <Button variant="outline" className="border-primary/40 text-primary-glow">
+                <Upload className="h-4 w-4 mr-1" />Auto-format upload
+              </Button>
+            </a>
+            <Button onClick={() => setShowForm(!showForm)} className="bg-gradient-primary shadow-neon">
+              <Plus className="h-4 w-4 mr-1" />List new card
+            </Button>
+          </div>
         </div>
 
         {showForm && (

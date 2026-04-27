@@ -15,6 +15,8 @@ import Recharge from "./pages/Recharge";
 import Tickets from "./pages/Tickets";
 import Settings from "./pages/Settings";
 import SellerPanel from "./pages/SellerPanel";
+import SellerApply from "./pages/SellerApply";
+import SellerUpload from "./pages/SellerUpload";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +39,8 @@ const App = () => (
             <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/seller" element={<ProtectedRoute><SellerPanel /></ProtectedRoute>} />
+            <Route path="/seller/apply" element={<ProtectedRoute><SellerApply /></ProtectedRoute>} />
+            <Route path="/seller/upload" element={<ProtectedRoute><SellerUpload /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

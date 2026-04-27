@@ -324,15 +324,53 @@ export type Database = {
         }
         Relationships: []
       }
+      price_rules: {
+        Row: {
+          brand: string | null
+          country: string | null
+          created_at: string
+          id: string
+          price: number
+          priority: number
+          refundable: boolean | null
+          seller_id: string
+        }
+        Insert: {
+          brand?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          price: number
+          priority?: number
+          refundable?: boolean | null
+          seller_id: string
+        }
+        Update: {
+          brand?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          price?: number
+          priority?: number
+          refundable?: boolean | null
+          seller_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           balance: number
           banned: boolean
+          commission_percent: number
           created_at: string
           display_name: string | null
           id: string
           is_seller: boolean
+          is_seller_verified: boolean
+          is_seller_visible: boolean
+          seller_bio: string | null
+          seller_display_name: string | null
           seller_status: string | null
           updated_at: string
           username: string
@@ -341,10 +379,15 @@ export type Database = {
           avatar_url?: string | null
           balance?: number
           banned?: boolean
+          commission_percent?: number
           created_at?: string
           display_name?: string | null
           id: string
           is_seller?: boolean
+          is_seller_verified?: boolean
+          is_seller_visible?: boolean
+          seller_bio?: string | null
+          seller_display_name?: string | null
           seller_status?: string | null
           updated_at?: string
           username: string
@@ -353,42 +396,131 @@ export type Database = {
           avatar_url?: string | null
           balance?: number
           banned?: boolean
+          commission_percent?: number
           created_at?: string
           display_name?: string | null
           id?: string
           is_seller?: boolean
+          is_seller_verified?: boolean
+          is_seller_visible?: boolean
+          seller_bio?: string | null
+          seller_display_name?: string | null
           seller_status?: string | null
           updated_at?: string
           username?: string
         }
         Relationships: []
       }
+      refund_requests: {
+        Row: {
+          buyer_id: string
+          card_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          order_id: string | null
+          reason: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          seller_id: string
+          status: string
+        }
+        Insert: {
+          buyer_id: string
+          card_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          order_id?: string | null
+          reason?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          seller_id: string
+          status?: string
+        }
+        Update: {
+          buyer_id?: string
+          card_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          order_id?: string | null
+          reason?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          seller_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refund_requests_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seller_applications: {
         Row: {
+          admin_note: string | null
           contact: string | null
           created_at: string
           description: string | null
+          expected_volume: string | null
           id: string
-          shop_name: string
+          jabber: string | null
+          message: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sample_bins: string | null
+          shop_name: string | null
           status: string
+          telegram: string | null
           user_id: string
         }
         Insert: {
+          admin_note?: string | null
           contact?: string | null
           created_at?: string
           description?: string | null
+          expected_volume?: string | null
           id?: string
-          shop_name: string
+          jabber?: string | null
+          message?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sample_bins?: string | null
+          shop_name?: string | null
           status?: string
+          telegram?: string | null
           user_id: string
         }
         Update: {
+          admin_note?: string | null
           contact?: string | null
           created_at?: string
           description?: string | null
+          expected_volume?: string | null
           id?: string
-          shop_name?: string
+          jabber?: string | null
+          message?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sample_bins?: string | null
+          shop_name?: string | null
           status?: string
+          telegram?: string | null
           user_id?: string
         }
         Relationships: []
