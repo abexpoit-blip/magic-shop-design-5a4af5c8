@@ -188,4 +188,83 @@ const Stat = ({ label, value, tone }: { label: string; value: number; tone: "war
   );
 };
 
+const NotesPanel = ({ appId, notes, authors, currentUserId, onAdd, onDelete }: {
+  appId: string;
+  notes: AppNote[];
+  authors: Map<string, Profile>;
+  currentUserId?: string;
+  onAdd: (text: string) => void | Promise<void>;
+  onDelete: (noteId: string) => void | Promise<void>;
+}) => {
+  const [draft, setDraft] = useState("");
+  const [open, setOpen] = useState(false);
+  const submit = async () => {
+    if (!draft.trim()) return;
+    await onAdd(draft);
+    setDraft("");
+  };
+  return (
+    <div className="mt-3 pt-3 border-t border-border/40">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-primary-glow transition"
+      >
+        <StickyNote className="h-3.5 w-3.5" />
+        <span className="font-display tracking-wider">
+          ADMIN NOTES ({notes.length})
+        </span>
+        <span className="ml-auto text-[10px]">{open ? "Hide" : "Show"}</span>
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-2">
+          {notes.length === 0 && (
+            <p className="text-[11px] text-muted-foreground italic">No notes yet — add the first one below.</p>
+          )}
+          {notes.map((n) => {
+            const a = authors.get(n.author_id);
+            const mine = n.author_id === currentUserId;
+            return (
+              <div key={n.id} className="p-2.5 rounded-lg bg-background/40 border border-border/30 text-xs">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="font-mono text-[10px] text-primary-glow">
+                    {a?.username ?? n.author_id.slice(0, 8)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
+                    {mine && (
+                      <button
+                        onClick={() => { if (confirm("Delete this note?")) onDelete(n.id); }}
+                        className="text-muted-foreground hover:text-destructive"
+                        title="Delete note"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-foreground whitespace-pre-wrap">{n.note}</p>
+              </div>
+            );
+          })}
+
+          <div className="flex gap-2 items-start pt-1">
+            <Textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }}
+              placeholder="Add an internal note (Cmd/Ctrl+Enter to save)…"
+              rows={2}
+              className="bg-input/60 text-xs flex-1"
+            />
+            <Button size="sm" onClick={submit} disabled={!draft.trim()} className="bg-gradient-primary">
+              <MessageSquarePlus className="h-3.5 w-3.5 mr-1" />Save
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default AdminApplications;
