@@ -82,6 +82,44 @@ const Settings = () => {
             <Button onClick={applySeller} className="bg-gradient-primary shadow-neon">Submit application</Button>
           </section>
         )}
+
+        <section className="glass rounded-2xl p-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary-glow" />
+            <h2 className="font-display tracking-wider text-primary-glow">SAVED ACCOUNTS</h2>
+          </div>
+          <p className="text-xs text-muted-foreground">Quickly switch between accounts you've signed into on this device.</p>
+          {accounts.length === 0 && <p className="text-sm text-muted-foreground">No saved accounts yet.</p>}
+          <div className="space-y-2">
+            {accounts.map((acc) => {
+              const isCurrent = acc.email === user?.email;
+              return (
+                <div key={acc.email} className={`flex items-center gap-3 p-3 rounded-lg border ${isCurrent ? "bg-primary/10 border-primary/40" : "bg-secondary/40 border-border/50"}`}>
+                  <div className="h-9 w-9 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shrink-0">
+                    {acc.username[0]?.toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-foreground truncate">
+                      {acc.username} {isCurrent && <span className="text-[10px] text-primary-glow uppercase tracking-wider ml-1">· current</span>}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">{acc.role} · {acc.email}</div>
+                  </div>
+                  {!isCurrent && (
+                    <Button size="sm" variant="outline" onClick={() => switchAccount(acc.email)}>
+                      <LogIn className="h-3 w-3 mr-1" />Switch
+                    </Button>
+                  )}
+                  <button onClick={() => removeAcc(acc.email)} className="text-muted-foreground hover:text-destructive p-1">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <Button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }} variant="outline" className="w-full mt-2">
+            <Plus className="h-3 w-3 mr-1" />Sign in with another account
+          </Button>
+        </section>
       </div>
     </AppShell>
   );
