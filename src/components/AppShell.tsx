@@ -169,6 +169,40 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
         {/* Mobile drawer */}
         {open && (
           <div className="nav-drawer lg:hidden border-t border-border/50 bg-background/95 backdrop-blur-2xl">
+            {/* Drawer header — avatar + name + balance with skeletons */}
+            <div className="nav-drawer-header flex items-center gap-3">
+              {profileLoading ? (
+                <span className="nav-drawer-avatar nav-skeleton rounded-full" aria-hidden="true" />
+              ) : (
+                <div className="nav-drawer-avatar rounded-full bg-gradient-primary flex items-center justify-center font-semibold text-primary-foreground shadow-neon">
+                  {profile?.username?.[0]?.toUpperCase() ?? "U"}
+                </div>
+              )}
+              <div className="flex-1 min-w-0 leading-tight">
+                {profileLoading ? (
+                  <>
+                    <span className="nav-skeleton nav-drawer-skeleton-name block" aria-hidden="true" />
+                    <span className="nav-skeleton nav-drawer-skeleton-role block mt-1.5" aria-hidden="true" />
+                  </>
+                ) : (
+                  <>
+                    <div className="nav-drawer-name font-semibold text-foreground truncate">{profile?.username}</div>
+                    <div className="nav-drawer-role text-muted-foreground uppercase tracking-[0.22em]">
+                      {roles.includes("admin") ? "Admin" : roles.includes("seller") ? "Seller" : "Member"}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="nav-drawer-balance flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary/15 to-gold/10 border border-primary/30 px-3 py-1.5 shrink-0">
+                <Wallet className="h-3.5 w-3.5 text-primary-glow shrink-0" strokeWidth={1.75} />
+                {profileLoading ? (
+                  <span className="nav-skeleton nav-drawer-skeleton-balance" aria-hidden="true" />
+                ) : (
+                  <span className="font-display font-semibold gold-text text-[13px]">${Number(profile?.balance ?? 0).toFixed(2)}</span>
+                )}
+              </div>
+            </div>
+
             <div className="nav-drawer-inner grid grid-cols-2">
               {items.map((it) => (
                 <NavLink key={it.to} to={it.to} end={it.to === "/"} onClick={() => setOpen(false)}
