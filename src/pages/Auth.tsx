@@ -144,6 +144,29 @@ const Auth = () => {
               Telegram: <span className="gold-text font-semibold">@cruzercc_shop</span>
             </p>
 
+            {savedAccounts.length > 0 && mode === "login" && (
+              <div className="mb-5">
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground flex items-center gap-1.5"><UsersIcon className="h-3 w-3" />Switch account</Label>
+                <div className="mt-2 space-y-1.5">
+                  {savedAccounts.map((acc) => (
+                    <button key={acc.email} type="button" onClick={() => pickAccount(acc)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-secondary/40 border border-border/50 hover:border-primary/50 hover:bg-secondary/60 transition group">
+                      <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0">
+                        {acc.username[0]?.toUpperCase()}
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="text-sm font-semibold text-foreground truncate">{acc.username}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{acc.role} · {acc.email}</div>
+                      </div>
+                      <button type="button" onClick={(e) => removeAccount(e, acc.email)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-1 transition">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <form onSubmit={submit} className="space-y-4">
               <div>
                 <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Username</Label>
@@ -169,7 +192,7 @@ const Auth = () => {
                 <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Password</Label>
                 <div className="relative mt-2">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
+                  <Input id="auth-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
                     placeholder="••••••••" className="pl-10 h-11 bg-input/70 border-border/60" />
                 </div>
               </div>
