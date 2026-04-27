@@ -254,7 +254,7 @@ const Shop = () => {
                           className="mt-1 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary-glow hover:bg-primary/20 transition">
                           <Store className="h-2.5 w-2.5" />
                           {sellerMap.get(c.seller_id)!.seller_display_name || sellerMap.get(c.seller_id)!.display_name || sellerMap.get(c.seller_id)!.username}
-                          {sellerMap.get(c.seller_id)!.is_seller_verified && <BadgeCheck className="h-2.5 w-2.5" />}
+                          <TrustBadge tier={sellerMap.get(c.seller_id)!.trust_tier} size="xs" />
                         </Link>
                       )}
                     </td>
