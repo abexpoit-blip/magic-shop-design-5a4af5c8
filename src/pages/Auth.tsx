@@ -103,8 +103,9 @@ const Auth = () => {
         nav(role === "seller" ? "/seller" : "/");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Authentication failed";
-      toast.error(msg);
+      const { describeAuthError } = await import("@/lib/authErrors");
+      const friendly = describeAuthError(err);
+      toast.error(friendly.title, friendly.hint ? { description: friendly.hint } : undefined);
     } finally { setLoading(false); }
   };
 
