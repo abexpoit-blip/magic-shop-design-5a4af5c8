@@ -35,6 +35,38 @@ export type Database = {
         }
         Relationships: []
       }
+      application_notes: {
+        Row: {
+          application_id: string
+          author_id: string
+          created_at: string
+          id: string
+          note: string
+        }
+        Insert: {
+          application_id: string
+          author_id: string
+          created_at?: string
+          id?: string
+          note: string
+        }
+        Update: {
+          application_id?: string
+          author_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_notes_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "seller_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cards: {
         Row: {
           address: string | null
