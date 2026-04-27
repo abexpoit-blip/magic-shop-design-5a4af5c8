@@ -123,7 +123,7 @@ const SellerUpload = () => {
     });
 
     if (rows.length === 0) {
-      toast.warning(`All ${parsed.length} cards are already in stock`);
+      toast.warning(`All ${toPublish.length} cards are already in stock`);
       setBusy(false); return;
     }
 
