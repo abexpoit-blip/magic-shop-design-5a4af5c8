@@ -1,0 +1,95 @@
+import { useEffect, useState } from "react";
+import { AppShell } from "@/components/AppShell";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Download, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
+interface OrderItem { id: string; price: number; card_snapshot: Record<string, unknown>; }
+interface Order { id: string; total: number; status: string; created_at: string; order_items: OrderItem[]; }
+
+const Orders = () => {
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("orders")
+        .select("*, order_items(*)").eq("user_id", user.id).order("created_at", { ascending: false });
+      setOrders((data ?? []) as Order[]);
+    })();
+  }, [user]);
+
+  const download = (o: Order) => {
+    const lines = ["bin,brand,country,exp,price"];
+    o.order_items.forEach((it) => {
+      const c = it.card_snapshot as Record<string, string>;
+      lines.push(`${c.bin},${c.brand},${c.country},${c.exp_month}/${c.exp_year},${it.price}`);
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `order-${o.id.slice(0, 8)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Downloaded");
+  };
+
+  const filtered = orders.filter((o) => o.id.toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <AppShell>
+      <div className="space-y-5">
+        <h1 className="font-display text-3xl font-black neon-text">ORDERS</h1>
+
+        <div className="glass rounded-2xl p-4 flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by order id" className="pl-10 bg-input/60" />
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-4 text-sm text-warning bg-warning/5 border-warning/20 border">
+          ⚠️ Notice: Once cleared, orders cannot be recovered. Save your downloads to a safe place.
+        </div>
+
+        <div className="glass rounded-2xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/60 text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="p-3 text-left">Order</th>
+                <th className="p-3 text-left">Items</th>
+                <th className="p-3 text-left">Total</th>
+                <th className="p-3 text-left">Date</th>
+                <th className="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((o) => (
+                <tr key={o.id} className="border-t border-border/40 hover:bg-secondary/30 transition">
+                  <td className="p-3 font-mono text-xs">{o.id.slice(0, 16)}…</td>
+                  <td className="p-3">{o.order_items?.length ?? 0}</td>
+                  <td className="p-3 font-display text-primary-glow">${Number(o.total).toFixed(2)}</td>
+                  <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleString()}</td>
+                  <td className="p-3 text-right">
+                    <Button size="sm" variant="outline" onClick={() => download(o)} className="border-primary/40 text-primary-glow">
+                      <Download className="h-3 w-3 mr-1" /> Download
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={5} className="p-12 text-center text-muted-foreground">No orders yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AppShell>
+  );
+};
+
+export default Orders;
