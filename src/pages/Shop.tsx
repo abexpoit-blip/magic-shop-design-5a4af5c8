@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { COUNTRIES, countryFlag } from "@/lib/brands";
-import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X } from "lucide-react";
+import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, BadgeCheck, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -15,19 +16,40 @@ interface Card {
   refundable: boolean; has_phone: boolean; has_email: boolean; base: string; price: number;
   status: string; seller_id: string;
 }
+interface Seller {
+  id: string; username: string; seller_display_name: string | null; display_name: string | null;
+  is_seller_verified: boolean;
+}
 
 const Shop = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [cards, setCards] = useState<Card[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
   const [searched, setSearched] = useState(false);
   const [bin, setBin] = useState("");
   const [base, setBase] = useState("all");
   const [country, setCountry] = useState("");
   const [zip, setZip] = useState("");
+  const [seller, setSeller] = useState<string>(searchParams.get("seller") ?? "all");
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastBin, setLastBin] = useState("");
+
+  const sellerMap = useMemo(() => {
+    const m = new Map<string, Seller>();
+    sellers.forEach((s) => m.set(s.id, s));
+    return m;
+  }, [sellers]);
+
+  const loadSellers = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id,username,seller_display_name,display_name,is_seller_verified")
+      .eq("is_seller_visible", true);
+    setSellers((data ?? []) as Seller[]);
+  };
 
   const load = async (auto = false) => {
     setLoading(true);
@@ -36,6 +58,7 @@ const Shop = () => {
     if (base !== "all") q = q.ilike("base", `%${base}%`);
     if (country) q = q.ilike("country", `${country}%`);
     if (zip) q = q.ilike("zip", `${zip}%`);
+    if (seller !== "all") q = q.eq("seller_id", seller);
     const { data } = await q;
     setCards((data ?? []) as Card[]);
     setLastBin(bin);
@@ -49,7 +72,15 @@ const Shop = () => {
     setCartIds(new Set((data ?? []).map((c: { card_id: string }) => c.card_id)));
   };
 
-  useEffect(() => { load(true); loadCart(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadSellers(); load(true); loadCart(); /* eslint-disable-next-line */ }, []);
+
+  // re-load when seller filter changes
+  useEffect(() => {
+    if (seller === "all") { searchParams.delete("seller"); } else { searchParams.set("seller", seller); }
+    setSearchParams(searchParams, { replace: true });
+    load(true);
+    // eslint-disable-next-line
+  }, [seller]);
 
   // Auto-detect BIN: when 6+ digits typed, auto-search
   useEffect(() => {
