@@ -27,6 +27,7 @@ const Shop = () => {
   const [zip, setZip] = useState("");
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [lastBin, setLastBin] = useState("");
 
   const load = async (auto = false) => {
     setLoading(true);
@@ -37,6 +38,7 @@ const Shop = () => {
     if (zip) q = q.ilike("zip", `${zip}%`);
     const { data } = await q;
     setCards((data ?? []) as Card[]);
+    setLastBin(bin);
     setLoading(false);
     if (!auto) setSearched(true);
   };
