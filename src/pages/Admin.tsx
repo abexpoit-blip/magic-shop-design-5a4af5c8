@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AppShell } from "@/components/AppShell";
+import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -425,7 +425,7 @@ const Admin = () => {
           <Button onClick={postAnnouncement} className="mt-3 bg-gradient-primary shadow-neon">Post</Button>
         </Section>
       </div>
-    </AppShell>
+    </AdminLayout>
   );
 };
 
