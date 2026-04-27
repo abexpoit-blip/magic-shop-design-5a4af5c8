@@ -44,6 +44,26 @@ const AdminPayouts = () => {
     load();
   };
 
+  const togglePayout = (id: string) =>
+    setSelectedPayouts((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const bulkPayoutAction = async (paid: boolean) => {
+    const ids = Array.from(selectedPayouts);
+    if (ids.length === 0) return;
+    const verb = paid ? `mark ${ids.length} payout(s) as paid` : `reject ${ids.length} payout(s)`;
+    if (!confirm(`Confirm: ${verb}?`)) return;
+    setPayoutBulkRunning(true);
+    const { error } = await supabase.from("payouts").update({
+      status: paid ? "paid" : "rejected",
+      paid_at: paid ? new Date().toISOString() : null,
+    }).in("id", ids).eq("status", "pending");
+    setPayoutBulkRunning(false);
+    if (error) return toast.error(error.message);
+    toast.success(`${paid ? "Marked paid" : "Rejected"}: ${ids.length}`);
+    setSelectedPayouts(new Set());
+    load();
+  };
+
   const updateSeller = async (id: string, patch: Record<string, unknown>) => {
     const { error } = await (supabase.from("profiles") as any).update(patch).eq("id", id);
     if (error) return toast.error(error.message);
