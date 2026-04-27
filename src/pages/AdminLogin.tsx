@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
-import { describeAuthError } from "@/lib/authErrors";
+import { describeAuthError, withAuthRetry, isTransientAuthServiceError } from "@/lib/authErrors";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -32,9 +32,15 @@ const AdminLogin = () => {
   }, []);
 
   const tryLogin = async (loginEmail: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
-    if (error) throw error;
-    return data;
+    const res = await withAuthRetry(
+      () => supabase.auth.signInWithPassword({ email: loginEmail, password }),
+      { onRetry: (n) => setStatusBanner({ kind: "info", title: `Auth service hiccup — retrying (${n}/2)…`, hint: "Hold on, the backend pool blipped. Auto-retrying." }) }
+    );
+    if (res.error) {
+      if (isTransientAuthServiceError(res.error)) throw res.error;
+      throw res.error;
+    }
+    return res.data;
   };
 
   const submit = async (e: React.FormEvent) => {

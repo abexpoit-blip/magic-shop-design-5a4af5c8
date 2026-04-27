@@ -12,7 +12,7 @@ import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIc
 import logo from "@/assets/panther-logo.png";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/accountSwitcher";
 import { setActiveRole } from "@/lib/activeRole";
-import { describeAuthError, isTransientAuthServiceError } from "@/lib/authErrors";
+import { describeAuthError, isTransientAuthServiceError, withAuthRetry } from "@/lib/authErrors";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 import { Loader2 } from "lucide-react";
 
@@ -84,9 +84,12 @@ const Auth = () => {
         nav(role === "seller" ? "/seller/apply" : (safeFrom ?? "/shop"), { replace: true });
       } else {
         const loginEmail = username.includes("@") ? username : `${username.toLowerCase()}@cruzercc.shop`;
-        const { data: signInData, error } = await supabase.auth.signInWithPassword({
-          email: loginEmail,
-          password,
+        const { data: signInData, error } = await withAuthRetry(
+          () => supabase.auth.signInWithPassword({ email: loginEmail, password }),
+          { onRetry: (n) => setStatusBanner({ kind: "info", title: `Auth service hiccup — retrying (${n}/2)…`, hint: "Hold on, this happens when the backend pool blips." }) }
+        ).then((res) => {
+          if (res.error && isTransientAuthServiceError(res.error)) throw res.error;
+          return res;
         });
         if (error) throw error;
 
