@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2 } from "lucide-react";
-import { verifyAdminAccess } from "@/lib/adminAccess";
 
 const ADMIN_EMAIL = "samexpoit@gmail.com";
 const ADMIN_USERNAME = "admin@cruzercc";
@@ -42,14 +41,9 @@ const AdminLogin = () => {
     setLoading(true);
     try {
       const loginEmail = normalizeAdminIdentifier(identifier);
-      const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
       if (error) throw error;
 
-      const isAdmin = await verifyAdminAccess(data.user!.id);
-      if (!isAdmin) {
-        await supabase.auth.signOut();
-        throw new Error("This account does not have admin access");
-      }
       toast.success("Admin console unlocked");
       nav("/admin");
     } catch (err) {
