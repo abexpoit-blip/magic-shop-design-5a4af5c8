@@ -3,7 +3,8 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Wallet, Check, X, BadgeCheck, Eye, EyeOff, UserCheck, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Wallet, Check, X, BadgeCheck, Eye, EyeOff, UserCheck, Search, ArrowUpDown, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 interface Profile {
@@ -22,6 +23,16 @@ const AdminPayouts = () => {
   const [payoutBulkRunning, setPayoutBulkRunning] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkRunning, setBulkRunning] = useState(false);
+
+  // Filters & sort for the payout list
+  const [payoutQuery, setPayoutQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "paid" | "rejected">("all");
+  const [sellerFilter, setSellerFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [sortBy, setSortBy] = useState<"created_desc" | "created_asc" | "amount_desc" | "amount_asc">("created_desc");
 
   const load = async () => {
     const [u, p] = await Promise.all([
@@ -47,11 +58,29 @@ const AdminPayouts = () => {
   const togglePayout = (id: string) =>
     setSelectedPayouts((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  const undoBulk = async (snapshot: Array<{ id: string; status: string; paid_at: string | null }>) => {
+    // Restore each row's prior status/paid_at. Small batch — N updates.
+    const results = await Promise.all(
+      snapshot.map((s) =>
+        supabase.from("payouts").update({ status: s.status, paid_at: s.paid_at }).eq("id", s.id),
+      ),
+    );
+    const failed = results.filter((r) => r.error).length;
+    if (failed > 0) toast.error(`Undo partially failed (${failed}/${snapshot.length})`);
+    else toast.success(`Reverted ${snapshot.length} payout${snapshot.length === 1 ? "" : "s"}`);
+    load();
+  };
+
   const bulkPayoutAction = async (paid: boolean) => {
     const ids = Array.from(selectedPayouts);
     if (ids.length === 0) return;
     const verb = paid ? `mark ${ids.length} payout(s) as paid` : `reject ${ids.length} payout(s)`;
     if (!confirm(`Confirm: ${verb}?`)) return;
+
+    // Snapshot prior state of only the rows we'll actually change (status === pending)
+    const target = payouts.filter((p) => ids.includes(p.id) && p.status === "pending");
+    const snapshot = target.map((p) => ({ id: p.id, status: p.status, paid_at: p.paid_at ?? null }));
+
     setPayoutBulkRunning(true);
     const { error } = await supabase.from("payouts").update({
       status: paid ? "paid" : "rejected",
@@ -59,9 +88,22 @@ const AdminPayouts = () => {
     }).in("id", ids).eq("status", "pending");
     setPayoutBulkRunning(false);
     if (error) return toast.error(error.message);
-    toast.success(`${paid ? "Marked paid" : "Rejected"}: ${ids.length}`);
+
     setSelectedPayouts(new Set());
     load();
+
+    if (snapshot.length === 0) {
+      toast.message("No pending payouts were affected");
+      return;
+    }
+
+    toast.success(`${paid ? "Marked paid" : "Rejected"}: ${snapshot.length}`, {
+      duration: 10000,
+      action: {
+        label: "Undo",
+        onClick: () => undoBulk(snapshot),
+      },
+    });
   };
 
   const updateSeller = async (id: string, patch: Record<string, unknown>) => {
@@ -102,8 +144,59 @@ const AdminPayouts = () => {
     load();
   };
 
-  const pending = payouts.filter((p) => p.status === "pending");
-  const history = payouts.filter((p) => p.status !== "pending");
+  // Sellers that have at least one payout — used to populate the seller filter
+  const payoutSellers = useMemo(() => {
+    const ids = Array.from(new Set(payouts.map((p) => p.seller_id)));
+    return ids.map((id) => {
+      const u = users.find((x) => x.id === id);
+      return { id, label: u?.seller_display_name || u?.username || id.slice(0, 8) };
+    }).sort((a, b) => a.label.localeCompare(b.label));
+  }, [payouts, users]);
+
+  const filteredPayouts = useMemo(() => {
+    const q = payoutQuery.trim().toLowerCase();
+    const min = minAmount ? Number(minAmount) : null;
+    const max = maxAmount ? Number(maxAmount) : null;
+    const fromTs = dateFrom ? new Date(dateFrom).getTime() : null;
+    const toTs = dateTo ? new Date(dateTo).getTime() + 86_399_999 : null; // include end-of-day
+
+    let list = payouts.filter((p) => {
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (sellerFilter !== "all" && p.seller_id !== sellerFilter) return false;
+      const created = new Date(p.created_at).getTime();
+      if (fromTs !== null && created < fromTs) return false;
+      if (toTs !== null && created > toTs) return false;
+      const amt = Number(p.amount);
+      if (min !== null && amt < min) return false;
+      if (max !== null && amt > max) return false;
+      if (q) {
+        const u = users.find((x) => x.id === p.seller_id);
+        const blob = `${u?.username ?? ""} ${u?.seller_display_name ?? ""} ${p.method} ${p.address}`.toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    });
+
+    list = [...list].sort((a, b) => {
+      switch (sortBy) {
+        case "created_asc": return +new Date(a.created_at) - +new Date(b.created_at);
+        case "amount_desc": return Number(b.amount) - Number(a.amount);
+        case "amount_asc": return Number(a.amount) - Number(b.amount);
+        default: return +new Date(b.created_at) - +new Date(a.created_at);
+      }
+    });
+    return list;
+  }, [payouts, users, payoutQuery, statusFilter, sellerFilter, dateFrom, dateTo, minAmount, maxAmount, sortBy]);
+
+  const pending = filteredPayouts.filter((p) => p.status === "pending");
+  const history = filteredPayouts.filter((p) => p.status !== "pending");
+
+  const filtersActive = !!(payoutQuery || statusFilter !== "all" || sellerFilter !== "all" || dateFrom || dateTo || minAmount || maxAmount || sortBy !== "created_desc");
+  const resetFilters = () => {
+    setPayoutQuery(""); setStatusFilter("all"); setSellerFilter("all");
+    setDateFrom(""); setDateTo(""); setMinAmount(""); setMaxAmount("");
+    setSortBy("created_desc");
+  };
 
   return (
     <AdminLayout title="Payouts & Commission">
@@ -119,6 +212,69 @@ const AdminPayouts = () => {
                 }`}>{t === "pending" ? `Pending (${pending.length})` : `History (${history.length})`}</button>
             ))}
           </div>
+        </div>
+
+        {/* Filters & sorting */}
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+          <div className="relative lg:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={payoutQuery} onChange={(e) => setPayoutQuery(e.target.value)}
+              placeholder="Search seller, method, address…" className="bg-input/60 pl-9" />
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+            <SelectTrigger className="bg-input/60"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sellerFilter} onValueChange={setSellerFilter}>
+            <SelectTrigger className="bg-input/60"><SelectValue placeholder="Seller" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sellers</SelectItem>
+              {payoutSellers.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex gap-2 items-center">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">From</label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-input/60" />
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">To</label>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-input/60" />
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">Min&nbsp;$</label>
+            <Input type="number" step="0.01" min="0" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} className="bg-input/60" />
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">Max&nbsp;$</label>
+            <Input type="number" step="0.01" min="0" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} className="bg-input/60" />
+          </div>
+
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+            <SelectTrigger className="bg-input/60">
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created_desc">Newest first</SelectItem>
+              <SelectItem value="created_asc">Oldest first</SelectItem>
+              <SelectItem value="amount_desc">Amount high → low</SelectItem>
+              <SelectItem value="amount_asc">Amount low → high</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {filtersActive && (
+            <Button variant="outline" onClick={resetFilters} className="lg:col-span-1">
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />Reset filters
+            </Button>
+          )}
         </div>
 
         {tab === "pending" && pending.length > 0 && (
