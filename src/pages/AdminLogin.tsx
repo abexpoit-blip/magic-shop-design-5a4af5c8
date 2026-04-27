@@ -6,11 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
-import { describeAuthError, withAuthRetry, isTransientAuthServiceError } from "@/lib/authErrors";
+import { describeAuthError } from "@/lib/authErrors";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
-import { verifyAdminAccess } from "@/lib/adminAccess";
-
-const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+import { PRIMARY_ADMIN_EMAIL } from "@/lib/adminAccess";
 
 const AdminLogin = () => {
   const nav = useNavigate();
