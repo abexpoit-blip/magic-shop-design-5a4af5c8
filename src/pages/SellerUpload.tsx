@@ -112,7 +112,7 @@ const SellerUpload = () => {
 
   const addRule = async () => {
     if (!user || !newRule.price) return toast.error("Price required");
-    const { error } = await supabase.from("price_rules" as never).insert({
+    const { error } = await (supabase.from("price_rules" as never) as any).insert({
       seller_id: user.id,
       country: newRule.country || null,
       brand: newRule.brand || null,
