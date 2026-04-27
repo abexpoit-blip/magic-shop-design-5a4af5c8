@@ -574,6 +574,48 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          default_commission_percent: number
+          hero_cta: string
+          hero_eyebrow: string
+          hero_sub: string
+          hero_title: string
+          id: number
+          min_card_price: number
+          shop_name: string
+          shop_tag: string
+          ticker_items: Json
+          updated_at: string
+        }
+        Insert: {
+          default_commission_percent?: number
+          hero_cta?: string
+          hero_eyebrow?: string
+          hero_sub?: string
+          hero_title?: string
+          id?: number
+          min_card_price?: number
+          shop_name?: string
+          shop_tag?: string
+          ticker_items?: Json
+          updated_at?: string
+        }
+        Update: {
+          default_commission_percent?: number
+          hero_cta?: string
+          hero_eyebrow?: string
+          hero_sub?: string
+          hero_title?: string
+          id?: number
+          min_card_price?: number
+          shop_name?: string
+          shop_tag?: string
+          ticker_items?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tickets: {
         Row: {
           created_at: string
