@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { cardsApi, cartApi, sellersApi } from "@/lib/api";
 import { Input } from "@/components/ui/input";
@@ -93,12 +93,15 @@ const Shop = () => {
     }
   }, [bin]); // eslint-disable-line
 
+  const nav = useNavigate();
+
   const addToCart = async (cardId: string) => {
     if (!user) return toast.error("Please log in");
     try {
       await cartApi.add(cardId);
       setCartIds((s) => new Set(s).add(cardId));
       toast.success("Added to cart");
+      nav("/cart");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
