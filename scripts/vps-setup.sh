@@ -11,6 +11,21 @@ ok()   { echo -e "${GREEN}✓${NC} $*"; }
 warn() { echo -e "${YELLOW}⚠${NC} $*"; }
 fail() { echo -e "${RED}✗${NC} $*"; }
 
+check_json_health() {
+  local url="$1"
+  local headers body status content_type
+  headers=$(mktemp)
+  body=$(mktemp)
+  status=$(curl -sS -D "$headers" -o "$body" -w "%{http_code}" "$url" || true)
+  content_type=$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ {print tolower($0)}' "$headers" | tail -n 1)
+  if [ "$status" = "200" ] && [[ "$content_type" == *"application/json"* ]] && grep -q '"ok":true' "$body"; then
+    rm -f "$headers" "$body"
+    return 0
+  fi
+  rm -f "$headers" "$body"
+  return 1
+}
+
 echo "═══════════════════════════════════════"
 echo " cruzercc.shop — VPS Setup"
 echo "═══════════════════════════════════════"
@@ -74,11 +89,11 @@ BACKEND_PORT=$(grep -oP 'PORT=\K\d+' .env 2>/dev/null || echo "8080")
 if command -v pm2 &>/dev/null; then
   pm2 delete cruzercc-api 2>/dev/null || true
   if [ -f "ecosystem.config.cjs" ]; then
-    pm2 start ecosystem.config.cjs
+    pm2 start ecosystem.config.cjs --update-env
   elif [ -f "dist/server.js" ]; then
-    pm2 start dist/server.js --name cruzercc-api
+    PORT="$BACKEND_PORT" pm2 start dist/server.js --name cruzercc-api --update-env
   elif [ -f "server.js" ]; then
-    pm2 start server.js --name cruzercc-api
+    PORT="$BACKEND_PORT" pm2 start server.js --name cruzercc-api --update-env
   else
     fail "Cannot find server entry point (dist/server.js or server.js)"
     exit 1
@@ -92,7 +107,7 @@ fi
 # Test local
 echo ""
 sleep 2
-if curl -sf http://127.0.0.1:${BACKEND_PORT}/api/health > /dev/null 2>&1; then
+if check_json_health http://127.0.0.1:${BACKEND_PORT}/api/health; then
   ok "Backend responds on port ${BACKEND_PORT}"
 else
   fail "Backend NOT responding on port ${BACKEND_PORT}"
