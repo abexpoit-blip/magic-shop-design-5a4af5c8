@@ -8,7 +8,7 @@
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "migrate": "tsx scripts/migrate.ts",
-    "bootstrap-accounts": "node scripts/bootstrap-accounts.mjs",
+    "bootstrap-accounts": "tsx scripts/bootstrap-accounts.ts",
     "bootstrap-admin": "tsx scripts/bootstrap-admin.ts"
   },
   "dependencies": {
