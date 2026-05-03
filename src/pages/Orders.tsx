@@ -29,10 +29,10 @@ const Orders = () => {
 
   const download = (o: Order) => {
     const items = getItems(o);
-    const lines = ["bin,brand,country,exp,price"];
+    const lines = ["bin,brand,country,price"];
     items.forEach((it) => {
-      const c = it.card_snapshot as Record<string, string>;
-      lines.push(`${c.bin},${c.brand},${c.country},${c.exp_month}/${c.exp_year},${it.price}`);
+      const c = (it.card_snapshot ?? it) as Record<string, string>;
+      lines.push(`${c.bin ?? ""},${c.brand ?? ""},${c.country ?? ""},${it.price}`);
     });
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
