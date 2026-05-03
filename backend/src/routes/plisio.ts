@@ -146,7 +146,7 @@ plisioRouter.post("/webhook", async (req: Request, res: Response) => {
     `).run(confirmations, data.source_txid || null, txId, orderId);
 
     if (status === "completed" || status === "mismatch") {
-      // Auto-credit the user's balance
+      // Auto-credit the user's balance (minus deposit fees from site_settings)
       const creditAmount = Number(dep.amount); // USD amount they requested
 
       // If mismatch (underpaid/overpaid), use actual received USD
@@ -154,16 +154,31 @@ plisioRouter.post("/webhook", async (req: Request, res: Response) => {
         ? Number(data.source_amount)
         : creditAmount;
 
+      // Fetch deposit fee settings
+      let feePercent = 0;
+      let feeFlat = 0;
+      try {
+        const fpRow = db.prepare(`SELECT value FROM site_settings WHERE key = 'deposit_fee_percent'`).get() as any;
+        const ffRow = db.prepare(`SELECT value FROM site_settings WHERE key = 'deposit_fee_flat'`).get() as any;
+        if (fpRow) feePercent = Number(JSON.parse(fpRow.value)) || 0;
+        if (ffRow) feeFlat = Number(JSON.parse(ffRow.value)) || 0;
+      } catch { /* use defaults (0) */ }
+
+      const fee = (actualUsd * feePercent / 100) + feeFlat;
+      const credited = Math.max(0, actualUsd - fee);
+
+      console.log(`[plisio webhook] Deposit $${actualUsd}, fee $${fee.toFixed(2)} (${feePercent}% + $${feeFlat}), crediting $${credited.toFixed(2)}`);
+
       db.transaction(() => {
         db.prepare(`
           UPDATE deposits SET status = 'approved', admin_notes = ?, reviewed_at = datetime('now')
           WHERE id = ?
-        `).run(`Auto-confirmed via Plisio (${status}, ${confirmations} conf, txid: ${data.source_txid || "n/a"})`, orderId);
+        `).run(`Auto-confirmed via Plisio (${status}, ${confirmations} conf, txid: ${data.source_txid || "n/a"}, fee: $${fee.toFixed(2)})`, orderId);
 
         db.prepare(`
           UPDATE wallets SET balance = balance + ?, updated_at = datetime('now')
           WHERE user_id = ?
-        `).run(actualUsd, dep.user_id);
+        `).run(credited, dep.user_id);
 
         db.prepare(`
           INSERT INTO transactions (id, user_id, type, amount, ref_id, meta)
@@ -171,9 +186,9 @@ plisioRouter.post("/webhook", async (req: Request, res: Response) => {
         `).run(
           Array.from(crypto.randomBytes(16)).map(b => b.toString(16).padStart(2, "0")).join(""),
           dep.user_id,
-          actualUsd,
+          credited,
           orderId,
-          JSON.stringify({ plisio_txn: txId, crypto: dep.crypto_currency, confirmations, source_txid: data.source_txid })
+          JSON.stringify({ plisio_txn: txId, crypto: dep.crypto_currency, confirmations, source_txid: data.source_txid, gross: actualUsd, fee: fee })
         );
       })();
 
