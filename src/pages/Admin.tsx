@@ -1,233 +1,125 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { adminApi, cardsApi, announcementsApi, ticketsApi, depositsApi, payoutsApi, sellerAppsApi, refundsApi, depositAddressesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Check, X, Shield, Users, Megaphone, Ticket, DollarSign, ShoppingBag, TrendingUp,
   CreditCard, Ban, UserCheck, Wallet, Upload, Trash2, Eye, EyeOff, BadgeCheck, Search, ExternalLink,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { BRANDS, COUNTRIES } from "@/lib/brands";
+import { useAuth } from "@/hooks/useAuth";
 
-interface Application { id: string; user_id: string; shop_name: string | null; contact: string | null; description: string | null; status: string; telegram?: string | null; jabber?: string | null; expected_volume?: string | null; sample_bins?: string | null; message?: string | null; admin_note?: string | null; created_at: string; }
 interface Profile { id: string; username: string; balance: number; is_seller: boolean; banned: boolean; is_seller_verified?: boolean; is_seller_visible?: boolean; commission_percent?: number; seller_display_name?: string | null; }
-interface RefundRequest { id: string; buyer_id: string; seller_id: string; card_id: string | null; kind: string; reason: string | null; status: string; created_at: string; }
 interface TicketRow { id: string; user_id: string; subject: string; message: string; reply: string | null; status: string; }
 interface Order { id: string; user_id: string; total: number; status: string; created_at: string; }
 interface Deposit { id: string; user_id: string; amount: number; method: string; txid: string | null; status: string; created_at: string; }
 interface Payout { id: string; seller_id: string; amount: number; method: string; address: string; status: string; created_at: string; }
 interface Card { id: string; seller_id: string; bin: string; brand: string; country: string; price: number; status: string; created_at: string; }
-interface DepositAddress { id: string; method: string; address: string; network: string | null; }
 
 const Admin = () => {
-  const [apps, setApps] = useState<Application[]>([]);
+  const { user } = useAuth();
   const [users, setUsers] = useState<Profile[]>([]);
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
-  const [addresses, setAddresses] = useState<DepositAddress[]>([]);
-  const [refunds, setRefunds] = useState<RefundRequest[]>([]);
   const [annTitle, setAnnTitle] = useState("");
   const [annBody, setAnnBody] = useState("");
-  const [bulk, setBulk] = useState("");
 
   const load = async () => {
-    const [a, u, t, o, d, p, c, da, rf] = await Promise.all([
-      supabase.from("seller_applications").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("id,username,balance,is_seller,banned,is_seller_verified,is_seller_visible,commission_percent,seller_display_name").order("created_at", { ascending: false }).limit(100),
-      supabase.from("tickets").select("*").order("created_at", { ascending: false }).limit(50),
-      supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(100),
-      supabase.from("deposits").select("*").order("created_at", { ascending: false }).limit(100),
-      supabase.from("payouts").select("*").order("created_at", { ascending: false }).limit(50),
-      supabase.from("cards").select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("deposit_addresses").select("*"),
-      (supabase.from("refund_requests" as never) as any).select("*").order("created_at", { ascending: false }).limit(50),
-    ]);
-    setApps(((a as any).data ?? []) as Application[]);
-    setUsers(((u as any).data ?? []) as Profile[]);
-    setTickets((t.data ?? []) as TicketRow[]);
-    setOrders((o.data ?? []) as Order[]);
-    setDeposits((d.data ?? []) as Deposit[]);
-    setPayouts((p.data ?? []) as Payout[]);
-    setCards((c.data ?? []) as Card[]);
-    setAddresses((da.data ?? []) as DepositAddress[]);
-    setRefunds(((rf as any).data ?? []) as RefundRequest[]);
+    try {
+      const [u, t, o, d, p, c] = await Promise.allSettled([
+        adminApi.users(),
+        ticketsApi.all(),
+        adminApi.stats(),
+        depositsApi.all(),
+        payoutsApi.all(),
+        cardsApi.browse({ limit: 200 }),
+      ]);
+      if (u.status === "fulfilled") setUsers((u.value.users ?? []) as unknown as Profile[]);
+      if (t.status === "fulfilled") setTickets((t.value.tickets ?? []) as unknown as TicketRow[]);
+      if (d.status === "fulfilled") setDeposits((d.value.deposits ?? []) as unknown as Deposit[]);
+      if (p.status === "fulfilled") setPayouts((p.value.payouts ?? []) as unknown as Payout[]);
+      if (c.status === "fulfilled") setCards((c.value.cards ?? []) as unknown as Card[]);
+    } catch { /* ignore */ }
   };
   useEffect(() => { load(); }, []);
 
-  // ============= STATS =============
   const stats = useMemo(() => {
-    const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
-    const today = new Date().toISOString().slice(0, 10);
-    const todayRevenue = orders.filter((o) => o.created_at.slice(0, 10) === today).reduce((s, o) => s + Number(o.total), 0);
     const pendingDeposits = deposits.filter((d) => d.status === "pending").length;
     const pendingPayouts = payouts.filter((p) => p.status === "pending").length;
     const cardsAvailable = cards.filter((c) => c.status === "available").length;
     const cardsSold = cards.filter((c) => c.status === "sold").length;
-    const days = Array.from({ length: 14 }).map((_, i) => {
-      const dt = new Date(); dt.setDate(dt.getDate() - (13 - i));
-      const key = dt.toISOString().slice(0, 10);
-      const total = orders.filter((o) => o.created_at.slice(0, 10) === key).reduce((s, o) => s + Number(o.total), 0);
-      return { key, total };
-    });
-    const max = Math.max(1, ...days.map((d) => d.total));
-    return { totalRevenue, todayRevenue, pendingDeposits, pendingPayouts, cardsAvailable, cardsSold, totalUsers: users.length, totalOrders: orders.length, days, max };
-  }, [orders, deposits, payouts, cards, users]);
+    return { pendingDeposits, pendingPayouts, cardsAvailable, cardsSold, totalUsers: users.length };
+  }, [deposits, payouts, cards, users]);
 
-  // ============= ACTIONS =============
-  const decideApp = async (app: Application, approve: boolean, note?: string) => {
-    await (supabase.from("seller_applications") as any).update({
-      status: approve ? "approved" : "rejected",
-      admin_note: note ?? null,
-      reviewed_at: new Date().toISOString(),
-    }).eq("id", app.id);
-    if (approve) {
-      await supabase.from("user_roles").insert({ user_id: app.user_id, role: "seller" });
-      await (supabase.from("profiles") as any).update({ is_seller: true, seller_status: "approved" }).eq("id", app.user_id);
-    }
-    toast.success(approve ? "Seller approved" : "Application rejected"); load();
+  const decideDeposit = async (dep: Deposit, approve: boolean) => {
+    try {
+      if (approve) await depositsApi.approve(dep.id);
+      else await depositsApi.reject(dep.id);
+      toast.success(approve ? "Deposit approved & credited" : "Deposit rejected");
+      load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
-  const updateSellerProfile = async (id: string, patch: Record<string, unknown>) => {
-    const { error } = await (supabase.from("profiles") as any).update(patch).eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Seller updated"); load();
-  };
-
-  const decideRefund = async (r: RefundRequest, approve: boolean) => {
-    await (supabase.from("refund_requests" as never) as any)
-      .update({ status: approve ? "approved" : "rejected", resolved_at: new Date().toISOString() })
-      .eq("id", r.id);
-    if (approve) {
-      // refund buyer balance for the card price
-      const card = cards.find((c) => c.id === r.card_id);
-      const buyer = users.find((u) => u.id === r.buyer_id);
-      if (card && buyer) {
-        await supabase.from("profiles").update({ balance: Number(buyer.balance) + Number(card.price) }).eq("id", buyer.id);
-        await supabase.from("transactions").insert({ user_id: buyer.id, amount: Number(card.price), kind: "refund", method: "admin", note: `Refund for card ${card.bin}` });
-      }
-    }
-    toast.success(approve ? "Refund approved & credited" : "Refund rejected"); load();
+  const decidePayout = async (p: Payout, paid: boolean) => {
+    try {
+      if (paid) await payoutsApi.complete(p.id);
+      else await payoutsApi.reject(p.id);
+      toast.success(paid ? "Marked as paid" : "Payout rejected");
+      load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const adjustBalance = async (id: string, delta: number) => {
-    const u = users.find((x) => x.id === id); if (!u) return;
-    await supabase.from("profiles").update({ balance: Number(u.balance) + delta }).eq("id", id);
-    await supabase.from("transactions").insert({ user_id: id, amount: delta, kind: delta > 0 ? "admin_credit" : "admin_debit", method: "manual" });
-    toast.success("Balance updated"); load();
+    try {
+      await adminApi.adjustBalance(id, delta);
+      toast.success("Balance updated"); load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const toggleBan = async (u: Profile) => {
-    await supabase.from("profiles").update({ banned: !u.banned }).eq("id", u.id);
-    toast.success(u.banned ? "User unbanned" : "User banned"); load();
+    try {
+      await adminApi.toggleBan(u.id);
+      toast.success(u.banned ? "User unbanned" : "User banned"); load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const revokeSeller = async (u: Profile) => {
-    await supabase.from("user_roles").delete().eq("user_id", u.id).eq("role", "seller");
-    await supabase.from("profiles").update({ is_seller: false, seller_status: "revoked" }).eq("id", u.id);
-    toast.success("Seller revoked"); load();
+    try {
+      await adminApi.revokeSeller(u.id);
+      toast.success("Seller revoked"); load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const replyTicket = async (id: string, reply: string) => {
-    await supabase.from("tickets").update({ reply, status: "closed" }).eq("id", id);
-    toast.success("Reply sent"); load();
+    try {
+      await ticketsApi.reply(id, reply);
+      toast.success("Reply sent"); load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const postAnnouncement = async () => {
     if (!annTitle || !annBody) return;
-    await supabase.from("announcements").insert({ title: annTitle, body: annBody });
-    toast.success("Announcement posted"); setAnnTitle(""); setAnnBody("");
-  };
-
-  const decideDeposit = async (dep: Deposit, approve: boolean) => {
-    if (approve) {
-      const u = users.find((x) => x.id === dep.user_id);
-      const amt = Number(dep.amount);
-      let bonus = 0;
-      if (amt >= 5000) bonus = 750;
-      else if (amt >= 2000) bonus = 240;
-      else if (amt >= 1000) bonus = 100;
-      else if (amt >= 500) bonus = 35;
-      const total = amt + bonus;
-      if (u) await supabase.from("profiles").update({ balance: Number(u.balance) + total }).eq("id", u.id);
-      await supabase.from("transactions").insert({ user_id: dep.user_id, amount: total, kind: "recharge", method: dep.method, note: bonus ? `Includes $${bonus} bonus` : null });
-    }
-    await supabase.from("deposits").update({ status: approve ? "approved" : "rejected", reviewed_at: new Date().toISOString() }).eq("id", dep.id);
-    toast.success(approve ? "Deposit approved & credited" : "Deposit rejected"); load();
-  };
-
-  const decidePayout = async (p: Payout, paid: boolean) => {
-    await supabase.from("payouts").update({ status: paid ? "paid" : "rejected", paid_at: paid ? new Date().toISOString() : null }).eq("id", p.id);
-    toast.success(paid ? "Marked as paid" : "Payout rejected"); load();
-  };
-
-  const updateAddress = async (a: DepositAddress, field: "address" | "network", value: string) => {
-    const patch = field === "address"
-      ? { address: value, updated_at: new Date().toISOString() }
-      : { network: value, updated_at: new Date().toISOString() };
-    await supabase.from("deposit_addresses").update(patch).eq("id", a.id);
-    load();
-  };
-
-  const adminBulkUpload = async () => {
-    if (!bulk) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const lines = bulk.trim().split("\n").filter(Boolean);
-    const rows = lines.map((line) => {
-      const [bin, brand, country, state, city, zip, exp_month, exp_year, price] = line.split(",").map((s) => s.trim());
-      return {
-        seller_id: user.id, bin, brand: (brand || "VISA").toUpperCase(), country: (country || "US").toUpperCase(),
-        state, city, zip, exp_month, exp_year, price: Number(price || 1.5),
-        base: `${new Date().toISOString().slice(0,10)}_${country}_${brand}_$${price}_ADMIN`,
-        refundable: false, has_phone: true, has_email: true,
-      };
-    });
-    const { error } = await supabase.from("cards").insert(rows);
-    if (error) return toast.error(error.message);
-    toast.success(`Admin uploaded ${rows.length} cards`); setBulk(""); load();
-  };
-
-  const removeCard = async (id: string) => {
-    await supabase.from("cards").delete().eq("id", id);
-    load();
+    try {
+      await announcementsApi.create({ title: annTitle, body: annBody });
+      toast.success("Announcement posted"); setAnnTitle(""); setAnnBody("");
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   return (
     <AdminLayout title="Control Center">
       <div className="space-y-6">
-
-        {/* STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Stat icon={DollarSign} label="Total revenue" value={`$${stats.totalRevenue.toFixed(2)}`} accent="gold" />
-          <Stat icon={TrendingUp} label="Today" value={`$${stats.todayRevenue.toFixed(2)}`} accent="success" />
-          <Stat icon={ShoppingBag} label="Orders" value={String(stats.totalOrders)} accent="primary" />
           <Stat icon={Users} label="Users" value={String(stats.totalUsers)} accent="primary" />
           <Stat icon={Wallet} label="Pending deposits" value={String(stats.pendingDeposits)} accent={stats.pendingDeposits > 0 ? "warning" : "primary"} />
           <Stat icon={CreditCard} label="Pending payouts" value={String(stats.pendingPayouts)} accent={stats.pendingPayouts > 0 ? "warning" : "primary"} />
           <Stat icon={CreditCard} label="Cards available" value={String(stats.cardsAvailable)} accent="primary" />
-          <Stat icon={Check} label="Cards sold" value={String(stats.cardsSold)} accent="success" />
         </div>
-
-        {/* SALES CHART */}
-        <Section icon={TrendingUp} title="SALES · LAST 14 DAYS">
-          <div className="flex items-end gap-2 h-40">
-            {stats.days.map((d) => (
-              <div key={d.key} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full rounded-t bg-gradient-to-t from-gold/40 to-gold/90"
-                  style={{ height: `${(d.total / stats.max) * 100}%`, minHeight: d.total ? 4 : 2 }}
-                  title={`$${d.total.toFixed(2)}`} />
-                <span className="text-[9px] text-muted-foreground font-mono">{d.key.slice(5)}</span>
-              </div>
-            ))}
-          </div>
-        </Section>
 
         {/* DEPOSITS */}
         <Section icon={Wallet} title={`PENDING DEPOSITS (${stats.pendingDeposits})`}>
@@ -238,7 +130,7 @@ const Admin = () => {
               return (
                 <div key={d.id} className="flex items-center justify-between gap-2 p-3 rounded-lg bg-secondary/40 border border-border/40 flex-wrap">
                   <div className="min-w-0 flex-1">
-                    <p className="font-display">${Number(d.amount).toFixed(2)} · <span className="text-primary-glow">{d.method}</span> <span className="text-xs text-muted-foreground">· {u?.username ?? d.user_id.slice(0, 8)}</span></p>
+                    <p className="font-display">${Number(d.amount).toFixed(2)} · <span className="text-primary-glow">{d.method}</span> <span className="text-xs text-muted-foreground">· {u?.username ?? d.user_id?.slice(0, 8)}</span></p>
                     <p className="text-[10px] font-mono text-muted-foreground truncate">{d.txid}</p>
                   </div>
                   <div className="flex gap-2">
@@ -260,7 +152,7 @@ const Admin = () => {
               return (
                 <div key={p.id} className="flex items-center justify-between gap-2 p-3 rounded-lg bg-secondary/40 border border-border/40 flex-wrap">
                   <div className="min-w-0 flex-1">
-                    <p className="font-display">${Number(p.amount).toFixed(2)} · <span className="text-primary-glow">{p.method}</span> <span className="text-xs text-muted-foreground">· {u?.username ?? p.seller_id.slice(0, 8)}</span></p>
+                    <p className="font-display">${Number(p.amount).toFixed(2)} · <span className="text-primary-glow">{p.method}</span> <span className="text-xs text-muted-foreground">· {u?.username ?? p.seller_id?.slice(0, 8)}</span></p>
                     <p className="text-[10px] font-mono text-muted-foreground truncate">{p.address}</p>
                   </div>
                   <div className="flex gap-2">
@@ -270,114 +162,6 @@ const Admin = () => {
                 </div>
               );
             })}
-          </div>
-        </Section>
-
-        {/* DEPOSIT ADDRESSES */}
-        <Section icon={Wallet} title="DEPOSIT ADDRESSES (USER-FACING)">
-          <div className="space-y-2">
-            {addresses.map((a) => (
-              <div key={a.id} className="grid grid-cols-1 md:grid-cols-[80px_120px_1fr] gap-2 items-center p-3 rounded-lg bg-secondary/40 border border-border/40">
-                <span className="font-display text-primary-glow">{a.method}</span>
-                <Input defaultValue={a.network ?? ""} onBlur={(e) => updateAddress(a, "network", e.target.value)} placeholder="Network" className="bg-input/60" />
-                <Input defaultValue={a.address} onBlur={(e) => updateAddress(a, "address", e.target.value)} className="bg-input/60 font-mono text-xs" />
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* APPLICATIONS */}
-        <Section icon={Users} title="SELLER APPLICATIONS">
-          {apps.length === 0 && <p className="text-sm text-muted-foreground">No applications.</p>}
-          <div className="space-y-2">
-            {apps.map((a) => (
-              <div key={a.id} className="p-3 rounded-lg bg-secondary/40 border border-border/40">
-                <div className="flex items-start justify-between flex-wrap gap-2">
-                  <div className="space-y-0.5 text-sm">
-                    {a.telegram && <p>📱 Telegram: <span className="font-mono text-primary-glow">{a.telegram}</span></p>}
-                    {a.jabber && <p>💬 Jabber: <span className="font-mono text-primary-glow">{a.jabber}</span></p>}
-                    {a.expected_volume && <p className="text-xs text-muted-foreground">Volume: {a.expected_volume}</p>}
-                    {a.sample_bins && <p className="text-xs text-muted-foreground">BINs: <span className="font-mono">{a.sample_bins}</span></p>}
-                    {(a.shop_name || a.contact) && <p className="text-xs text-muted-foreground">{a.shop_name} · {a.contact}</p>}
-                    {(a.message || a.description) && <p className="text-xs text-muted-foreground italic mt-1">"{a.message || a.description}"</p>}
-                    <p className="text-[10px] mt-1">status: <span className={a.status === "pending" ? "text-warning" : a.status === "approved" ? "text-success" : "text-muted-foreground"}>{a.status}</span> · {new Date(a.created_at).toLocaleString()}</p>
-                  </div>
-                  {a.status === "pending" && (
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => decideApp(a, true)} className="bg-success text-white"><Check className="h-3 w-3 mr-1" />Approve</Button>
-                      <Button size="sm" variant="destructive" onClick={() => { const note = prompt("Reason for rejection (optional):") ?? undefined; decideApp(a, false, note); }}><X className="h-3 w-3 mr-1" />Reject</Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* SELLER CONTROLS — verified badge, public visibility, commission % */}
-        <SellerControls users={users} onUpdate={updateSellerProfile} />
-
-        {/* REFUND QUEUE */}
-        <Section icon={Wallet} title={`REFUND REQUESTS (${refunds.filter((r) => r.status === "pending").length} pending)`}>
-          {refunds.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No refund requests.</p>
-          ) : (
-            <div className="space-y-2">
-              {refunds.map((r) => {
-                const buyer = users.find((u) => u.id === r.buyer_id);
-                const card = cards.find((c) => c.id === r.card_id);
-                return (
-                  <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-border/40 flex-wrap gap-2">
-                    <div className="text-sm">
-                      <p><span className="font-mono text-primary-glow">{r.kind.toUpperCase()}</span> · buyer: {buyer?.username ?? r.buyer_id.slice(0, 8)}</p>
-                      <p className="text-xs text-muted-foreground">Card: {card ? `${card.brand} ${card.bin}` : "n/a"} · ${card ? Number(card.price).toFixed(2) : "?"}</p>
-                      {r.reason && <p className="text-xs italic text-muted-foreground">"{r.reason}"</p>}
-                      <p className="text-[10px] mt-1">status: <span className={r.status === "pending" ? "text-warning" : r.status === "approved" ? "text-success" : "text-muted-foreground"}>{r.status}</span></p>
-                    </div>
-                    {r.status === "pending" && (
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => decideRefund(r, true)} className="bg-success text-white"><Check className="h-3 w-3 mr-1" />Approve & credit</Button>
-                        <Button size="sm" variant="destructive" onClick={() => decideRefund(r, false)}><X className="h-3 w-3 mr-1" />Reject</Button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Section>
-
-        {/* ADMIN UPLOAD CARDS */}
-        <Section icon={Upload} title="ADMIN: BULK UPLOAD CARDS">
-          <p className="text-xs text-muted-foreground mb-2">Cards uploaded as admin attach to your account. CSV: <code className="text-primary-glow">bin,brand,country,state,city,zip,exp_month,exp_year,price</code></p>
-          <Textarea rows={5} value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder="411111,VISA,US,NY,New York,10001,12,28,1.5" className="bg-input/60 font-mono text-xs" />
-          <Button onClick={adminBulkUpload} className="mt-3 bg-gradient-primary shadow-neon">Upload as admin</Button>
-        </Section>
-
-        {/* ALL CARDS MODERATION */}
-        <Section icon={CreditCard} title={`ALL CARDS (${cards.length})`}>
-          <div className="overflow-x-auto max-h-96 overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-muted-foreground sticky top-0 bg-background/95">
-                <tr><th className="p-2 text-left">Brand</th><th className="p-2 text-left">BIN</th><th className="p-2 text-left">Country</th><th className="p-2 text-right">Price</th><th className="p-2">Status</th><th className="p-2 text-left">Seller</th><th></th></tr>
-              </thead>
-              <tbody>
-                {cards.slice(0, 100).map((c) => {
-                  const u = users.find((x) => x.id === c.seller_id);
-                  return (
-                    <tr key={c.id} className="border-t border-border/40">
-                      <td className="p-2">{c.brand}</td>
-                      <td className="p-2 font-mono">{c.bin}</td>
-                      <td className="p-2">{c.country}</td>
-                      <td className="p-2 text-right text-primary-glow font-display">${Number(c.price).toFixed(2)}</td>
-                      <td className="p-2 text-center"><span className="text-xs">{c.status}</span></td>
-                      <td className="p-2 text-xs text-muted-foreground">{u?.username ?? c.seller_id.slice(0, 8)}</td>
-                      <td className="p-2 text-right"><button onClick={() => removeCard(c.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
           </div>
         </Section>
 
@@ -464,190 +248,5 @@ const TicketAdminRow = ({ ticket, onReply }: { ticket: TicketRow; onReply: (id: 
     </div>
   );
 };
-
-
-const SellerControls = ({ users, onUpdate }: { users: Profile[]; onUpdate: (id: string, patch: Record<string, unknown>) => void }) => {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "visible" | "hidden" | "verified">("all");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkRunning, setBulkRunning] = useState(false);
-
-  const sellers = users.filter((u) => u.is_seller);
-  const filtered = sellers.filter((u) => {
-    if (query && !u.username.toLowerCase().includes(query.toLowerCase()) && !(u.seller_display_name ?? "").toLowerCase().includes(query.toLowerCase())) return false;
-    if (filter === "visible") return !!u.is_seller_visible;
-    if (filter === "hidden") return !u.is_seller_visible;
-    if (filter === "verified") return !!u.is_seller_verified;
-    return true;
-  });
-
-  const visibleCount = sellers.filter((u) => u.is_seller_visible).length;
-  const verifiedCount = sellers.filter((u) => u.is_seller_verified).length;
-
-  const toggleOne = (id: string) =>
-    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const allFilteredSelected = filtered.length > 0 && filtered.every((u) => selected.has(u.id));
-  const someFilteredSelected = filtered.some((u) => selected.has(u.id));
-  const toggleAll = () =>
-    setSelected((s) => {
-      const n = new Set(s);
-      if (allFilteredSelected) filtered.forEach((u) => n.delete(u.id));
-      else filtered.forEach((u) => n.add(u.id));
-      return n;
-    });
-  const clearSelection = () => setSelected(new Set());
-
-  const bulkApply = async (patch: Record<string, unknown>, label: string) => {
-    const ids = Array.from(selected);
-    if (ids.length === 0) return;
-    setBulkRunning(true);
-    const { error } = await (supabase.from("profiles") as any).update(patch).in("id", ids);
-    setBulkRunning(false);
-    if (error) return toast.error(error.message);
-    toast.success(`${label} applied to ${ids.length} seller${ids.length === 1 ? "" : "s"}`);
-    clearSelection();
-    // trigger parent reload via any update call to refresh list
-    onUpdate(ids[0], patch);
-  };
-
-  return (
-    <section className="glass rounded-2xl p-6">
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <UserCheck className="h-5 w-5 text-primary-glow" />
-        <h2 className="font-display tracking-wider text-primary-glow">SELLER CONTROLS</h2>
-        <span className="ml-auto text-xs text-muted-foreground flex gap-3">
-          <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3 text-success" />{visibleCount} visible</span>
-          <span className="inline-flex items-center gap-1"><BadgeCheck className="h-3 w-3 text-primary-glow" />{verifiedCount} verified</span>
-          <span>· {sellers.length} total</span>
-        </span>
-      </div>
-
-      <div className="flex gap-2 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search sellers…" className="bg-input/60 pl-9" />
-        </div>
-        <div className="flex gap-1">
-          {(["all", "visible", "hidden", "verified"] as const).map((f) => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-3 py-2 rounded-lg text-xs uppercase tracking-wider transition ${
-                filter === f ? "bg-primary/20 border border-primary/60 text-primary-glow" : "bg-secondary/40 border border-border/40 text-muted-foreground hover:bg-secondary/60"
-              }`}>{f}</button>
-          ))}
-        </div>
-      </div>
-
-      {selected.size > 0 && (
-        <div className="mb-3 p-3 rounded-xl bg-primary/10 border border-primary/40 flex items-center gap-2 flex-wrap">
-          <span className="font-display text-sm text-primary-glow">{selected.size} selected</span>
-          <span className="text-xs text-muted-foreground">·</span>
-          <Button size="sm" disabled={bulkRunning} onClick={() => bulkApply({ is_seller_visible: true }, "Make visible")}
-            className="bg-success/20 text-success border border-success/40 hover:bg-success/30">
-            <Eye className="h-3.5 w-3.5 mr-1" />Make visible
-          </Button>
-          <Button size="sm" disabled={bulkRunning} onClick={() => bulkApply({ is_seller_visible: false }, "Hide")}
-            variant="outline" className="border-border/60">
-            <EyeOff className="h-3.5 w-3.5 mr-1" />Hide
-          </Button>
-          <span className="text-xs text-muted-foreground">·</span>
-          <Button size="sm" disabled={bulkRunning} onClick={() => bulkApply({ is_seller_verified: true }, "Verify")}
-            className="bg-primary/20 text-primary-glow border border-primary/40 hover:bg-primary/30">
-            <BadgeCheck className="h-3.5 w-3.5 mr-1" />Verify
-          </Button>
-          <Button size="sm" disabled={bulkRunning} onClick={() => bulkApply({ is_seller_verified: false }, "Unverify")}
-            variant="outline" className="border-border/60">
-            <X className="h-3.5 w-3.5 mr-1" />Unverify
-          </Button>
-          <button onClick={clearSelection} className="ml-auto text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-            <X className="h-3 w-3" />Clear selection
-          </button>
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-xs uppercase tracking-wider text-muted-foreground bg-secondary/40">
-            <tr>
-              <th className="p-3 w-10 text-center">
-                <input type="checkbox"
-                  checked={allFilteredSelected}
-                  ref={(el) => { if (el) el.indeterminate = !allFilteredSelected && someFilteredSelected; }}
-                  onChange={toggleAll}
-                  className="accent-primary cursor-pointer"
-                  aria-label="Select all" />
-              </th>
-              <th className="p-3 text-left">Seller</th>
-              <th className="p-3 text-center">Verified</th>
-              <th className="p-3 text-center">Visible on shop</th>
-              <th className="p-3 text-center">Commission %</th>
-              <th className="p-3 text-right">Profile</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((u) => (
-              <tr key={u.id} className={`border-t border-border/40 hover:bg-secondary/20 ${selected.has(u.id) ? "bg-primary/5" : ""}`}>
-                <td className="p-3 text-center">
-                  <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleOne(u.id)}
-                    className="accent-primary cursor-pointer" />
-                </td>
-                <td className="p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{u.seller_display_name || u.username}</span>
-                    {u.is_seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary-glow" />}
-                    {u.is_seller_visible
-                      ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/20 text-success border border-success/40">PUBLIC</span>
-                      : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/60 text-muted-foreground border border-border">HIDDEN</span>}
-                  </div>
-                  <p className="text-[10px] font-mono text-muted-foreground mt-0.5">@{u.username}</p>
-                </td>
-                <td className="p-3 text-center">
-                  <ToggleSwitch checked={!!u.is_seller_verified}
-                    onChange={(v) => onUpdate(u.id, { is_seller_verified: v })}
-                    onColor="bg-primary" />
-                </td>
-                <td className="p-3 text-center">
-                  <ToggleSwitch checked={!!u.is_seller_visible}
-                    onChange={(v) => onUpdate(u.id, { is_seller_visible: v })}
-                    onColor="bg-success" />
-                </td>
-                <td className="p-3 text-center">
-                  <Input type="number" step="0.5" min={0} max={100} defaultValue={u.commission_percent ?? 20}
-                    onBlur={(e) => {
-                      const v = Number(e.target.value);
-                      if (v !== Number(u.commission_percent ?? 20)) onUpdate(u.id, { commission_percent: v });
-                    }}
-                    className="bg-input/60 h-8 w-20 mx-auto text-center" />
-                </td>
-                <td className="p-3 text-right">
-                  {u.is_seller_visible ? (
-                    <Link to={`/seller/${u.id}`} target="_blank" rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-primary-glow hover:underline">
-                      View <ExternalLink className="h-3 w-3" />
-                    </Link>
-                  ) : (
-                    <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><EyeOff className="h-3 w-3" />Private</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={6} className="p-8 text-center text-muted-foreground text-sm">
-                {sellers.length === 0 ? "No approved sellers yet." : "No sellers match this filter."}
-              </td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-};
-
-const ToggleSwitch = ({ checked, onChange, onColor = "bg-primary" }: { checked: boolean; onChange: (v: boolean) => void; onColor?: string }) => (
-  <button type="button" onClick={() => onChange(!checked)}
-    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${checked ? onColor : "bg-secondary border border-border"}`}
-    aria-pressed={checked}>
-    <span className={`inline-block h-4 w-4 rounded-full bg-background shadow transition transform ${checked ? "translate-x-6" : "translate-x-1"}`} />
-  </button>
-);
 
 export default Admin;

@@ -1,16 +1,11 @@
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { sellerAppsApi, appNotesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, X, Users, MessageSquarePlus, Trash2, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-
-interface AppNote {
-  id: string; application_id: string; author_id: string; note: string; created_at: string;
-}
-interface Profile { id: string; username: string; }
 
 interface Application {
   id: string; user_id: string; shop_name: string | null; contact: string | null;
@@ -19,92 +14,69 @@ interface Application {
   admin_note?: string | null; created_at: string;
 }
 
+interface AppNote { id: string; application_id: string; author_id: string; note: string; created_at: string; }
+
 const AdminApplications = () => {
   const { user } = useAuth();
   const [apps, setApps] = useState<Application[]>([]);
   const [tab, setTab] = useState<"pending" | "all">("pending");
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<Map<string, AppNote[]>>(new Map());
-  const [authors, setAuthors] = useState<Map<string, Profile>>(new Map());
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("seller_applications").select("*").order("created_at", { ascending: false });
-    const list = (data ?? []) as Application[];
-    setApps(list);
-    setLoading(false);
-
-    if (list.length > 0) {
-      const { data: ns } = await (supabase.from("application_notes" as never) as any)
-        .select("*").in("application_id", list.map((a) => a.id)).order("created_at", { ascending: true });
-      const map = new Map<string, AppNote[]>();
-      ((ns ?? []) as AppNote[]).forEach((n) => {
-        if (!map.has(n.application_id)) map.set(n.application_id, []);
-        map.get(n.application_id)!.push(n);
-      });
-      setNotes(map);
-
-      const authorIds = Array.from(new Set(((ns ?? []) as AppNote[]).map((n) => n.author_id)));
-      if (authorIds.length > 0) {
-        const { data: ps } = await supabase.from("profiles").select("id,username").in("id", authorIds);
-        setAuthors(new Map((ps ?? []).map((p: any) => [p.id, p])));
+    try {
+      const { applications } = await sellerAppsApi.all();
+      const list = (applications ?? []) as unknown as Application[];
+      setApps(list);
+      // Load notes for each application
+      const noteMap = new Map<string, AppNote[]>();
+      for (const a of list.slice(0, 20)) {
+        try {
+          const { notes: ns } = await appNotesApi.list(a.id);
+          if (ns && (ns as unknown as AppNote[]).length > 0) noteMap.set(a.id, ns as unknown as AppNote[]);
+        } catch { /* ignore */ }
       }
-    } else {
-      setNotes(new Map());
-    }
+      setNotes(noteMap);
+    } catch { /* ignore */ }
+    setLoading(false);
   };
   useEffect(() => { load(); }, []);
 
   const addNote = async (applicationId: string, text: string) => {
     if (!user || !text.trim()) return;
-    const { data, error } = await (supabase.from("application_notes" as never) as any)
-      .insert({ application_id: applicationId, author_id: user.id, note: text.trim() })
-      .select().single();
-    if (error) return toast.error(error.message);
-    setNotes((m) => {
-      const n = new Map(m);
-      const arr = n.get(applicationId) ?? [];
-      n.set(applicationId, [...arr, data as AppNote]);
-      return n;
-    });
-    if (user && !authors.has(user.id)) {
-      const { data: me } = await supabase.from("profiles").select("id,username").eq("id", user.id).maybeSingle();
-      if (me) setAuthors((a) => new Map(a).set(me.id, me as Profile));
-    }
-    toast.success("Note saved");
+    try {
+      const { note: n } = await appNotesApi.create(applicationId, text.trim());
+      setNotes((m) => {
+        const nm = new Map(m);
+        nm.set(applicationId, [...(nm.get(applicationId) ?? []), n as unknown as AppNote]);
+        return nm;
+      });
+      toast.success("Note saved");
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const deleteNote = async (applicationId: string, noteId: string) => {
-    const { error } = await (supabase.from("application_notes" as never) as any).delete().eq("id", noteId);
-    if (error) return toast.error(error.message);
-    setNotes((m) => {
-      const n = new Map(m);
-      n.set(applicationId, (n.get(applicationId) ?? []).filter((x) => x.id !== noteId));
-      return n;
-    });
+    try {
+      await appNotesApi.del(applicationId, noteId);
+      setNotes((m) => {
+        const nm = new Map(m);
+        nm.set(applicationId, (nm.get(applicationId) ?? []).filter((x) => x.id !== noteId));
+        return nm;
+      });
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const decide = async (app: Application, approve: boolean, note?: string) => {
-    const { error } = await (supabase.from("seller_applications") as any).update({
-      status: approve ? "approved" : "rejected",
-      admin_note: note ?? null,
-      reviewed_at: new Date().toISOString(),
-    }).eq("id", app.id);
-    if (error) return toast.error(error.message);
-    if (approve) {
-      await supabase.from("user_roles").insert({ user_id: app.user_id, role: "seller" });
-      await (supabase.from("profiles") as any).update({ is_seller: true, seller_status: "approved" }).eq("id", app.user_id);
-    }
-    toast.success(approve ? "Seller approved" : "Application rejected");
-    load();
+    try {
+      if (approve) await sellerAppsApi.approve(app.id, note);
+      else await sellerAppsApi.reject(app.id, note);
+      toast.success(approve ? "Seller approved" : "Application rejected");
+      load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const list = tab === "pending" ? apps.filter((a) => a.status === "pending") : apps;
-  const counts = {
-    pending: apps.filter((a) => a.status === "pending").length,
-    approved: apps.filter((a) => a.status === "approved").length,
-    rejected: apps.filter((a) => a.status === "rejected").length,
-  };
 
   return (
     <AdminLayout title="Seller Applications">
@@ -116,16 +88,10 @@ const AdminApplications = () => {
             {(["pending", "all"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider transition ${
-                  tab === t ? "bg-primary/20 border border-primary/60 text-primary-glow" : "bg-secondary/40 border border-border/40 text-muted-foreground hover:bg-secondary/60"
-                }`}>{t === "pending" ? `Pending (${counts.pending})` : `All (${apps.length})`}</button>
+                  tab === t ? "bg-primary/20 border border-primary/60 text-primary-glow" : "bg-secondary/40 border border-border/40 text-muted-foreground"
+                }`}>{t === "pending" ? `Pending (${apps.filter((a) => a.status === "pending").length})` : `All (${apps.length})`}</button>
             ))}
           </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 mb-4 text-center text-xs">
-          <Stat label="Pending" value={counts.pending} tone="warning" />
-          <Stat label="Approved" value={counts.approved} tone="success" />
-          <Stat label="Rejected" value={counts.rejected} tone="muted" />
         </div>
 
         {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -136,14 +102,11 @@ const AdminApplications = () => {
             <div key={a.id} className="p-4 rounded-lg bg-secondary/40 border border-border/40">
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div className="space-y-0.5 text-sm min-w-0 flex-1">
-                  {a.shop_name && <p className="font-display text-base text-primary-glow">{a.shop_name}</p>}
                   {a.telegram && <p>📱 Telegram: <span className="font-mono text-primary-glow">{a.telegram}</span></p>}
                   {a.jabber && <p>💬 Jabber: <span className="font-mono text-primary-glow">{a.jabber}</span></p>}
-                  {a.contact && <p className="text-xs text-muted-foreground">Contact: {a.contact}</p>}
                   {a.expected_volume && <p className="text-xs text-muted-foreground">Volume: {a.expected_volume}</p>}
                   {a.sample_bins && <p className="text-xs text-muted-foreground">BINs: <span className="font-mono">{a.sample_bins}</span></p>}
                   {(a.message || a.description) && <p className="text-xs text-muted-foreground italic mt-1">"{a.message || a.description}"</p>}
-                  {a.admin_note && <p className="text-xs text-warning mt-1">Admin note: {a.admin_note}</p>}
                   <p className="text-[10px] mt-2">
                     status: <span className={a.status === "pending" ? "text-warning" : a.status === "approved" ? "text-success" : "text-destructive"}>{a.status}</span>
                     {" · "}{new Date(a.created_at).toLocaleString()}
@@ -162,13 +125,13 @@ const AdminApplications = () => {
                 )}
               </div>
 
+              {/* Notes */}
               <NotesPanel
                 appId={a.id}
                 notes={notes.get(a.id) ?? []}
-                authors={authors}
                 currentUserId={user?.id}
-                onAdd={async (t) => { await addNote(a.id, t); }}
-                onDelete={async (noteId) => { await deleteNote(a.id, noteId); }}
+                onAdd={(t) => addNote(a.id, t)}
+                onDelete={(noteId) => deleteNote(a.id, noteId)}
               />
             </div>
           ))}
@@ -178,85 +141,44 @@ const AdminApplications = () => {
   );
 };
 
-const Stat = ({ label, value, tone }: { label: string; value: number; tone: "warning" | "success" | "muted" }) => {
-  const color = tone === "warning" ? "text-warning" : tone === "success" ? "text-success" : "text-muted-foreground";
-  return (
-    <div className="rounded-lg bg-secondary/30 border border-border/40 p-3">
-      <p className={`font-display text-xl ${color}`}>{value}</p>
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{label}</p>
-    </div>
-  );
-};
-
-const NotesPanel = ({ appId, notes, authors, currentUserId, onAdd, onDelete }: {
-  appId: string;
-  notes: AppNote[];
-  authors: Map<string, Profile>;
-  currentUserId?: string;
+const NotesPanel = ({ appId, notes, currentUserId, onAdd, onDelete }: {
+  appId: string; notes: AppNote[]; currentUserId?: string;
   onAdd: (text: string) => void | Promise<void>;
   onDelete: (noteId: string) => void | Promise<void>;
 }) => {
   const [draft, setDraft] = useState("");
   const [open, setOpen] = useState(false);
-  const submit = async () => {
-    if (!draft.trim()) return;
-    await onAdd(draft);
-    setDraft("");
-  };
+  const submit = async () => { if (!draft.trim()) return; await onAdd(draft); setDraft(""); };
   return (
     <div className="mt-3 pt-3 border-t border-border/40">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-primary-glow transition"
-      >
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-primary-glow transition">
         <StickyNote className="h-3.5 w-3.5" />
-        <span className="font-display tracking-wider">
-          ADMIN NOTES ({notes.length})
-        </span>
+        <span className="font-display tracking-wider">ADMIN NOTES ({notes.length})</span>
         <span className="ml-auto text-[10px]">{open ? "Hide" : "Show"}</span>
       </button>
-
       {open && (
         <div className="mt-3 space-y-2">
-          {notes.length === 0 && (
-            <p className="text-[11px] text-muted-foreground italic">No notes yet — add the first one below.</p>
-          )}
-          {notes.map((n) => {
-            const a = authors.get(n.author_id);
-            const mine = n.author_id === currentUserId;
-            return (
-              <div key={n.id} className="p-2.5 rounded-lg bg-background/40 border border-border/30 text-xs">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="font-mono text-[10px] text-primary-glow">
-                    {a?.username ?? n.author_id.slice(0, 8)}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
-                    {mine && (
-                      <button
-                        onClick={() => { if (confirm("Delete this note?")) onDelete(n.id); }}
-                        className="text-muted-foreground hover:text-destructive"
-                        title="Delete note"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
+          {notes.length === 0 && <p className="text-[11px] text-muted-foreground italic">No notes yet.</p>}
+          {notes.map((n) => (
+            <div key={n.id} className="p-2.5 rounded-lg bg-background/40 border border-border/30 text-xs">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="font-mono text-[10px] text-primary-glow">{n.author_id?.slice(0, 8)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
+                  {n.author_id === currentUserId && (
+                    <button onClick={() => { if (confirm("Delete this note?")) onDelete(n.id); }} className="text-muted-foreground hover:text-destructive">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
-                <p className="text-foreground whitespace-pre-wrap">{n.note}</p>
               </div>
-            );
-          })}
-
+              <p className="text-foreground whitespace-pre-wrap">{n.note}</p>
+            </div>
+          ))}
           <div className="flex gap-2 items-start pt-1">
-            <Textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+            <Textarea value={draft} onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }}
-              placeholder="Add an internal note (Cmd/Ctrl+Enter to save)…"
-              rows={2}
-              className="bg-input/60 text-xs flex-1"
-            />
+              placeholder="Add an internal note…" rows={2} className="bg-input/60 text-xs flex-1" />
             <Button size="sm" onClick={submit} disabled={!draft.trim()} className="bg-gradient-primary">
               <MessageSquarePlus className="h-3.5 w-3.5 mr-1" />Save
             </Button>
