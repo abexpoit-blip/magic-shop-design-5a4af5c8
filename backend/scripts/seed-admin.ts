@@ -4,6 +4,7 @@
  *
  * Usage:  npx tsx scripts/seed-admin.ts
  */
+import "dotenv/config";
 import "../src/db.js";
 import { db } from "../src/db.js";
 import bcrypt from "bcryptjs";
