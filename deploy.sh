@@ -50,14 +50,14 @@ ssh $VPS_USER@$VPS_HOST << 'EOF'
   cp -r dist/* /var/www/cruzercc/frontend/
 
   cd /var/www/cruzercc/backend
-  npm ci --production
+  npm ci --omit=dev
   npm run build
 
   # Run migrations
   npx tsx scripts/migrate.ts 2>/dev/null || echo "Migrations: nothing new"
 
   # Restart
-  pm2 reload cruzercc-api --update-env 2>/dev/null || pm2 start ecosystem.config.cjs
+  pm2 reload cruzercc-api --update-env 2>/dev/null || pm2 start /var/www/cruzercc/backend/ecosystem.config.cjs
   pm2 save
   test -f /var/www/cruzercc/frontend/index.html
   grep -q '/assets/' /var/www/cruzercc/frontend/index.html
