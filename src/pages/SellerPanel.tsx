@@ -12,7 +12,7 @@ import { Plus, Trash2, Upload, DollarSign, TrendingUp, Package, CheckCircle2, Wa
 import { toast } from "sonner";
 
 interface CardRow { id: string; bin: string; brand: string; country: string; price: number; status: string; base: string; created_at: string; }
-interface Payout { id: string; amount: number; method: string; address: string; status: string; created_at: string; }
+interface Payout { id: string; amount: number; method: string; address?: string; destination?: string; status: string; created_at: string; }
 
 const SellerPanel = () => {
   const { user } = useAuth();
