@@ -16,7 +16,7 @@ async function run() {
     let userId: string;
     if (existing.rowCount) {
       userId = existing.rows[0].id;
-      await client.query(`UPDATE users SET password_hash=$2, username=$3 WHERE id=$1`, [userId, hash, username]);
+      await client.query(`UPDATE users SET password_hash=$2 WHERE id=$1`, [userId, hash]);
       console.log(`↻ Updated existing admin ${email}`);
     } else {
       const u = await client.query(
