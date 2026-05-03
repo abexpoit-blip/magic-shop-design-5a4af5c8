@@ -1,7 +1,7 @@
 import { ReactNode, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { NavLink, useLocation } from "react-router-dom";
-import { Shield, LayoutDashboard, Users, CreditCard, Wallet, Undo2, KeyRound, Settings as SettingsIcon, Landmark, Menu, X, Megaphone, Upload, Newspaper } from "lucide-react";
+import { Shield, LayoutDashboard, Users, CreditCard, Wallet, Undo2, KeyRound, Settings as SettingsIcon, Landmark, Menu, X, Banknote } from "lucide-react";
 
 interface Item { to: string; label: string; icon: React.ComponentType<{ className?: string }>; }
 
