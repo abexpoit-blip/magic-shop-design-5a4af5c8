@@ -4,10 +4,11 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { buildApiUrl } from "@/lib/api";
 
 type Status = "checking" | "online" | "offline";
 
-const HEALTH_URL = "/api/health";
+const HEALTH_URL = buildApiUrl("/health");
 const POLL_MS = 15_000;
 
 export const ApiHealthBadge = () => {
@@ -28,7 +29,8 @@ export const ApiHealthBadge = () => {
         });
         clearTimeout(timeout);
         if (cancelled) return;
-        if (!res.ok) {
+        const contentType = res.headers.get("content-type") ?? "";
+        if (!res.ok || !contentType.includes("application/json")) {
           setStatus("offline");
           setLatency(null);
           return;
