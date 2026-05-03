@@ -351,7 +351,7 @@
     justify-content: center;
     height: var(--nav-icon-btn);
     width: var(--nav-icon-btn);
-    border-radius: 999px;
+    border-radius: 12px;
     border: 1px solid hsl(var(--border) / 0.85);
     color: hsl(var(--muted-foreground));
     background: hsl(0 0% 100% / 0.015);
