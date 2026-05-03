@@ -20,7 +20,7 @@ interface Profile {
 }
 interface Card {
   id: string; bin: string; brand: string; country: string; price: number;
-  base: string; refundable: boolean; exp_month: string | null; exp_year: string | null;
+  base?: string; refundable?: boolean; exp_month?: string | number | null; exp_year?: string | number | null;
 }
 
 const SellerProfile = () => {
