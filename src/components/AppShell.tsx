@@ -209,19 +209,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
                 seller mode, but seller mode is locked — they must sign out and
                 sign in as a buyer to revert. Prevents accidental auto-switch
                 away from seller during a session. */}
-            {canSell && effectiveRole === "buyer" && (
-              <button
-                onClick={() => {
-                  setActiveRole("seller");
-                  nav("/seller");
-                }}
-                className="nav-icon-btn hidden md:inline-flex"
-                title="Switch to seller mode"
-                aria-label="Switch to seller mode"
-              >
-                <Repeat className="nav-icon" strokeWidth={1.75} />
-              </button>
-            )}
+            {/* Seller nav link already visible based on role */}
 
             <button onClick={async () => { await signOut(); nav("/auth"); }}
               className="nav-icon-btn nav-icon-btn-danger hidden md:inline-flex" aria-label="Sign out">

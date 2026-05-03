@@ -26,10 +26,10 @@ const AdminLogin = () => {
 
   // If already logged in as admin, redirect
   useEffect(() => {
-    if (!authLoading && user && roles.includes("admin")) {
+    if (!authLoading && user && profile?.role === "admin") {
       nav(safeAdminFrom ?? "/admin", { replace: true });
     }
-  }, [authLoading, user, roles]);
+  }, [authLoading, user, profile]);
 
   useEffect(() => {
     document.title = "Admin · Secure Console";

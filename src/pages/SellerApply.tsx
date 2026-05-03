@@ -30,7 +30,7 @@ const SellerApply = () => {
     try {
       const { applications } = await sellerAppsApi.mine();
       setApps((applications ?? []) as unknown as Application[]);
-      setIsSeller(roles.includes("seller") || roles.includes("admin"));
+      setIsSeller(profile?.role === "seller" || profile?.role === "admin");
     } catch { /* ignore */ }
     setLoading(false);
   };

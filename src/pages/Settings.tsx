@@ -58,7 +58,7 @@ const Settings = () => {
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Submit failed"); }
   };
 
-  const isSeller = roles.includes("seller") || roles.includes("admin");
+  const isSeller = profile?.role === "seller" || profile?.role === "admin";
 
   return (
     <AppShell>
