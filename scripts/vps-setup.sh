@@ -12,7 +12,7 @@ warn() { echo -e "${YELLOW}⚠${NC} $*"; }
 fail() { echo -e "${RED}✗${NC} $*"; }
 
 echo "═══════════════════════════════════════"
-echo " api.cruzercc.shop — VPS Setup"
+echo " cruzercc.shop — VPS Setup"
 echo "═══════════════════════════════════════"
 echo ""
 
@@ -99,17 +99,17 @@ else
   echo "  Check: pm2 logs cruzercc-api --lines 50"
 fi
 
-# ── SSL for api.cruzercc.shop ──
+# ── SSL for cruzercc.shop ──
 echo ""
 echo "── SSL certificate ──"
-CERT_PATH="/etc/letsencrypt/live/api.cruzercc.shop/fullchain.pem"
+CERT_PATH="/etc/letsencrypt/live/cruzercc.shop/fullchain.pem"
 if [ ! -f "$CERT_PATH" ]; then
-  warn "No SSL cert for api.cruzercc.shop — obtaining one..."
-  sudo certbot certonly --standalone --preferred-challenges http -d api.cruzercc.shop --non-interactive --agree-tos --email admin@cruzercc.shop || {
-    warn "certbot failed. Try manually: sudo certbot certonly --standalone -d api.cruzercc.shop"
+  warn "No SSL cert for cruzercc.shop — obtaining one..."
+  sudo certbot --nginx -d cruzercc.shop -d www.cruzercc.shop --non-interactive --agree-tos --email admin@cruzercc.shop || {
+    warn "certbot failed. Try manually: sudo certbot --nginx -d cruzercc.shop -d www.cruzercc.shop"
   }
 else
-  ok "SSL cert exists for api.cruzercc.shop"
+  ok "SSL cert exists for cruzercc.shop"
 fi
 
 # ── Nginx ──
@@ -118,8 +118,8 @@ echo "── Setting up Nginx ──"
 cd "$PROJECT_DIR"
 
 NGINX_SRC="nginx/cruzercc.conf"
-NGINX_DEST="/etc/nginx/sites-available/cruzercc-api.conf"
-NGINX_LINK="/etc/nginx/sites-enabled/cruzercc-api.conf"
+NGINX_DEST="/etc/nginx/sites-available/cruzercc.conf"
+NGINX_LINK="/etc/nginx/sites-enabled/cruzercc.conf"
 
 if [ ! -f "$NGINX_SRC" ]; then
   fail "Nginx config not found at $NGINX_SRC"
@@ -134,8 +134,8 @@ fi
 sudo cp "$NGINX_SRC" "$NGINX_DEST"
 sudo ln -sf "$NGINX_DEST" "$NGINX_LINK"
 
-# Remove old config if it exists
-sudo rm -f /etc/nginx/sites-enabled/cruzercc.conf 2>/dev/null || true
+# Remove old API-only config if it exists
+sudo rm -f /etc/nginx/sites-enabled/cruzercc-api.conf 2>/dev/null || true
 
 if sudo nginx -t 2>&1; then
   sudo systemctl reload nginx
@@ -149,16 +149,16 @@ echo ""
 echo "── Final verification ──"
 sleep 1
 
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://api.cruzercc.shop/api/health 2>/dev/null || echo "000")
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://cruzercc.shop/api/health 2>/dev/null || echo "000")
 if [ "$HTTP_CODE" = "200" ]; then
-  ok "https://api.cruzercc.shop/api/health → 200 ✓"
+  ok "https://cruzercc.shop/api/health → 200 ✓"
 else
-  warn "https://api.cruzercc.shop/api/health → HTTP $HTTP_CODE"
+  warn "https://cruzercc.shop/api/health → HTTP $HTTP_CODE"
   echo "  DNS may still be propagating, or SSL cert is not yet ready"
 fi
 
 echo ""
 echo "═══════════════════════════════════════"
-echo " Done! API endpoint: https://api.cruzercc.shop/api"
+echo " Done! API endpoint: https://cruzercc.shop/api"
 echo " Admin login: https://cruzercc.shop/admin-login"
 echo "═══════════════════════════════════════"
