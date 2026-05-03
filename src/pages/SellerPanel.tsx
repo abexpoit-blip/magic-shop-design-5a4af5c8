@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { BRANDS, COUNTRIES, BrandLogo, countryFlag } from "@/lib/brands";
+import { BRANDS, COUNTRIES, BrandLogo, countryFlag, detectBrandFromBin } from "@/lib/brands";
 import { Plus, Trash2, Upload, DollarSign, TrendingUp, Package, CheckCircle2, Wallet, Clock, Percent, PiggyBank, BadgeCheck, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
