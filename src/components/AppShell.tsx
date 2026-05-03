@@ -22,13 +22,12 @@ const baseNav = [
 ];
 
 export const AppShell = ({ children }: { children: ReactNode }) => {
-  const { profile, roles, activeRole, setActiveRole, signOut, loading, user, profileError, refresh } = useAuth();
+  const { profile, signOut, loading, user, profileError, refresh } = useAuth();
   const settings = useSiteSettings();
-  const isAdmin = roles.includes("admin");
-  const canSell = roles.includes("seller") || isAdmin;
-  // Effective mode honours the user's pick at login but falls back safely for
-  // accounts that don't actually carry the seller role.
-  const effectiveRole: "buyer" | "seller" = activeRole === "seller" && canSell ? "seller" : "buyer";
+  const role = profile?.role ?? "buyer";
+  const isAdmin = role === "admin";
+  const canSell = role === "seller" || isAdmin;
+  const effectiveRole: "buyer" | "seller" = canSell ? "seller" : "buyer";
   const roleLabel = isAdmin
     ? "Admin"
     : effectiveRole === "seller"
@@ -354,12 +353,12 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 };
 
 export const AdminRoute = ({ children }: { children: ReactNode }) => {
-  const { roles, loading, user, profileError } = useAuth();
+  const { profile, loading, user, profileError } = useAuth();
   const loc = useLocation();
 
   if (!user) return <Navigate to="/admin-login" replace state={{ from: loc }} />;
   if (loading && !profileError) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
-  if (!roles.includes("admin")) {
+  if (profile?.role !== "admin") {
     return <Navigate to="/admin-login" replace state={{ from: loc, reason: "not-admin" }} />;
   }
   return <>{children}</>;
