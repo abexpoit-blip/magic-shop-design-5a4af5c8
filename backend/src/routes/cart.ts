@@ -13,11 +13,27 @@ function genId(): string {
 
 // List cart items
 cartRouter.get("/", requireAuth, (req, res) => {
-  const items = db.prepare(
-    `SELECT ci.id, ci.card_id, c.bin, c.brand, c.country, c.price, c.last4
+  const rows = db.prepare(
+    `SELECT ci.id, ci.card_id, c.bin, c.brand, c.country, c.price, c.last4,
+            c.base, c.exp_month, c.exp_year
        FROM cart_items ci LEFT JOIN cards c ON c.id = ci.card_id
       WHERE ci.user_id = ? ORDER BY ci.created_at DESC`
-  ).all(req.user!.id);
+  ).all(req.user!.id) as any[];
+  const items = rows.map(r => ({
+    id: r.id,
+    card_id: r.card_id,
+    card: r.bin ? {
+      id: r.card_id,
+      bin: r.bin,
+      brand: r.brand,
+      country: r.country,
+      price: r.price,
+      last4: r.last4,
+      base: r.base,
+      exp_month: r.exp_month,
+      exp_year: r.exp_year,
+    } : null,
+  }));
   res.json({ items });
 });
 

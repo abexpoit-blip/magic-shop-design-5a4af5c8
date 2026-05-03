@@ -134,7 +134,11 @@ const Recharge = () => {
     countdownRef.current = setInterval(() => {
       const remaining = calcRemaining();
       setCountdown(remaining);
-      if (remaining <= 0 && countdownRef.current) clearInterval(countdownRef.current);
+      if (remaining <= 0) {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        // Auto-clear expired invoice from localStorage
+        localStorage.removeItem("cruzercc.activeInvoice");
+      }
     }, 1000);
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, [activeInvoice?.expires_at]);
