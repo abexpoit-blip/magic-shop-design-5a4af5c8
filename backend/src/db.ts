@@ -82,6 +82,30 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     sold_at TEXT
   );
+
+  -- Add columns that may be missing on existing databases
+  -- SQLite doesn't support ADD COLUMN IF NOT EXISTS, so we use a helper approach
+`);
+
+// Safely add missing columns to cards table
+const addColIfMissing = (col: string, type: string) => {
+  try {
+    db.exec(`ALTER TABLE cards ADD COLUMN ${col} ${type}`);
+  } catch {
+    // column already exists — ignore
+  }
+};
+addColIfMissing("city", "TEXT");
+addColIfMissing("cc_number", "TEXT");
+addColIfMissing("phone", "TEXT");
+addColIfMissing("address", "TEXT");
+addColIfMissing("base", "TEXT");
+addColIfMissing("refundable", "INTEGER DEFAULT 0");
+addColIfMissing("has_phone", "INTEGER DEFAULT 0");
+addColIfMissing("has_email", "INTEGER DEFAULT 0");
+addColIfMissing("email", "TEXT");
+
+db.exec(`
   CREATE INDEX IF NOT EXISTS idx_cards_seller ON cards(seller_id);
   CREATE INDEX IF NOT EXISTS idx_cards_status ON cards(status);
   CREATE INDEX IF NOT EXISTS idx_cards_bin ON cards(bin);
