@@ -7,7 +7,7 @@
  *   VITE_API_BASE=https://cruzercc.shop/api
  */
 
-function resolveApiBase(): string {
+export function resolveApiBase(): string {
   // Explicit env override takes priority
   const envBase = import.meta.env.VITE_API_BASE as string | undefined;
   if (envBase && envBase.length > 0) return envBase.replace(/\/+$/, "");
@@ -23,7 +23,11 @@ function resolveApiBase(): string {
   return "/api";
 }
 
-const API_BASE = resolveApiBase();
+export const API_BASE = resolveApiBase();
+
+export function buildApiUrl(path: string): string {
+  return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 // ───────── token helpers ─────────
 const TOKEN_KEY = "cruzercc.token";
@@ -64,7 +68,7 @@ async function request<T = unknown>(
   body?: unknown,
   opts?: { params?: Record<string, string | number | boolean | undefined> },
 ): Promise<T> {
-  let url = `${API_BASE}${path}`;
+  let url = buildApiUrl(path);
   if (opts?.params) {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(opts.params)) {
