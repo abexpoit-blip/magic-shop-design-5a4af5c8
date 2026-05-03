@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useCallback } from "react";
 import { Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, ShieldCheck, PackagePlus, LogOut, Menu, X, Search, Bell, Maximize2, Minimize2, AlertTriangle, RefreshCw, Newspaper, Undo2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { BuildBadge } from "@/components/BuildBadge";
 // Admin access is purely role-based (server-side via user_roles + RLS).
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { cartApi, announcementsApi } from "@/lib/api";
+import { toast } from "sonner";
 
 type Density = "comfortable" | "compact";
 
