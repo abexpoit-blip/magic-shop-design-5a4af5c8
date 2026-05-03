@@ -94,7 +94,7 @@ const Auth = () => {
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
 
       {/* Left branding panel — desktop only */}
-      <div className="hidden lg:flex flex-col justify-between w-[46%] xl:w-[48%] p-10 xl:p-14 relative z-10">
+      <div className="hidden lg:flex flex-col justify-between w-1/2 xl:w-[52%] p-10 xl:p-14 2xl:p-20 relative z-10">
         <div className="flex items-center gap-3">
           <img src={logo} alt="cruzercc.shop" width={56} height={56}
             className="h-12 w-12 xl:h-14 xl:w-14 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-float" />
