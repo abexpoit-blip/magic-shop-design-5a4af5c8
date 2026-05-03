@@ -1,25 +1,91 @@
+/**
+ * Seed script — creates admin, seller, and buyer test accounts.
+ * Idempotent: safe to run multiple times.
+ *
+ * Usage:  npx tsx scripts/seed-admin.ts
+ */
 import "../src/db.js";
 import { db } from "../src/db.js";
 import bcrypt from "bcryptjs";
 
-const email = process.env.ADMIN_EMAIL || "admin@cruzercc.shop";
-const username = process.env.ADMIN_USER || "admin";
-const password = process.env.ADMIN_PASS || "Admin@2026!";
-
-const hash = bcrypt.hashSync(password, 12);
-
-const existing = db.prepare(`SELECT id FROM users WHERE lower(email) = lower(?)`).get(email) as any;
-if (existing) {
-  db.prepare(`UPDATE users SET password_hash = ?, role = 'admin', updated_at = datetime('now') WHERE id = ?`).run(hash, existing.id);
-  console.log(`✅ Admin updated: ${email}`);
-} else {
-  const id = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
-  db.transaction(() => {
-    db.prepare(`INSERT INTO users (id, email, username, password_hash, role) VALUES (?, ?, ?, ?, 'admin')`).run(id, email, username, hash);
-    db.prepare(`INSERT INTO profiles (user_id) VALUES (?)`).run(id);
-    db.prepare(`INSERT INTO wallets (user_id) VALUES (?)`).run(id);
-  })();
-  console.log(`✅ Admin created: ${email} / ${username}`);
+function genId(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
 }
+
+interface SeedUser {
+  email: string;
+  username: string;
+  password: string;
+  role: "admin" | "seller" | "buyer";
+  balance: number;
+}
+
+const users: SeedUser[] = [
+  {
+    email: "admin@cruzercc.shop",
+    username: "admin",
+    password: "Admin@2026!",
+    role: "admin",
+    balance: 0,
+  },
+  {
+    email: "seller@cruzercc.shop",
+    username: "seller1",
+    password: "Seller@2026!",
+    role: "seller",
+    balance: 500,
+  },
+  {
+    email: "buyer@cruzercc.shop",
+    username: "buyer1",
+    password: "Buyer@2026!",
+    role: "buyer",
+    balance: 100,
+  },
+];
+
+for (const u of users) {
+  const hash = bcrypt.hashSync(u.password, 12);
+  const existing = db.prepare(
+    `SELECT id FROM users WHERE lower(email) = lower(?) OR username_lower = lower(?)`
+  ).get(u.email, u.username) as any;
+
+  if (existing) {
+    db.prepare(
+      `UPDATE users SET password_hash = ?, role = ?, is_active = 1, updated_at = datetime('now') WHERE id = ?`
+    ).run(hash, u.role, existing.id);
+    db.prepare(
+      `UPDATE wallets SET balance = CASE WHEN balance = 0 THEN ? ELSE balance END WHERE user_id = ?`
+    ).run(u.balance, existing.id);
+    console.log(`✅ ${u.role.toUpperCase()} updated: ${u.email} / ${u.username} / ${u.password}`);
+  } else {
+    const id = genId();
+    db.transaction(() => {
+      db.prepare(
+        `INSERT INTO users (id, email, username, password_hash, role) VALUES (?, ?, ?, ?, ?)`
+      ).run(id, u.email.toLowerCase(), u.username, hash, u.role);
+      db.prepare(`INSERT INTO profiles (user_id) VALUES (?)`).run(id);
+      db.prepare(`INSERT INTO wallets (user_id, balance) VALUES (?, ?)`).run(id, u.balance);
+    })();
+    console.log(`✅ ${u.role.toUpperCase()} created: ${u.email} / ${u.username} / ${u.password}`);
+  }
+}
+
+console.log(`
+╔══════════════════════════════════════════════╗
+║          TEST ACCOUNT CREDENTIALS            ║
+╠══════════════════════════════════════════════╣
+║  ADMIN  │ admin@cruzercc.shop / Admin@2026!  ║
+║  Login  │ /admin-login                       ║
+╠══════════════════════════════════════════════╣
+║  SELLER │ seller@cruzercc.shop / Seller@2026!║
+║  Login  │ /seller-login                      ║
+╠══════════════════════════════════════════════╣
+║  BUYER  │ buyer@cruzercc.shop / Buyer@2026!  ║
+║  Login  │ /auth                              ║
+╚══════════════════════════════════════════════╝
+`);
 
 process.exit(0);
