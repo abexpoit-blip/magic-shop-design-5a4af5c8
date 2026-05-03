@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { sellerAppsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +18,7 @@ interface Application {
 }
 
 const SellerApply = () => {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
   const [apps, setApps] = useState<Application[]>([]);
   const [isSeller, setIsSeller] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -27,24 +27,24 @@ const SellerApply = () => {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const [a, r] = await Promise.all([
-      (supabase.from("seller_applications") as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("user_roles").select("role").eq("user_id", user.id),
-    ]);
-    setApps(((a as any).data ?? []) as Application[]);
-    setIsSeller(((r as any).data ?? []).some((x: { role: string }) => x.role === "seller" || x.role === "admin"));
+    try {
+      const { applications } = await sellerAppsApi.mine();
+      setApps((applications ?? []) as unknown as Application[]);
+      setIsSeller(roles.includes("seller") || roles.includes("admin"));
+    } catch { /* ignore */ }
     setLoading(false);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { load(); }, [user]);
 
   const submit = async () => {
     if (!user) return;
     if (!form.telegram && !form.jabber) return toast.error("Provide at least Telegram or Jabber");
-    const { error } = await (supabase.from("seller_applications") as any).insert({ user_id: user.id, ...form, status: "pending" });
-    if (error) return toast.error(error.message);
-    toast.success("Application submitted — admin will review shortly");
-    setForm({ telegram: "", jabber: "", expected_volume: "", sample_bins: "", message: "" });
-    load();
+    try {
+      await sellerAppsApi.submit({ ...form, status: "pending" });
+      toast.success("Application submitted — admin will review shortly");
+      setForm({ telegram: "", jabber: "", expected_volume: "", sample_bins: "", message: "" });
+      load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Submit failed"); }
   };
 
   const pending = apps.find((a) => a.status === "pending");

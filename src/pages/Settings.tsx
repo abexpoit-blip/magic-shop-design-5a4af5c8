@@ -1,49 +1,61 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { profileApi, api, sellerAppsApi, clearToken } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getSavedAccounts, removeSavedAccount, switchAccount, type SavedAccount } from "@/lib/accountSwitcher";
-import { Users, X, LogIn, Plus } from "lucide-react";
+import { Users, X, LogIn, Plus, Send } from "lucide-react";
 
 const Settings = () => {
   const { user, profile, refresh, roles } = useAuth();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
-  const [shopName, setShopName] = useState("");
-  const [contact, setContact] = useState("");
-  const [description, setDescription] = useState("");
   const [pwd, setPwd] = useState("");
   const [accounts, setAccounts] = useState<SavedAccount[]>([]);
+
+  // Seller application (hidden section — only visible to non-sellers)
+  const [shopName, setShopName] = useState("");
+  const [telegram, setTelegram] = useState("");
+  const [jabber, setJabber] = useState("");
+  const [expectedVolume, setExpectedVolume] = useState("");
+  const [sampleBins, setSampleBins] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => { setAccounts(getSavedAccounts()); }, []);
   const removeAcc = (email: string) => { removeSavedAccount(email); setAccounts(getSavedAccounts()); };
 
   const saveProfile = async () => {
     if (!user) return;
-    await supabase.from("profiles").update({ display_name: displayName }).eq("id", user.id);
-    toast.success("Profile updated");
-    await refresh();
+    try {
+      await profileApi.update({ display_name: displayName });
+      toast.success("Profile updated");
+      await refresh();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Update failed"); }
   };
 
   const changePassword = async () => {
     if (pwd.length < 6) return toast.error("Password must be at least 6 characters");
-    const { error } = await supabase.auth.updateUser({ password: pwd });
-    if (error) return toast.error(error.message);
-    toast.success("Password changed");
-    setPwd("");
+    try {
+      await api.post("/auth/change-password", { password: pwd });
+      toast.success("Password changed");
+      setPwd("");
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const applySeller = async () => {
-    if (!user || !shopName) return toast.error("Shop name required");
-    const { error } = await supabase.from("seller_applications").insert({
-      user_id: user.id, shop_name: shopName, contact, description,
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Application submitted — admin will review it");
-    setShopName(""); setContact(""); setDescription("");
+    if (!user) return;
+    if (!telegram && !jabber) return toast.error("Provide at least Telegram or Jabber");
+    try {
+      await sellerAppsApi.submit({
+        telegram, jabber, expected_volume: expectedVolume,
+        sample_bins: sampleBins, message,
+      });
+      toast.success("Application submitted — admin will review it");
+      setShopName(""); setTelegram(""); setJabber("");
+      setExpectedVolume(""); setSampleBins(""); setMessage("");
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Submit failed"); }
   };
 
   const isSeller = roles.includes("seller") || roles.includes("admin");
@@ -72,14 +84,37 @@ const Settings = () => {
           <Button onClick={changePassword} className="bg-gradient-primary shadow-neon">Change password</Button>
         </section>
 
+        {/* Seller application — hidden inside buyer settings */}
         {!isSeller && (
-          <section className="glass-neon rounded-2xl p-6 space-y-3">
+          <section className="glass-neon rounded-2xl p-6 space-y-4">
             <h2 className="font-display tracking-wider text-primary-glow">BECOME A SELLER</h2>
             <p className="text-sm text-muted-foreground">Apply to list your own cards. Admin will review your request.</p>
-            <Input value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Shop name" className="bg-input/60" />
-            <Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Telegram contact" className="bg-input/60" />
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Tell us about your inventory…" rows={4} className="bg-input/60" />
-            <Button onClick={applySeller} className="bg-gradient-primary shadow-neon">Submit application</Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Telegram</label>
+                <Input value={telegram} onChange={(e) => setTelegram(e.target.value)} placeholder="@yourhandle" className="bg-input/60 mt-1" />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Jabber / OTR</label>
+                <Input value={jabber} onChange={(e) => setJabber(e.target.value)} placeholder="you@xmpp.org" className="bg-input/60 mt-1" />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Expected daily volume</label>
+                <Input value={expectedVolume} onChange={(e) => setExpectedVolume(e.target.value)} placeholder="e.g. 500 cards / day" className="bg-input/60 mt-1" />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Sample BINs</label>
+                <Input value={sampleBins} onChange={(e) => setSampleBins(e.target.value)} placeholder="411111, 545454" className="bg-input/60 mt-1" />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Why should we approve you?</label>
+              <Textarea rows={4} value={message} onChange={(e) => setMessage(e.target.value)}
+                placeholder="Tell us about your sources, refund policy, experience…" className="bg-input/60 mt-1" />
+            </div>
+            <Button onClick={applySeller} className="bg-gradient-primary shadow-neon">
+              <Send className="h-4 w-4 mr-2" />Submit application
+            </Button>
           </section>
         )}
 
@@ -116,7 +151,7 @@ const Settings = () => {
               );
             })}
           </div>
-          <Button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }} variant="outline" className="w-full mt-2">
+          <Button onClick={() => { clearToken(); window.location.href = "/auth"; }} variant="outline" className="w-full mt-2">
             <Plus className="h-3 w-3 mr-1" />Sign in with another account
           </Button>
         </section>

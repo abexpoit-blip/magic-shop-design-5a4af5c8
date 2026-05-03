@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { cardsApi, priceRulesApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,10 +36,12 @@ const SellerUpload = () => {
 
   const loadRules = async () => {
     if (!user) return;
-    const { data } = await supabase.from("price_rules" as never).select("*").eq("seller_id", user.id).order("priority", { ascending: false });
-    setRules((data ?? []) as unknown as PriceRule[]);
+    try {
+      const { rules: r } = await priceRulesApi.mine();
+      setRules((r ?? []) as unknown as PriceRule[]);
+    } catch { /* ignore */ }
   };
-  useEffect(() => { loadRules(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { loadRules(); }, [user]);
 
   const onFile = async (file: File) => {
     const txt = await file.text();
@@ -67,11 +69,10 @@ const SellerUpload = () => {
     return candidates[0]?.price ?? Number(defaultPrice);
   };
 
+  const nullify = (v: string) => (v === "null" || !v ? null : v);
+
   const publish = async () => {
     if (!user) return;
-
-    // Auto-fix sweep right before publish: re-parse raw + re-dedupe so nothing
-    // dirty slips into the shop, even if the seller edited after the last preview.
     let toPublish = parsed;
     if (autoFixOnPublish) {
       const source = raw.trim() ? raw : parsed.map((p) => Object.values(p).join("|")).join("\n");
@@ -88,18 +89,10 @@ const SellerUpload = () => {
     if (toPublish.length === 0) { toast.error("Nothing to publish"); return; }
     setBusy(true);
 
-    // Dedupe against existing stock by cc_number
-    const numbers = toPublish.map((p) => p.cc);
-    const { data: existing } = await supabase.from("cards").select("cc_number").in("cc_number", numbers);
-    const existingSet = new Set((existing ?? []).map((c: { cc_number: string | null }) => c.cc_number));
-    const fresh = toPublish.filter((p) => !existingSet.has(p.cc));
-    const skipped = toPublish.length - fresh.length;
-
-    const rows = fresh.map((p) => {
+    const rows = toPublish.map((p) => {
       const brand = detectBrand(p.cc);
       const country = p.country !== "null" ? p.country.toUpperCase() : "US";
       return {
-        seller_id: user.id,
         bin: p.cc.slice(0, 6),
         cc_number: p.cc,
         cvv: nullify(p.cvv),
@@ -122,37 +115,32 @@ const SellerUpload = () => {
       };
     });
 
-    if (rows.length === 0) {
-      toast.warning(`All ${toPublish.length} cards are already in stock`);
-      setBusy(false); return;
-    }
-
-    const { error } = await supabase.from("cards").insert(rows);
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success(`Published ${rows.length} cards${skipped > 0 ? ` (${skipped} duplicates skipped)` : ""}`);
-    setRaw(""); setParsed([]); setFailed([]);
+    try {
+      const result = await cardsApi.bulkCreate(rows);
+      toast.success(`Published ${result.count ?? rows.length} cards`);
+      setRaw(""); setParsed([]); setFailed([]);
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Publish failed"); }
+    finally { setBusy(false); }
   };
 
   const addRule = async () => {
     if (!user || !newRule.price) return toast.error("Price required");
-    const { error } = await (supabase.from("price_rules" as never) as any).insert({
-      seller_id: user.id,
-      country: newRule.country || null,
-      brand: newRule.brand || null,
-      refundable: newRule.refundable === "any" ? null : newRule.refundable === "yes",
-      price: Number(newRule.price),
-      priority: rules.length,
-    });
-    if (error) return toast.error(error.message);
-    setNewRule({ country: "", brand: "", refundable: "any", price: "" });
-    loadRules();
-    toast.success("Rule added");
+    try {
+      await priceRulesApi.create({
+        country: newRule.country || null,
+        brand: newRule.brand || null,
+        refundable: newRule.refundable === "any" ? null : newRule.refundable === "yes",
+        price: Number(newRule.price),
+        priority: rules.length,
+      });
+      setNewRule({ country: "", brand: "", refundable: "any", price: "" });
+      loadRules();
+      toast.success("Rule added");
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const deleteRule = async (id: string) => {
-    await supabase.from("price_rules" as never).delete().eq("id", id);
-    loadRules();
+    try { await priceRulesApi.del(id); loadRules(); } catch { /* ignore */ }
   };
 
   const previewLines = useMemo(() => parsed.slice(0, 10), [parsed]);
@@ -169,14 +157,12 @@ const SellerUpload = () => {
           </p>
         </div>
 
-        {/* Pricing rules */}
         <section className="glass rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="h-4 w-4 text-primary-glow" />
             <h2 className="font-display tracking-wider text-primary-glow">PER-CARD PRICING RULES</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">Higher-priority rules win. If no rule matches a card, the default price below is used.</p>
-
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
             <Input placeholder="Country (any)" value={newRule.country} onChange={(e) => setNewRule({ ...newRule, country: e.target.value.toUpperCase() })} className="bg-input/60" />
             <Select value={newRule.brand || "any"} onValueChange={(v) => setNewRule({ ...newRule, brand: v === "any" ? "" : v })}>
@@ -197,7 +183,6 @@ const SellerUpload = () => {
             <Input placeholder="Price USD" type="number" step="0.01" value={newRule.price} onChange={(e) => setNewRule({ ...newRule, price: e.target.value })} className="bg-input/60" />
             <Button onClick={addRule} className="bg-gradient-primary"><Plus className="h-4 w-4 mr-1" />Add rule</Button>
           </div>
-
           <div className="space-y-1.5">
             {rules.map((r) => (
               <div key={r.id} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/40 border border-border/40 text-sm">
@@ -214,7 +199,6 @@ const SellerUpload = () => {
           </div>
         </section>
 
-        {/* Default settings */}
         <section className="glass rounded-2xl p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
             <div>
@@ -239,26 +223,16 @@ const SellerUpload = () => {
             </label>
           </div>
           <label className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30 border border-border/40 cursor-pointer hover:bg-secondary/50 transition">
-            <input
-              type="checkbox"
-              checked={autoFixOnPublish}
-              onChange={(e) => setAutoFixOnPublish(e.target.checked)}
-              className="mt-0.5 accent-primary cursor-pointer"
-            />
+            <input type="checkbox" checked={autoFixOnPublish} onChange={(e) => setAutoFixOnPublish(e.target.checked)} className="mt-0.5 accent-primary cursor-pointer" />
             <div className="flex-1">
               <div className="flex items-center gap-2 text-sm font-display tracking-wider text-primary-glow">
                 <Wand2 className="h-3.5 w-3.5" /> AUTO-FIX BEFORE PUBLISH
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Re-runs the format fixer + dedupe right before saving so every card is normalized to the canonical
-                shop format (cc|month|year|cvv|name|addr|city|state|zip|country|tel|email). Strongly recommended.
-              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Re-runs the format fixer + dedupe right before saving.</p>
             </div>
           </label>
         </section>
 
-
-        {/* Paste box */}
         <section className="glass-neon rounded-2xl p-6 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-display tracking-wider text-primary-glow">PASTE CARDS</h2>
@@ -267,11 +241,10 @@ const SellerUpload = () => {
             </Button>
           </div>
           <Textarea rows={10} value={raw} onChange={(e) => setRaw(e.target.value)}
-            placeholder={`Any of these works:\n4111111111111111|12|28|123|John Smith|123 Main St|New York|NY|10001|US|+15555551234|john@x.com\n4111111111111111,12/28,123,John Smith,123 Main St,New York,NY,10001,US,5555551234,john@x.com\n4111111111111111\t12\t28\t123\tJohn Smith\t...`}
+            placeholder={`Any of these works:\n4111111111111111|12|28|123|John Smith|123 Main St|New York|NY|10001|US|+15555551234|john@x.com`}
             className="bg-input/60 font-mono text-xs" />
         </section>
 
-        {/* Preview */}
         {parsed.length > 0 && (
           <section className="glass rounded-2xl p-6 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -289,93 +262,17 @@ const SellerUpload = () => {
                 {parsed.length > 10 && `\n… and ${parsed.length - 10} more`}
               </pre>
             </div>
-
-            {/* Shop layout preview — exactly how cleaned fields appear after publish */}
-            <div className="pt-4 border-t border-border/40">
-              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <Eye className="h-4 w-4 text-primary-glow" />
-                  <h3 className="font-display tracking-wider text-primary-glow text-sm">SHOP PREVIEW</h3>
-                  <span className="text-[10px] text-muted-foreground">how buyers will see it</span>
-                </div>
-                <div className="inline-flex rounded-md border border-border/60 overflow-hidden text-[11px]">
-                  <button
-                    onClick={() => setPreviewMode("desktop")}
-                    className={`px-3 py-1 transition ${previewMode === "desktop" ? "bg-primary/20 text-primary-glow" : "text-muted-foreground hover:bg-secondary/40"}`}
-                  >Desktop</button>
-                  <button
-                    onClick={() => setPreviewMode("mobile")}
-                    className={`px-3 py-1 transition ${previewMode === "mobile" ? "bg-primary/20 text-primary-glow" : "text-muted-foreground hover:bg-secondary/40"}`}
-                  >Mobile (375px)</button>
-                </div>
-              </div>
-
-              <div className={`mx-auto transition-all ${previewMode === "mobile" ? "max-w-[375px] border-x border-border/40 rounded-xl" : "w-full"}`}>
-                <div className="overflow-x-auto rounded-lg border border-border/40 bg-background/60">
-                  <table className="w-full text-xs">
-                    <thead className="bg-secondary/40 text-[10px] uppercase tracking-wider text-muted-foreground">
-                      <tr>
-                        <th className="p-2 text-left">bin</th>
-                        <th className="p-2">refund</th>
-                        <th className="p-2">mm/yy</th>
-                        <th className="p-2">city</th>
-                        <th className="p-2">state</th>
-                        <th className="p-2">zip</th>
-                        <th className="p-2">country</th>
-                        <th className="p-2">tel</th>
-                        <th className="p-2">email</th>
-                        <th className="p-2">price</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewLines.map((c, i) => {
-                        const brand = detectBrand(c.cc);
-                        const country = c.country !== "null" ? c.country.toUpperCase() : "US";
-                        const price = matchPrice(brand, country);
-                        return (
-                          <tr key={i} className={`border-t border-border/40 ${i % 2 ? "bg-secondary/10" : ""}`}>
-                            <td className="p-2 font-mono whitespace-nowrap">
-                              <div>{c.cc.slice(0, 6)}<span className="text-muted-foreground">********</span></div>
-                              <span className="mt-1 inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary-glow">
-                                <Store className="h-2.5 w-2.5" />you
-                                <BadgeCheck className="h-2.5 w-2.5" />
-                              </span>
-                            </td>
-                            <td className="p-2 text-center text-muted-foreground">{refundable ? "YES" : "NO"}</td>
-                            <td className="p-2 text-center font-mono">{c.month !== "null" ? c.month : "—"}/{c.year !== "null" ? c.year : "—"}</td>
-                            <td className="p-2 text-center max-w-[100px] truncate" title={c.city}>{c.city !== "null" ? c.city : "—"}</td>
-                            <td className="p-2 text-center">{c.state !== "null" ? c.state : "—"}</td>
-                            <td className="p-2 text-center font-mono">{c.zip !== "null" ? c.zip : "—"}</td>
-                            <td className="p-2 text-center whitespace-nowrap">{countryFlag(country)} {country}</td>
-                            <td className="p-2 text-center text-[10px]">{c.tel !== "null" ? <span className="text-success">yes</span> : <span className="text-muted-foreground">no</span>}</td>
-                            <td className="p-2 text-center text-[10px]">{c.email !== "null" ? <span className="text-success">yes</span> : <span className="text-muted-foreground">no</span>}</td>
-                            <td className="p-2 text-center font-display text-primary-glow">{price.toFixed(2)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {parsed.length > previewLines.length && (
-                  <p className="text-[10px] text-muted-foreground text-center mt-2">
-                    Showing first {previewLines.length} of {parsed.length} — all rows will look like these.
-                  </p>
-                )}
-              </div>
-            </div>
           </section>
         )}
 
         {failed.length > 0 && (
-          <section className="glass rounded-2xl p-6 border border-warning/40 space-y-2">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              <h2 className="font-display tracking-wider text-warning">{failed.length} LINES SKIPPED</h2>
+          <section className="glass rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <h3 className="font-display tracking-wider text-warning">{failed.length} UNPARSEABLE LINES</h3>
             </div>
-            <p className="text-xs text-muted-foreground">These couldn't be parsed — check the format and re-paste.</p>
-            <pre className="text-[11px] font-mono text-muted-foreground bg-background/40 p-3 rounded max-h-40 overflow-auto whitespace-pre-wrap">
-              {failed.slice(0, 20).join("\n")}
-              {failed.length > 20 && `\n… and ${failed.length - 20} more`}
+            <pre className="text-[11px] font-mono text-muted-foreground whitespace-pre-wrap max-h-40 overflow-auto">
+              {failed.join("\n")}
             </pre>
           </section>
         )}
@@ -383,7 +280,5 @@ const SellerUpload = () => {
     </AppShell>
   );
 };
-
-const nullify = (v: string) => (v === "null" || !v ? null : v);
 
 export default SellerUpload;

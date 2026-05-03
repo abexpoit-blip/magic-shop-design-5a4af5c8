@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { sellersApi } from "@/lib/api";
 import { BrandLogo, countryFlag } from "@/lib/brands";
 import { BadgeCheck, Store, ArrowLeft, ShoppingCart, Loader2 } from "lucide-react";
 import { TrustBadge } from "@/components/TrustBadge";
@@ -20,7 +20,7 @@ interface Profile {
 }
 interface Card {
   id: string; bin: string; brand: string; country: string; price: number;
-  base: string; refundable: boolean; exp_month: string | null; exp_year: string | null;
+  base?: string; refundable?: boolean; exp_month?: string | number | null; exp_year?: string | number | null;
 }
 
 const SellerProfile = () => {
@@ -33,28 +33,20 @@ const SellerProfile = () => {
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number>(0);
 
-  const fetchPage = async (sellerId: string, from: number) => {
-    const { data, count } = await supabase
-      .from("cards")
-      .select("id,bin,brand,country,price,base,refundable,exp_month,exp_year", { count: "exact" })
-      .eq("seller_id", sellerId).eq("status", "available")
-      .order("created_at", { ascending: false })
-      .range(from, from + PAGE_SIZE - 1);
-    return { rows: (data ?? []) as Card[], count: count ?? 0 };
-  };
-
   useEffect(() => {
     if (!id) return;
     (async () => {
       setLoading(true);
-      const [p, page] = await Promise.all([
-        supabase.from("profiles").select("id,display_name,username,seller_display_name,seller_bio,is_seller_verified,is_seller_visible,avatar_url,trust_tier").eq("id", id).maybeSingle(),
-        fetchPage(id, 0),
-      ]);
-      setProfile(p.data as Profile | null);
-      setCards(page.rows);
-      setTotalCount(page.count);
-      setHasMore(page.rows.length < page.count);
+      try {
+        const [p, c] = await Promise.all([
+          sellersApi.profile(id),
+          sellersApi.cards(id, { limit: PAGE_SIZE, offset: 0 }),
+        ]);
+        setProfile((p.profile ?? null) as unknown as Profile | null);
+        setCards((c.cards ?? []) as Card[]);
+        setTotalCount(c.count ?? 0);
+        setHasMore((c.cards ?? []).length < (c.count ?? 0));
+      } catch { /* ignore */ }
       setLoading(false);
     })();
   }, [id]);
@@ -62,10 +54,12 @@ const SellerProfile = () => {
   const loadMore = async () => {
     if (!id || loadingMore) return;
     setLoadingMore(true);
-    const page = await fetchPage(id, cards.length);
-    setCards((prev) => [...prev, ...page.rows]);
-    setTotalCount(page.count);
-    setHasMore(cards.length + page.rows.length < page.count);
+    try {
+      const c = await sellersApi.cards(id, { limit: PAGE_SIZE, offset: cards.length });
+      setCards((prev) => [...prev, ...c.cards]);
+      setTotalCount(c.count);
+      setHasMore(cards.length + c.cards.length < c.count);
+    } catch { /* ignore */ }
     setLoadingMore(false);
   };
 

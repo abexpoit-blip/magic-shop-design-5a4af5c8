@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { depositsApi, depositAddressesApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ interface DepositAddress { id: string; method: string; address: string; network:
 interface Deposit { id: string; amount: number; method: string; txid: string | null; status: string; created_at: string; }
 
 const Recharge = () => {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("USDT");
   const [txid, setTxid] = useState("");
@@ -20,28 +20,24 @@ const Recharge = () => {
   const [history, setHistory] = useState<Deposit[]>([]);
 
   const load = async () => {
-    const [a, d] = await Promise.all([
-      supabase.from("deposit_addresses").select("*"),
-      user ? supabase.from("deposits").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10) : Promise.resolve({ data: [] }),
+    const [a, d] = await Promise.allSettled([
+      depositAddressesApi.list(),
+      depositsApi.mine(),
     ]);
-    setAddresses((a.data ?? []) as DepositAddress[]);
-    setHistory((d.data ?? []) as Deposit[]);
+    if (a.status === "fulfilled") setAddresses((a.value.addresses ?? []) as unknown as DepositAddress[]);
+    if (d.status === "fulfilled") setHistory((d.value.deposits ?? []) as unknown as Deposit[]);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { load(); }, []);
 
   const current = addresses.find((a) => a.method === method);
 
   const submit = async () => {
-    if (!user) return;
     const amt = Number(amount);
     if (!amt || amt < 20) return toast.error("Minimum recharge is $20");
     if (!txid.trim()) return toast.error("Transaction ID (TXID) is required");
     setBusy(true);
     try {
-      const { error } = await supabase.from("deposits").insert({
-        user_id: user.id, amount: amt, method, txid: txid.trim(), status: "pending",
-      });
-      if (error) throw error;
+      await depositsApi.submit({ amount: amt, method, note: txid.trim() });
       toast.success("Deposit submitted. Admin will confirm shortly.");
       setAmount(""); setTxid("");
       load();
