@@ -12,6 +12,15 @@ import { payoutsRouter } from "./routes/payouts.js";
 import { ticketsRouter } from "./routes/tickets.js";
 import { announcementsRouter } from "./routes/announcements.js";
 import { cardsRouter } from "./routes/cards.js";
+import { walletRouter } from "./routes/wallet.js";
+import { ordersRouter } from "./routes/orders.js";
+import { cartRouter } from "./routes/cart.js";
+import { newsRouter } from "./routes/news.js";
+import { refundsRouter } from "./routes/refunds.js";
+import { siteSettingsRouter } from "./routes/site-settings.js";
+import { depositAddressesRouter } from "./routes/deposit-addresses.js";
+import { priceRulesRouter } from "./routes/price-rules.js";
+import { sellersRouter } from "./routes/sellers.js";
 
 const app = express();
 
@@ -33,6 +42,15 @@ app.use("/api/payouts", payoutsRouter);
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/announcements", announcementsRouter);
 app.use("/api/cards", cardsRouter);
+app.use("/api/wallet", walletRouter);
+app.use("/api/orders", ordersRouter);
+app.use("/api/cart", cartRouter);
+app.use("/api/news", newsRouter);
+app.use("/api/refunds", refundsRouter);
+app.use("/api/site-settings", siteSettingsRouter);
+app.use("/api/deposit-addresses", depositAddressesRouter);
+app.use("/api/price-rules", priceRulesRouter);
+app.use("/api/sellers", sellersRouter);
 
 // Error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
