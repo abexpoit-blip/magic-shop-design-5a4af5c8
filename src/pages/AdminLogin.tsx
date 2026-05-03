@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2, ArrowLeft, ArrowRight, AlertCircle, WifiOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
+const ADMIN_LOGIN_URL = "https://cruzercc.shop/admin-login";
+
 const AdminLogin = () => {
   const nav = useNavigate();
   const loc = useLocation();
@@ -51,8 +53,6 @@ const AdminLogin = () => {
 
       setToken(result.token);
       toast.success("Admin console unlocked");
-      // Force auth refresh then navigate
-      window.dispatchEvent(new StorageEvent("storage", { key: "cruzercc.token" }));
       setTimeout(() => nav(safeAdminFrom ?? "/admin", { replace: true }), 100);
     } catch (err) {
       let title = "Login failed";
@@ -170,6 +170,9 @@ const AdminLogin = () => {
 
         <p className="text-center text-[9px] font-mono tracking-[0.3em] text-muted-foreground mt-5">
           UNAUTHORIZED ACCESS LOGGED · IP MONITORED
+        </p>
+        <p className="text-center text-[10px] text-muted-foreground mt-2">
+          Admin login URL: <a href={ADMIN_LOGIN_URL} className="text-primary-glow underline underline-offset-4">{ADMIN_LOGIN_URL}</a>
         </p>
       </div>
     </div>

@@ -57,6 +57,10 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const changePasswordSchema = z.object({
+  password: z.string().min(8).max(128),
+});
+
 async function loginCore(identifier: string, password: string) {
   const { rows } = await pool.query(
     `SELECT u.id, u.email, u.username, u.password_hash, u.is_active,
@@ -97,4 +101,18 @@ authRouter.post("/admin-login", async (req, res, next) => {
 
 authRouter.get("/me", requireAuth, async (req, res) => {
   res.json({ user: req.user });
+});
+
+authRouter.post("/change-password", requireAuth, async (req, res, next) => {
+  try {
+    const { password } = changePasswordSchema.parse(req.body);
+    const hash = await bcrypt.hash(password, 12);
+    await pool.query(
+      `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`,
+      [req.user!.id, hash],
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
 });

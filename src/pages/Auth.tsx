@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { authApi, setToken, ApiError } from "@/lib/api";
 import { Captcha } from "@/components/Captcha";
 import { BuildBadge } from "@/components/BuildBadge";
-import { ApiHealthBadge } from "@/components/ApiHealthBadge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIcon, X, ArrowRight } from "lucide-react";
+import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIcon, X } from "lucide-react";
 import logo from "@/assets/panther-logo.png";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/accountSwitcher";
 import { setActiveRole } from "@/lib/activeRole";
@@ -17,11 +15,6 @@ import { Loader2 } from "lucide-react";
 
 const Auth = () => {
   const nav = useNavigate();
-  const loc = useLocation();
-  const fromPath = (loc.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-  const safeFrom = fromPath && !fromPath.startsWith("/auth") && !fromPath.startsWith("/admin-login")
-    ? fromPath
-    : null;
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -29,7 +22,7 @@ const Auth = () => {
   const [captcha, setCaptcha] = useState("");
   const [captchaOk, setCaptchaOk] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [statusBanner, setStatusBanner] = useState<{ kind: "info" | "error"; title: string; hint?: string } | null>(null);
+  const [statusBanner, setStatusBanner] = useState<{ kind: "error"; title: string; hint?: string } | null>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
 
@@ -68,7 +61,7 @@ const Auth = () => {
         const result = await authApi.signup({ email: fakeEmail, username, password });
         setToken(result.token);
         toast.success("Account created — entering the den…");
-        nav(safeFrom ?? "/shop", { replace: true });
+        nav("/shop", { replace: true });
       } else {
         const result = await authApi.login({ identifier: username.trim(), password });
         setToken(result.token);
@@ -78,7 +71,7 @@ const Auth = () => {
         setActiveRole(result.user.id, isSeller ? "seller" : "buyer");
 
         toast.success("Welcome back, hunter");
-        nav(isSeller ? "/seller" : (safeFrom ?? "/shop"), { replace: true });
+        nav(isSeller ? "/seller" : "/shop", { replace: true });
       }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -139,9 +132,6 @@ const Auth = () => {
 
       <div className="flex-1 flex items-center justify-center p-6 relative z-10">
         <div className="w-full max-w-md animate-fade-up">
-          <div className="flex justify-center mb-4">
-            <ApiHealthBadge />
-          </div>
           <div className="lg:hidden flex flex-col items-center mb-6">
             <img src={logo} alt="cruzercc.shop logo" width={84} height={84}
               className="h-20 w-20 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-pulse-glow" />
@@ -189,16 +179,6 @@ const Auth = () => {
                       </button>
                     </button>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {safeFrom && (
-              <div className="mb-4 rounded-lg border border-gold/40 bg-gold/10 px-3 py-2.5 text-xs text-gold flex items-start gap-2" role="status">
-                <ArrowRight className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                <div>
-                  <div className="font-semibold">Redirecting to your original page</div>
-                  <div className="opacity-80 mt-0.5 font-mono break-all">After sign-in we'll take you to <span className="underline">{safeFrom}</span></div>
                 </div>
               </div>
             )}
