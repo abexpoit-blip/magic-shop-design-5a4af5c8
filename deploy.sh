@@ -77,9 +77,11 @@ echo "🔄 Setting up nginx..."
 # Remove ALL possible conflicting site configs
 rm -f /etc/nginx/sites-enabled/default
 rm -f /etc/nginx/sites-enabled/cruzercc
+rm -f /etc/nginx/sites-enabled/cruzercc.shop
 rm -f /etc/nginx/sites-enabled/cruzercc.conf
 rm -f /etc/nginx/sites-enabled/cruzercc-api
 rm -f /etc/nginx/sites-enabled/cruzercc-api.conf
+rm -f /etc/nginx/sites-available/cruzercc.shop
 rm -f /etc/nginx/sites-available/cruzercc.conf
 rm -f /etc/nginx/sites-available/cruzercc-api
 rm -f /etc/nginx/sites-available/cruzercc-api.conf
