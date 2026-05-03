@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Wallet, Check, X, Search } from "lucide-react";
 import { toast } from "sonner";
 
-interface Payout { id: string; seller_id: string; amount: number; method: string; address: string; status: string; created_at: string; paid_at?: string | null; seller_name?: string; }
+interface Payout { id: string; seller_id: string; amount: number; method: string; address?: string; destination?: string; status: string; created_at: string; paid_at?: string | null; seller_name?: string; }
 
 const AdminPayouts = () => {
   const [payouts, setPayouts] = useState<Payout[]>([]);
@@ -33,7 +33,7 @@ const AdminPayouts = () => {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return payouts.filter((p) => {
-      if (q && !`${p.seller_name ?? ""} ${p.method} ${p.address}`.toLowerCase().includes(q)) return false;
+      if (q && !`${p.seller_name ?? ""} ${p.method} ${p.destination ?? p.address ?? ""}`.toLowerCase().includes(q)) return false;
       return true;
     });
   }, [payouts, query]);
@@ -70,7 +70,7 @@ const AdminPayouts = () => {
                   ${Number(p.amount).toFixed(2)} · <span className="text-primary-glow">{p.method}</span>
                   <span className="text-xs text-muted-foreground"> · {p.seller_name ?? p.seller_id?.slice(0, 8)}</span>
                 </p>
-                <p className="text-[10px] font-mono text-muted-foreground truncate">{p.address}</p>
+                <p className="text-[10px] font-mono text-muted-foreground truncate">{p.destination ?? p.address}</p>
                 <p className="text-[10px] text-muted-foreground">
                   requested {new Date(p.created_at).toLocaleString()}
                   {p.paid_at && ` · paid ${new Date(p.paid_at).toLocaleString()}`}
