@@ -148,7 +148,8 @@ fi
 
 sudo cp "$NGINX_SRC" "$NGINX_DEST"
 sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
-sudo rm -f /etc/nginx/sites-enabled/cruzercc /etc/nginx/sites-enabled/cruzercc.conf /etc/nginx/sites-enabled/cruzercc-api.conf 2>/dev/null || true
+sudo rm -f /etc/nginx/sites-enabled/cruzercc /etc/nginx/sites-enabled/cruzercc.shop /etc/nginx/sites-enabled/cruzercc.conf /etc/nginx/sites-enabled/cruzercc-api.conf 2>/dev/null || true
+sudo rm -f /etc/nginx/sites-available/cruzercc.shop 2>/dev/null || true
 sudo ln -sf "$NGINX_DEST" "$NGINX_LINK"
 
 if sudo nginx -t 2>&1; then

@@ -114,7 +114,8 @@ jobs:
             # ── Nginx ──
             sed "s|127.0.0.1:8080|127.0.0.1:${BACKEND_PORT}|g" "$APP/nginx/cruzercc.conf" > /etc/nginx/sites-available/cruzercc
             rm -f /etc/nginx/sites-enabled/default
-            rm -f /etc/nginx/sites-enabled/cruzercc /etc/nginx/sites-enabled/cruzercc.conf /etc/nginx/sites-enabled/cruzercc-api.conf
+            rm -f /etc/nginx/sites-enabled/cruzercc /etc/nginx/sites-enabled/cruzercc.shop /etc/nginx/sites-enabled/cruzercc.conf /etc/nginx/sites-enabled/cruzercc-api.conf
+            rm -f /etc/nginx/sites-available/cruzercc.shop
             ln -sf /etc/nginx/sites-available/cruzercc /etc/nginx/sites-enabled/cruzercc
             nginx -t && systemctl reload nginx
 

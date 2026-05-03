@@ -148,6 +148,7 @@ server {
     }
 }
 NGINXEOF
+rm -f /etc/nginx/sites-enabled/cruzercc.shop /etc/nginx/sites-available/cruzercc.shop 2>/dev/null || true
 ln -sf /etc/nginx/sites-available/cruzercc /etc/nginx/sites-enabled/
 echo "   ✅ Nginx config created"
 else

@@ -49,16 +49,30 @@ const users: SeedUser[] = [
 for (const u of users) {
   const hash = bcrypt.hashSync(u.password, 12);
   const existing = db.prepare(
-    `SELECT id FROM users WHERE lower(email) = lower(?) OR username_lower = lower(?)`
-  ).get(u.email, u.username) as any;
+    `SELECT id FROM users
+      WHERE lower(email) = lower(?) OR username_lower = lower(?)
+      ORDER BY CASE WHEN lower(email) = lower(?) THEN 0 ELSE 1 END
+      LIMIT 1`
+  ).get(u.email, u.username, u.email) as any;
 
   if (existing) {
-    db.prepare(
-      `UPDATE users SET password_hash = ?, role = ?, is_active = 1, updated_at = datetime('now') WHERE id = ?`
-    ).run(hash, u.role, existing.id);
-    db.prepare(
-      `UPDATE wallets SET balance = CASE WHEN balance = 0 THEN ? ELSE balance END WHERE user_id = ?`
-    ).run(u.balance, existing.id);
+    db.transaction(() => {
+      db.prepare(
+        `UPDATE users
+            SET email = ?,
+                username = ?,
+                password_hash = ?,
+                role = ?,
+                is_active = 1,
+                updated_at = datetime('now')
+          WHERE id = ?`
+      ).run(u.email.toLowerCase(), u.username, hash, u.role, existing.id);
+      db.prepare(`INSERT OR IGNORE INTO profiles (user_id) VALUES (?)`).run(existing.id);
+      db.prepare(`INSERT OR IGNORE INTO wallets (user_id, balance) VALUES (?, ?)`).run(existing.id, u.balance);
+      db.prepare(
+        `UPDATE wallets SET balance = CASE WHEN balance = 0 THEN ? ELSE balance END, updated_at = datetime('now') WHERE user_id = ?`
+      ).run(u.balance, existing.id);
+    })();
     console.log(`✅ ${u.role.toUpperCase()} updated: ${u.email} / ${u.username} / ${u.password}`);
   } else {
     const id = genId();
