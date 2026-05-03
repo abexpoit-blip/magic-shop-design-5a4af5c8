@@ -3,6 +3,7 @@ set -e
 
 APP=/var/www/cruzercc
 EXPECTED_TITLE="cruzercc.shop"
+BACKEND_ENV="$APP/backend/.env"
 
 check_html_contains() {
   local url="$1"
@@ -88,9 +89,11 @@ echo "♻️ Restarting API..."
 pm2 reload cruzercc-api --update-env 2>/dev/null || pm2 start $APP/backend/ecosystem.config.cjs
 pm2 save
 
+BACKEND_PORT=$(grep -oP '^PORT=\K\d+' "$BACKEND_ENV" 2>/dev/null || echo "8080")
+
 # Nginx
 echo "🔄 Reloading nginx..."
-cp $APP/nginx/cruzercc.conf /etc/nginx/sites-available/cruzercc
+sed "s|127.0.0.1:8080|127.0.0.1:${BACKEND_PORT}|g" "$APP/nginx/cruzercc.conf" > /etc/nginx/sites-available/cruzercc
 rm -f /etc/nginx/sites-enabled/default
 rm -f /etc/nginx/sites-enabled/cruzercc /etc/nginx/sites-enabled/cruzercc.conf /etc/nginx/sites-enabled/cruzercc-api.conf
 ln -sf /etc/nginx/sites-available/cruzercc /etc/nginx/sites-enabled/cruzercc
@@ -98,8 +101,8 @@ nginx -t && systemctl reload nginx
 
 ok=false
 for i in $(seq 1 15); do
-  if check_json_health "http://127.0.0.1:8080/api/health"; then
-    echo "✅ Healthy JSON API: http://127.0.0.1:8080/api/health"
+  if check_json_health "http://127.0.0.1:${BACKEND_PORT}/api/health"; then
+    echo "✅ Healthy JSON API: http://127.0.0.1:${BACKEND_PORT}/api/health"
     ok=true
     break
   fi
