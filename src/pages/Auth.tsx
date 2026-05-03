@@ -127,12 +127,14 @@ const Auth = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
-        <div className="w-full max-w-md animate-fade-up">
+      {/* Right form panel */}
+      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:px-10 xl:px-14 relative z-10">
+        <div className="w-full max-w-[420px] animate-fade-up">
+          {/* Mobile branding header */}
           <div className="lg:hidden flex flex-col items-center mb-6">
             <img src={logo} alt="cruzercc.shop logo" width={84} height={84}
-              className="h-20 w-20 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-pulse-glow" />
-            <h1 className="font-display text-3xl font-black neon-text mt-4 tracking-[0.18em]">CRUZERCC.SHOP</h1>
+              className="h-16 w-16 sm:h-20 sm:w-20 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-pulse-glow" />
+            <h1 className="font-display text-2xl sm:text-3xl font-black neon-text mt-4 tracking-[0.18em]">CRUZERCC.SHOP</h1>
             <p className="text-[10px] font-mono tracking-[0.4em] text-gold/80 mt-1">GIFT CARD · CC PROVIDER</p>
           </div>
 
