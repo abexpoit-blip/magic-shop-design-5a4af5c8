@@ -5,6 +5,13 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { authRouter } from "./routes/auth.js";
 import { profileRouter } from "./routes/profile.js";
+import { adminRouter } from "./routes/admin.js";
+import { sellerAppsRouter } from "./routes/seller-applications.js";
+import { depositsRouter } from "./routes/deposits.js";
+import { payoutsRouter } from "./routes/payouts.js";
+import { ticketsRouter } from "./routes/tickets.js";
+import { announcementsRouter } from "./routes/announcements.js";
+import { cardsRouter } from "./routes/cards.js";
 
 const app = express();
 
@@ -19,6 +26,13 @@ app.get("/api/health", (_req, res) => res.json({ ok: true, ts: Date.now() }));
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/seller-applications", sellerAppsRouter);
+app.use("/api/deposits", depositsRouter);
+app.use("/api/payouts", payoutsRouter);
+app.use("/api/tickets", ticketsRouter);
+app.use("/api/announcements", announcementsRouter);
+app.use("/api/cards", cardsRouter);
 
 // Error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
