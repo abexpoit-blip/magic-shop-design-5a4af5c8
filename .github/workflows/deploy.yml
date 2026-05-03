@@ -11,19 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── Build frontend ──
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-        env:
-          VITE_API_BASE: /api
-
-      # ── Build backend ──
-      - run: cd backend && npm install && npm run build
-
       # ── Deploy via SSH ──
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
@@ -34,25 +21,34 @@ jobs:
           script: |
             set -e
             APP_DIR=/var/www/cruzercc
+            REPO_URL=https://github.com/abexpoit-blip/magic-shop-design.git
 
             # Ensure dirs exist
             mkdir -p $APP_DIR/frontend $APP_DIR/backend $APP_DIR/uploads /var/log/cruzercc
 
-            # Pull latest
-            cd $APP_DIR/repo
+            # Ensure repo exists and is current
+            if [ ! -d "$APP_DIR/.git" ]; then
+              rm -rf $APP_DIR
+              git clone $REPO_URL $APP_DIR
+            fi
+
+            cd $APP_DIR
             git fetch origin main
             git reset --hard origin/main
 
             # ── Frontend ──
+            npm ci
+            VITE_API_BASE=/api npm run build
             rm -rf $APP_DIR/frontend/*
             cp -r dist/* $APP_DIR/frontend/
+            test -f $APP_DIR/frontend/index.html
+            grep -q '/assets/' $APP_DIR/frontend/index.html
 
             # ── Backend ──
-            cd $APP_DIR/repo/backend
-            npm install
-            cp -r dist/* $APP_DIR/backend/dist/
-            cp package.json $APP_DIR/backend/
-            cp node_modules $APP_DIR/backend/ -r 2>/dev/null || true
+            cd $APP_DIR/backend
+            npm ci
+            npm run build
+            test -f $APP_DIR/backend/dist/server.js
 
             # ── Database migrations ──
             cd $APP_DIR/backend
@@ -60,6 +56,8 @@ jobs:
 
             # ── Restart backend ──
             pm2 reload cruzercc-api --update-env || pm2 start ecosystem.config.cjs
+            pm2 save
+            curl -sf http://127.0.0.1:8080/api/health > /dev/null
 
             # ── Reload nginx ──
             sudo nginx -t && sudo systemctl reload nginx
