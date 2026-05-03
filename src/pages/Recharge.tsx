@@ -39,12 +39,37 @@ const Recharge = () => {
   const [currencies, setCurrencies] = useState<PlisioCurrency[]>([]);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Active invoice state
-  const [activeInvoice, setActiveInvoice] = useState<{
+  // Active invoice state — persisted in localStorage to survive reloads
+  const [activeInvoice, setActiveInvoiceRaw] = useState<{
     deposit_id: string; wallet_address: string; crypto_amount: string;
     currency: string; invoice_url: string; qr_data: string; status: string;
     confirmations: number; usd_amount: number; expires_at: string | null;
-  } | null>(null);
+  } | null>(() => {
+    try {
+      const saved = localStorage.getItem("cruzercc.activeInvoice");
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      // Check if expired
+      if (parsed.expires_at) {
+        const expMs = Number(parsed.expires_at) > 1e12 ? Number(parsed.expires_at) : Number(parsed.expires_at) > 1e9 ? Number(parsed.expires_at) * 1000 : new Date(parsed.expires_at).getTime();
+        if (expMs && Date.now() > expMs) return null; // already expired, don't restore
+      }
+      return parsed;
+    } catch { return null; }
+  });
+
+  const setActiveInvoice = useCallback((val: typeof activeInvoice | ((prev: typeof activeInvoice) => typeof activeInvoice)) => {
+    setActiveInvoiceRaw((prev) => {
+      const next = typeof val === "function" ? (val as any)(prev) : val;
+      if (next) {
+        localStorage.setItem("cruzercc.activeInvoice", JSON.stringify(next));
+      } else {
+        localStorage.removeItem("cruzercc.activeInvoice");
+      }
+      return next;
+    });
+  }, []);
+
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [countdown, setCountdown] = useState<number>(-1);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
