@@ -45,11 +45,9 @@ jobs:
             npm install
             npm run build
 
-            # ── Seed admin (idempotent) ──
+            # ── Seed accounts (idempotent — runs every deploy) ──
             cd $APP/backend
-            if [ ! -f $APP/data/cruzercc.db ]; then
-              npx tsx scripts/seed-admin.ts
-            fi
+            npx tsx scripts/seed-admin.ts
 
             # ── Restart backend ──
             pm2 reload cruzercc-api --update-env 2>/dev/null || pm2 start $APP/backend/ecosystem.config.cjs
