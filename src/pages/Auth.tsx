@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIcon, X } from "lucide-react";
 import logo from "@/assets/panther-logo.png";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/accountSwitcher";
-import { setActiveRole } from "@/lib/activeRole";
+
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 import { Loader2 } from "lucide-react";
 
@@ -66,9 +66,7 @@ const Auth = () => {
         const result = await authApi.login({ identifier: username.trim(), password });
         setToken(result.token);
 
-        const userRoles = result.user.roles ?? [];
-        const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
-        setActiveRole(result.user.id, isSeller ? "seller" : "buyer");
+        const isSeller = result.user.role === "seller" || result.user.role === "admin";
 
         toast.success("Welcome back, hunter");
         nav(isSeller ? "/seller" : "/shop", { replace: true });
@@ -252,6 +250,15 @@ const Auth = () => {
             defaultEmail={username.includes("@") ? username : ""}
             redirectPath="/reset-password"
           />
+
+          <div className="flex justify-center gap-4 mt-4">
+            <button onClick={() => nav("/seller-login")} className="text-xs text-gold/70 hover:text-gold transition font-mono tracking-wider">
+              SELLER LOGIN →
+            </button>
+            <button onClick={() => nav("/admin-login")} className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition font-mono tracking-wider">
+              ADMIN →
+            </button>
+          </div>
 
           <p className="text-center text-[10px] font-mono tracking-[0.3em] text-muted-foreground mt-6 lg:hidden">
             © {new Date().getFullYear()} CRUZERCC.SHOP

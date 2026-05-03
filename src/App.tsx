@@ -8,6 +8,7 @@ import { ProtectedRoute, AdminRoute } from "@/components/AppShell";
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import SellerLogin from "./pages/SellerLogin";
 import AdminLogin from "./pages/AdminLogin";
 import ResetPassword from "./pages/ResetPassword";
 import AdminSettings from "./pages/AdminSettings";
@@ -44,12 +45,24 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* Public auth pages */}
             <Route path="/auth" element={<Auth />} />
+            <Route path="/seller-login" element={<SellerLogin />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin/reset-password" element={<ResetPassword />} />
+
+            {/* Admin routes */}
+            <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
             <Route path="/admin/site" element={<AdminRoute><AdminSiteSettings /></AdminRoute>} />
+            <Route path="/admin/applications" element={<AdminRoute><AdminApplications /></AdminRoute>} />
+            <Route path="/admin/payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
+            <Route path="/admin/cards" element={<AdminRoute><AdminCards /></AdminRoute>} />
+            <Route path="/admin/refunds" element={<AdminRoute><AdminRefunds /></AdminRoute>} />
+            <Route path="/admin/deposit-addresses" element={<AdminRoute><AdminDepositAddresses /></AdminRoute>} />
+
+            {/* Buyer/Seller protected routes */}
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute><Shop /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
@@ -65,12 +78,7 @@ const App = () => (
             <Route path="/seller/format" element={<ProtectedRoute><SellerFormat /></ProtectedRoute>} />
             <Route path="/seller/price-rules" element={<ProtectedRoute><SellerPriceRules /></ProtectedRoute>} />
             <Route path="/seller/:id" element={<ProtectedRoute><SellerProfile /></ProtectedRoute>} />
-            <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-            <Route path="/admin/applications" element={<AdminRoute><AdminApplications /></AdminRoute>} />
-            <Route path="/admin/payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
-            <Route path="/admin/cards" element={<AdminRoute><AdminCards /></AdminRoute>} />
-            <Route path="/admin/refunds" element={<AdminRoute><AdminRefunds /></AdminRoute>} />
-            <Route path="/admin/deposit-addresses" element={<AdminRoute><AdminDepositAddresses /></AdminRoute>} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

@@ -10,7 +10,7 @@ import { getSavedAccounts, removeSavedAccount, switchAccount, type SavedAccount 
 import { Users, X, LogIn, Plus, Send } from "lucide-react";
 
 const Settings = () => {
-  const { user, profile, refresh, roles } = useAuth();
+  const { user, profile, refresh } = useAuth();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
   const [pwd, setPwd] = useState("");
   const [accounts, setAccounts] = useState<SavedAccount[]>([]);
@@ -58,7 +58,7 @@ const Settings = () => {
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Submit failed"); }
   };
 
-  const isSeller = roles.includes("seller") || roles.includes("admin");
+  const isSeller = profile?.role === "seller" || profile?.role === "admin";
 
   return (
     <AppShell>

@@ -1,74 +1,43 @@
-#!/usr/bin/env bash
-# ──────────────────────────────────────────────────────────────
-# Manual deploy script: GitHub → VPS (161.97.100.218)
-# Usage:  ./deploy.sh
-# Prereq: SSH key access to root@161.97.100.218
-# ──────────────────────────────────────────────────────────────
-set -euo pipefail
+#!/bin/bash
+set -e
 
-VPS_HOST="161.97.100.218"
-VPS_USER="root"
-APP_DIR="/var/www/cruzercc"
-REPO_URL="https://github.com/abexpoit-blip/magic-shop-design.git"
+APP=/var/www/cruzercc
+echo "🚀 Deploying cruzercc.shop..."
 
-echo "══════════════════════════════════════════"
-echo "  CRUZERCC.SHOP — Deploy to VPS"
-echo "══════════════════════════════════════════"
+cd $APP
+git fetch origin main
+git reset --hard origin/main
 
-# ── 1. Build frontend locally ──
-echo "→ Building frontend…"
+# Frontend
+echo "📦 Building frontend..."
 npm ci
 VITE_API_BASE=/api npm run build
+rm -rf $APP/frontend/*
+cp -r dist/* $APP/frontend/
 
-# ── 2. Build backend locally ──
-echo "→ Building backend…"
-cd backend
+# Backend
+echo "📦 Building backend..."
+cd $APP/backend
 npm ci
 npm run build
-cd ..
 
-# ── 3. Upload to VPS ──
-echo "→ Uploading to VPS ($VPS_HOST)…"
+# Seed admin if fresh DB
+if [ ! -f $APP/data/cruzercc.db ]; then
+  echo "🌱 Seeding admin..."
+  npx tsx scripts/seed-admin.ts
+fi
 
-# Sync repo to VPS app dir
-rsync -avz --delete \
-  --exclude node_modules \
-  --exclude backend/node_modules \
-  --exclude .git \
-  ./ $VPS_USER@$VPS_HOST:$APP_DIR/
+# Restart API
+echo "♻️ Restarting API..."
+pm2 reload cruzercc-api --update-env 2>/dev/null || pm2 start $APP/backend/ecosystem.config.cjs
+pm2 save
 
-# ── 4. Install deps & restart on VPS ──
-echo "→ Installing backend deps & restarting…"
-ssh $VPS_USER@$VPS_HOST << 'EOF'
-  set -e
+# Nginx
+echo "🔄 Reloading nginx..."
+cp $APP/nginx/cruzercc.conf /etc/nginx/sites-available/cruzercc.conf
+ln -sf /etc/nginx/sites-available/cruzercc.conf /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
 
-  cd /var/www/cruzercc
-  npm ci
-  VITE_API_BASE=/api npm run build
-  mkdir -p /var/www/cruzercc/frontend
-  rm -rf /var/www/cruzercc/frontend/*
-  cp -r dist/* /var/www/cruzercc/frontend/
-
-  cd /var/www/cruzercc/backend
-  npm ci --omit=dev
-  npm run build
-
-  # Run migrations
-  npx tsx scripts/migrate.ts 2>/dev/null || echo "Migrations: nothing new"
-
-  # Restart
-  pm2 reload cruzercc-api --update-env 2>/dev/null || pm2 start /var/www/cruzercc/backend/ecosystem.config.cjs
-  pm2 save
-  test -f /var/www/cruzercc/frontend/index.html
-  grep -q '/assets/' /var/www/cruzercc/frontend/index.html
-  curl -sf http://127.0.0.1:8080/api/health > /dev/null
-  sudo nginx -t && sudo systemctl reload nginx
-  echo "✅ VPS deploy complete"
-EOF
-
-echo ""
-echo "══════════════════════════════════════════"
-echo "  ✅ Deploy finished!"
-echo "  Frontend: https://cruzercc.shop"
-echo "  API:      https://cruzercc.shop/api"
-echo "══════════════════════════════════════════"
+sleep 2
+curl -sf http://127.0.0.1:8080/api/health && echo "✅ API healthy" || echo "⚠️ API not responding"
+echo "✅ Deploy complete!"

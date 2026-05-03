@@ -1,18 +1,16 @@
 module.exports = {
-  apps: [
-    {
-      name: "cruzercc-api",
-      script: "dist/server.js",
-      cwd: "/var/www/cruzercc/backend",
-      instances: 1,
-      exec_mode: "fork",
-      env: {
-        NODE_ENV: "production"
-      },
-      max_memory_restart: "400M",
-      out_file: "/var/log/cruzercc/api.out.log",
-      error_file: "/var/log/cruzercc/api.err.log",
-      time: true
-    }
-  ]
+  apps: [{
+    name: "cruzercc-api",
+    script: "dist/server.js",
+    cwd: "/var/www/cruzercc/backend",
+    env: {
+      NODE_ENV: "production",
+      PORT: 8080,
+    },
+    instances: 1,
+    autorestart: true,
+    max_memory_restart: "256M",
+    error_file: "/var/log/cruzercc/error.log",
+    out_file: "/var/log/cruzercc/out.log",
+  }],
 };

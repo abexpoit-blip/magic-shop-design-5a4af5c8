@@ -18,7 +18,7 @@ interface Application {
 }
 
 const SellerApply = () => {
-  const { user, roles } = useAuth();
+  const { user, profile } = useAuth();
   const [apps, setApps] = useState<Application[]>([]);
   const [isSeller, setIsSeller] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ const SellerApply = () => {
     try {
       const { applications } = await sellerAppsApi.mine();
       setApps((applications ?? []) as unknown as Application[]);
-      setIsSeller(roles.includes("seller") || roles.includes("admin"));
+      setIsSeller(profile?.role === "seller" || profile?.role === "admin");
     } catch { /* ignore */ }
     setLoading(false);
   };

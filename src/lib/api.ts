@@ -1,10 +1,6 @@
 /**
- * VPS API client — replaces all Supabase direct calls.
- *
- * The API base is configured via VITE_API_BASE (defaults to "/api" for
- * same-origin deployments behind nginx). When the frontend is served from
- * Lovable preview it should point at the VPS, e.g.
- *   VITE_API_BASE=https://cruzercc.shop/api
+ * VPS API client — all backend calls go through here.
+ * No Supabase, no Lovable Cloud. Pure VPS.
  */
 
 export const AUTH_CHANGED_EVENT = "cruzercc-auth-changed";
@@ -37,7 +33,7 @@ export function buildApiUrl(path: string): string {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-// ───────── token helpers ─────────
+// ── Token helpers ──
 const TOKEN_KEY = "cruzercc.token";
 
 export function getToken(): string | null {
@@ -52,7 +48,6 @@ export function clearToken() {
   window.dispatchEvent(new CustomEvent(AUTH_CHANGED_EVENT));
 }
 
-/** Decode JWT payload without verification (for client-side display only). */
 export function decodeToken(t: string): Record<string, unknown> | null {
   try {
     return JSON.parse(atob(t.split(".")[1]));
@@ -61,7 +56,7 @@ export function decodeToken(t: string): Record<string, unknown> | null {
   }
 }
 
-// ───────── generic fetch wrapper ─────────
+// ── API Error ──
 export class ApiError extends Error {
   status: number;
   contentType: string;
@@ -74,6 +69,7 @@ export class ApiError extends Error {
   }
 }
 
+// ── Generic fetch wrapper ──
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 async function request<T = unknown>(
@@ -103,50 +99,31 @@ async function request<T = unknown>(
       headers,
       body: body != null ? JSON.stringify(body) : undefined,
     });
-  } catch (networkErr) {
-    throw new ApiError(
-      0,
-      `Network error: ${networkErr instanceof Error ? networkErr.message : "Failed to fetch"}`,
-      "",
-      `URL: ${url}`,
-    );
+  } catch {
+    throw new ApiError(0, "Network error — is the server running?");
   }
 
   const ct = res.headers.get("content-type") ?? "";
 
   if (!res.ok) {
     const rawBody = await res.text();
-    const snippet = rawBody.slice(0, 300);
-    let msg = `HTTP ${res.status} ${res.statusText}`;
-
+    let msg = `HTTP ${res.status}`;
     if (ct.includes("application/json")) {
       try {
         const j = JSON.parse(rawBody);
         msg = j.error ?? j.message ?? msg;
-      } catch { /* keep generic msg */ }
+      } catch { /* keep generic */ }
     } else if (ct.includes("text/html")) {
-      msg = `Server returned HTML instead of JSON (HTTP ${res.status}). Your backend/Nginx is likely misconfigured.`;
+      msg = `Server returned HTML instead of JSON (HTTP ${res.status})`;
     }
-
-    throw new ApiError(res.status, msg, ct, snippet);
-  }
-
-  // Detect HTML served on a 200 (misconfigured catch-all)
-  if (ct.includes("text/html")) {
-    const rawBody = await res.text();
-    throw new ApiError(
-      200,
-      "Server returned HTML instead of JSON (HTTP 200). Nginx is likely serving index.html as a fallback for this API route.",
-      ct,
-      rawBody.slice(0, 300),
-    );
+    throw new ApiError(res.status, msg, ct, rawBody.slice(0, 300));
   }
 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
-// ───────── convenience verbs ─────────
+// ── Convenience verbs ──
 export const api = {
   get: <T = unknown>(path: string, params?: Record<string, string | number | boolean | undefined>) =>
     request<T>("GET", path, undefined, { params }),
@@ -156,12 +133,11 @@ export const api = {
   del: <T = unknown>(path: string) => request<T>("DELETE", path),
 };
 
-// ───────── typed API helpers ─────────
+// ── Typed API helpers ──
 
-// Auth
 export interface AuthResult {
   token: string;
-  user: { id: string; email: string; username: string; roles: string[] };
+  user: { id: string; email: string; username: string; role: string; roles?: string[] };
 }
 
 export const authApi = {
@@ -169,17 +145,18 @@ export const authApi = {
     api.post<AuthResult>("/auth/signup", data),
   login: (data: { identifier: string; password: string }) =>
     api.post<AuthResult>("/auth/login", data),
+  sellerLogin: (data: { identifier: string; password: string }) =>
+    api.post<AuthResult>("/auth/seller-login", data),
   adminLogin: (data: { identifier: string; password: string }) =>
     api.post<AuthResult>("/auth/admin-login", data),
   me: () => api.get<{ user: AuthResult["user"] }>("/auth/me"),
 };
 
-// Profile
 export interface VpsProfile {
-  id: string; email: string; username: string;
+  id: string; email: string; username: string; role: string;
   display_name: string | null; avatar_url: string | null;
   bio: string | null; country: string | null;
-  balance: number; roles: string[];
+  balance: number; roles?: string[];
 }
 
 export const profileApi = {
@@ -213,7 +190,6 @@ export const cardsApi = {
   bulkDelete: (ids: string[]) => api.post<{ ok: true }>("/cards/bulk-delete", { ids }),
 };
 
-// Cart / checkout
 export const cartApi = {
   list: () => api.get<{ items: Array<{ id: string; card_id: string; card?: Record<string, unknown> }> }>("/cart"),
   add: (card_id: string) => api.post<{ ok: true }>("/cart", { card_id }),
@@ -223,7 +199,6 @@ export const cartApi = {
     api.post<{ order_id: string; total: number }>("/cart/checkout", { card_ids }),
 };
 
-// Orders
 export interface VpsOrder {
   id: string; total: number; status: string; created_at: string;
   items?: Array<{ card_id: string; price: number; brand?: string; bin?: string; last4?: string; country?: string }>;
@@ -234,13 +209,11 @@ export const ordersApi = {
   all: () => api.get<{ orders: VpsOrder[] }>("/orders"),
 };
 
-// Wallet
 export const walletApi = {
   balance: () => api.get<{ balance: number }>("/wallet"),
   transactions: () => api.get<{ transactions: Array<Record<string, unknown>> }>("/wallet/transactions"),
 };
 
-// Deposits
 export const depositsApi = {
   submit: (data: { amount: number; method: string; proof_url?: string; note?: string }) =>
     api.post<{ deposit: Record<string, unknown> }>("/deposits", data),
@@ -252,7 +225,6 @@ export const depositsApi = {
     api.post<{ deposit: Record<string, unknown> }>(`/deposits/${id}/reject`, { admin_notes }),
 };
 
-// Payouts
 export const payoutsApi = {
   request: (data: { amount: number; method: string; destination: string }) =>
     api.post<{ payout: Record<string, unknown> }>("/payouts", data),
@@ -264,7 +236,6 @@ export const payoutsApi = {
     api.post<{ payout: Record<string, unknown> }>(`/payouts/${id}/reject`, { admin_notes }),
 };
 
-// Tickets
 export const ticketsApi = {
   create: (data: { subject: string; body: string }) =>
     api.post<{ ticket: Record<string, unknown> }>("/tickets", data),
@@ -275,7 +246,6 @@ export const ticketsApi = {
   close: (id: string) => api.post<{ ok: true }>(`/tickets/${id}/close`),
 };
 
-// Seller applications
 export const sellerAppsApi = {
   submit: (data: Record<string, unknown>) =>
     api.post<{ application: Record<string, unknown> }>("/seller-applications", data),
@@ -288,7 +258,6 @@ export const sellerAppsApi = {
     api.post<{ application: Record<string, unknown> }>(`/seller-applications/${id}/reject`, { admin_notes }),
 };
 
-// Announcements
 export const announcementsApi = {
   list: () => api.get<{ announcements: Array<Record<string, unknown>> }>("/announcements"),
   create: (data: { title: string; body: string }) =>
@@ -296,7 +265,6 @@ export const announcementsApi = {
   del: (id: string) => api.del<{ ok: true }>(`/announcements/${id}`),
 };
 
-// Admin
 export const adminApi = {
   users: (q?: string) => api.get<{ users: Array<Record<string, unknown>> }>("/admin/users", { q }),
   stats: () => api.get<Record<string, number>>("/admin/stats"),
@@ -310,14 +278,12 @@ export const adminApi = {
     api.post<{ ok: true }>("/admin/change-password", { password }),
 };
 
-// Site settings
 export const siteSettingsApi = {
   get: () => api.get<{ settings: Record<string, unknown> }>("/site-settings"),
   update: (data: Record<string, unknown>) =>
     api.put<{ ok: true }>("/site-settings", data),
 };
 
-// Deposit addresses
 export const depositAddressesApi = {
   list: () => api.get<{ addresses: Array<Record<string, unknown>> }>("/deposit-addresses"),
   update: (id: string, data: Record<string, unknown>) =>
@@ -326,12 +292,10 @@ export const depositAddressesApi = {
     api.post<{ address: Record<string, unknown> }>("/deposit-addresses", data),
 };
 
-// News updates
 export const newsApi = {
   list: () => api.get<{ updates: Array<Record<string, unknown>> }>("/news"),
 };
 
-// Price rules
 export const priceRulesApi = {
   mine: () => api.get<{ rules: Array<Record<string, unknown>> }>("/price-rules/mine"),
   create: (data: Record<string, unknown>) =>
@@ -339,7 +303,6 @@ export const priceRulesApi = {
   del: (id: string) => api.del<{ ok: true }>(`/price-rules/${id}`),
 };
 
-// Refund requests
 export const refundsApi = {
   create: (data: Record<string, unknown>) =>
     api.post<{ refund: Record<string, unknown> }>("/refunds", data),
@@ -349,7 +312,6 @@ export const refundsApi = {
     api.post<{ ok: true }>(`/refunds/${id}/${approve ? "approve" : "reject"}`, { resolution_note: note }),
 };
 
-// Application notes (admin)
 export const appNotesApi = {
   list: (applicationId: string) =>
     api.get<{ notes: Array<Record<string, unknown>> }>(`/seller-applications/${applicationId}/notes`),
@@ -359,7 +321,6 @@ export const appNotesApi = {
     api.del<{ ok: true }>(`/seller-applications/${applicationId}/notes/${noteId}`),
 };
 
-// Seller public profile
 export const sellersApi = {
   visible: () => api.get<{ sellers: Array<Record<string, unknown>> }>("/sellers/visible"),
   profile: (id: string) => api.get<{ profile: Record<string, unknown> }>(`/sellers/${id}`),

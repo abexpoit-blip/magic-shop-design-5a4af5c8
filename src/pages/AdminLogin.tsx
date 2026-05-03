@@ -13,7 +13,7 @@ const API_BASE_URL = "https://cruzercc.shop/api";
 const AdminLogin = () => {
   const nav = useNavigate();
   const loc = useLocation();
-  const { roles, user, loading: authLoading } = useAuth();
+  const { profile, user, loading: authLoading } = useAuth();
   const fromPath = (loc.state as { from?: { pathname?: string } } | null)?.from?.pathname;
   const safeAdminFrom = fromPath && fromPath.startsWith("/admin") && fromPath !== "/admin-login"
     ? fromPath
@@ -26,10 +26,10 @@ const AdminLogin = () => {
 
   // If already logged in as admin, redirect
   useEffect(() => {
-    if (!authLoading && user && roles.includes("admin")) {
+    if (!authLoading && user && profile?.role === "admin") {
       nav(safeAdminFrom ?? "/admin", { replace: true });
     }
-  }, [authLoading, user, roles]);
+  }, [authLoading, user, profile]);
 
   useEffect(() => {
     document.title = "Admin · Secure Console";
@@ -47,8 +47,7 @@ const AdminLogin = () => {
       });
 
       // Verify admin role
-      const userRoles = result.user.roles ?? [];
-      if (!userRoles.includes("admin")) {
+      if (result.user.role !== "admin") {
         throw new Error("This account does not have admin privileges.");
       }
 
