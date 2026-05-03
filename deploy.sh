@@ -22,11 +22,10 @@ cd $APP/backend
 npm install
 npm run build
 
-# Seed admin if fresh DB
-if [ ! -f $APP/data/cruzercc.db ]; then
-  echo "🌱 Seeding admin..."
-  npx tsx scripts/seed-admin.ts
-fi
+# Seed test accounts (idempotent — safe to run every deploy)
+echo "🌱 Seeding accounts..."
+cd $APP/backend
+npx tsx scripts/seed-admin.ts
 
 # Restart API
 echo "♻️ Restarting API..."
