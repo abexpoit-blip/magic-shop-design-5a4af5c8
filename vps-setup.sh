@@ -32,6 +32,13 @@ fi
 # Install PM2 globally
 npm install -g pm2 tsx 2>/dev/null || true
 
+if ss -ltn '( sport = :8080 )' | tail -n +2 | grep -q .; then
+  echo "→ Port 8080 is already in use; cruzercc will use 18080 instead…"
+  APP_PORT=18080
+else
+  APP_PORT=8080
+fi
+
 # ── 2. Setup PostgreSQL ──
 echo "→ [2/8] Setting up database…"
 # Start postgres if not running
@@ -76,7 +83,7 @@ npm install
 # Create .env if it doesn't exist
 if [ ! -f .env ]; then
 cat > .env << ENVEOF
-PORT=8080
+PORT=$APP_PORT
 NODE_ENV=production
 DATABASE_URL=$DATABASE_URL
 JWT_SECRET=$JWT_SECRET
@@ -123,7 +130,7 @@ server {
 
     # API proxy
     location /api/ {
-        proxy_pass http://127.0.0.1:8080/api/;
+        proxy_pass http://127.0.0.1:${APP_PORT};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
