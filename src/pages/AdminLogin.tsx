@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { authApi, setToken } from "@/lib/api";
 import { BuildBadge } from "@/components/BuildBadge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
-import { describeAuthError } from "@/lib/authErrors";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 
 const AdminLogin = () => {
@@ -31,21 +30,13 @@ const AdminLogin = () => {
     setStatusBanner(null);
     setLoading(true);
     try {
-      const email = identifier.trim().toLowerCase();
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const result = await authApi.adminLogin({ identifier: identifier.trim().toLowerCase(), password });
+      setToken(result.token);
 
-      // Verify admin role server-side via user_roles RLS.
-      const userId = data.user?.id;
-      if (!userId) throw new Error("Login failed");
-      const { data: roleRow, error: rerr } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (rerr || !roleRow) {
-        await supabase.auth.signOut();
+      // Verify admin role from token response
+      const userRoles = result.user.roles ?? [];
+      if (!userRoles.includes("admin")) {
+        setToken("");
         throw new Error("This account does not have admin privileges.");
       }
 
@@ -53,19 +44,12 @@ const AdminLogin = () => {
       nav(safeAdminFrom ?? "/admin", { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
-      const friendly = describeAuthError(err);
-      const lower = message.toLowerCase();
-      if (lower.includes("invalid login") || lower.includes("invalid_grant") || lower.includes("invalid credentials")) {
-        setStatusBanner({
-          kind: "error",
-          title: "Email or password is incorrect",
-        });
-      } else if (message.includes("admin privileges")) {
+      if (message.includes("admin privileges")) {
         setStatusBanner({ kind: "error", title: "Not an admin account", hint: "This login is for the configured admin only." });
       } else {
-        setStatusBanner({ kind: "error", title: friendly.title, hint: friendly.hint });
+        setStatusBanner({ kind: "error", title: message });
       }
-      toast.error(friendly.title, friendly.hint ? { description: friendly.hint } : undefined);
+      toast.error(message);
     } finally { setLoading(false); }
   };
 
