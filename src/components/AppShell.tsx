@@ -110,7 +110,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
           </NavLink>
 
           {/* Desktop nav pills */}
-          <nav className="nav-pills hidden lg:flex items-center bg-secondary/25 border border-border/40 rounded-full">
+          <nav className="nav-pills hidden lg:flex items-center bg-secondary/20 border border-border/30 rounded-2xl">
             {items.map((it) => (
               <NavLink
                 key={it.to}

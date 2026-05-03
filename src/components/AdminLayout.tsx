@@ -22,14 +22,14 @@ export const AdminLayout = ({ children, title }: { children: ReactNode; title: s
     <AppShell>
       <div className="flex flex-col lg:flex-row gap-8">
         <aside className="lg:w-72 xl:w-80 lg:shrink-0">
-          <div className="glass-neon rounded-2xl p-5 lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)]">
-            <div className="flex items-center gap-2.5 mb-5 px-2">
-              <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center">
-                <Shield className="h-4.5 w-4.5 text-primary-glow" />
+          <div className="glass-neon rounded-2xl p-6 lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)]">
+            <div className="flex items-center gap-3 mb-6 px-2">
+              <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-primary-glow" />
               </div>
-              <span className="font-display font-bold tracking-[0.15em] text-primary-glow text-sm uppercase">Admin</span>
+              <span className="font-display font-bold tracking-[0.15em] text-primary-glow text-base uppercase">Admin</span>
             </div>
-            <nav className="space-y-1">
+            <nav className="space-y-1.5">
               {items.map((it) => {
                 const active = it.to === "/admin" ? pathname === "/admin" : pathname.startsWith(it.to);
                 const Icon = it.icon;
@@ -37,13 +37,13 @@ export const AdminLayout = ({ children, title }: { children: ReactNode; title: s
                   <NavLink
                     key={it.to}
                     to={it.to}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-[15px] font-medium transition-all ${
                       active
                         ? "bg-gradient-to-r from-primary/20 to-primary/5 text-primary-glow border border-primary/40 shadow-[0_0_16px_-4px_hsl(268_90%_62%/0.4)]"
                         : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent"
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-primary-glow" : ""}`} />
+                    <Icon className={`h-5 w-5 shrink-0 ${active ? "text-primary-glow" : ""}`} />
                     <span>{it.label}</span>
                   </NavLink>
                 );
