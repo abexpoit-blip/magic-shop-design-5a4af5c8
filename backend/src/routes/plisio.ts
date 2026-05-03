@@ -77,7 +77,11 @@ plisioRouter.post("/create-invoice", requireAuth, async (req: Request, res: Resp
       currency: currency,
       invoice_url: invoice.invoice_url,
       qr_data: invoice.wallet_hash,
-      expires_at: invoice.expire_utc,
+      expires_at: invoice.expire_utc
+        ? (typeof invoice.expire_utc === "number"
+            ? new Date(invoice.expire_utc * 1000).toISOString()
+            : String(invoice.expire_utc))
+        : new Date(Date.now() + 30 * 60 * 1000).toISOString(), // fallback 30 min
     });
   } catch (err: any) {
     console.error("[plisio] create-invoice error:", err);

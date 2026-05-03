@@ -87,10 +87,17 @@ const Recharge = () => {
   // Countdown timer
   useEffect(() => {
     if (!activeInvoice?.expires_at) return;
-    const calcRemaining = () => {
-      const exp = new Date(activeInvoice.expires_at!).getTime();
-      return Math.max(0, Math.floor((exp - Date.now()) / 1000));
+    const parseExpiry = (val: string) => {
+      // Handle Unix timestamp (seconds), ISO string, or numeric string
+      const n = Number(val);
+      if (!isNaN(n) && n > 1e9 && n < 1e13) return n * 1000; // Unix seconds
+      if (!isNaN(n) && n > 1e12) return n; // Already ms
+      const d = new Date(val).getTime();
+      return isNaN(d) ? 0 : d;
     };
+    const expMs = parseExpiry(activeInvoice.expires_at);
+    if (!expMs) return;
+    const calcRemaining = () => Math.max(0, Math.floor((expMs - Date.now()) / 1000));
     setCountdown(calcRemaining());
     countdownRef.current = setInterval(() => {
       const remaining = calcRemaining();
@@ -214,7 +221,7 @@ const Recharge = () => {
               /* ─── Active Invoice ─── */
               <div className="space-y-5">
                 {/* Countdown timer */}
-                {activeInvoice.expires_at && (
+                {activeInvoice.expires_at && countdown >= 0 && (
                   <div className={`flex items-center justify-center gap-2 p-3 rounded-xl border ${
                     isExpired
                       ? "bg-destructive/10 border-destructive/40 text-destructive"
