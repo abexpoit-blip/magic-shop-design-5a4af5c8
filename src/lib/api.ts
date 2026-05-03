@@ -12,15 +12,8 @@ export function resolveApiBase(): string {
   const envBase = import.meta.env.VITE_API_BASE as string | undefined;
   if (envBase && envBase.length > 0) return envBase.replace(/\/+$/, "");
 
-  // When served from Lovable preview or any non-production host, call the live VPS
-  if (typeof window !== "undefined") {
-    const h = window.location.hostname;
-    const isProduction = h === "cruzercc.shop" || h === "www.cruzercc.shop";
-    if (!isProduction) return "https://cruzercc.shop/api";
-  }
-
-  // Production: same-origin via nginx proxy
-  return "/api";
+  // Always use the dedicated API subdomain on VPS
+  return "https://api.cruzercc.shop/api";
 }
 
 export const API_BASE = resolveApiBase();
