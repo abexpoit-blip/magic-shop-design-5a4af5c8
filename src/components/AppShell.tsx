@@ -142,11 +142,16 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
                 key={it.to}
                 to={it.to}
                 end={it.to === "/"}
-                className="nav-pill"
+                className="nav-pill relative"
                 data-active={isActive(it.to)}
               >
                 <it.icon className="nav-pill-icon" strokeWidth={1.75} />
                 <span>{it.label}</span>
+                {it.to === "/cart" && cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+                    {cartCount}
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>
