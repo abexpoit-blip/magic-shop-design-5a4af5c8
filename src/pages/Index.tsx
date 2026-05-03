@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { newsApi, announcementsApi, ordersApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Wallet, ShoppingBag, TrendingUp, Megaphone, Newspaper, Send,
-  ShieldCheck, Zap, Globe2, Headphones, ArrowRight, Sparkles, BadgeCheck,
+  ShieldCheck, Zap, Globe2, ArrowRight, Sparkles, BadgeCheck,
   Crown, Flame, Lock
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -19,15 +19,17 @@ const Index = () => {
 
   useEffect(() => {
     (async () => {
-      const [n, a, o] = await Promise.all([
-        supabase.from("news_updates").select("*").order("created_at", { ascending: false }).limit(20),
-        supabase.from("announcements").select("*").order("created_at", { ascending: false }).limit(5),
-        supabase.from("orders").select("total"),
+      const [n, a, o] = await Promise.allSettled([
+        newsApi.list(),
+        announcementsApi.list(),
+        ordersApi.mine(),
       ]);
-      setNews((n.data ?? []) as typeof news);
-      setAnns((a.data ?? []) as typeof anns);
-      const orders = (o.data ?? []) as { total: number }[];
-      setStats({ orders: orders.length, spend: orders.reduce((s, x) => s + Number(x.total), 0) });
+      if (n.status === "fulfilled") setNews((n.value.updates ?? []) as typeof news);
+      if (a.status === "fulfilled") setAnns((a.value.announcements ?? []) as typeof anns);
+      if (o.status === "fulfilled") {
+        const orders = (o.value.orders ?? []) as { total: number }[];
+        setStats({ orders: orders.length, spend: orders.reduce((s, x) => s + Number(x.total), 0) });
+      }
     })();
   }, []);
 
@@ -64,7 +66,6 @@ const Index = () => {
                 </Link>
               </div>
 
-              {/* Feature pills */}
               <div className="grid grid-cols-3 gap-3 pt-2 max-w-xl">
                 <FeaturePill icon={ShieldCheck} label="Vault-grade" />
                 <FeaturePill icon={Zap} label="Instant" />
@@ -72,7 +73,6 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Floating wallet card */}
             <div className="lg:col-span-5 flex items-center justify-center">
               <div className="relative w-full max-w-sm">
                 <div className="absolute inset-0 bg-gradient-primary rounded-3xl blur-2xl opacity-40" />
@@ -250,7 +250,7 @@ const Index = () => {
                 <Crown className="h-4 w-4 text-gold" />
                 <span className="font-display font-bold text-sm gold-text">Become a verified seller</span>
               </div>
-              <p className="text-xs text-foreground/80">Apply through Seller Panel after registration. Approved sellers receive automatic payouts and priority placement.</p>
+              <p className="text-xs text-foreground/80">Apply through Settings after registration. Approved sellers receive automatic payouts and priority placement.</p>
             </div>
           </div>
         </section>
@@ -276,13 +276,6 @@ const SmallHeader = ({ icon: Icon, title }: { icon: React.ComponentType<{ classN
       <Icon className="h-4 w-4 text-primary-glow" />
     </div>
     <h2 className="font-display text-lg font-bold tracking-tight">{title}</h2>
-  </div>
-);
-
-const TrustItem = ({ icon: Icon, label }: { icon: React.ComponentType<{ className?: string }>; label: string }) => (
-  <div className="flex items-center gap-1.5 text-muted-foreground">
-    <Icon className="h-3.5 w-3.5 text-primary-glow" />
-    <span>{label}</span>
   </div>
 );
 
@@ -315,9 +308,9 @@ const StatCard = ({
 };
 
 const ContactRow = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/40 border border-border/40 hover:border-primary/40 transition">
+  <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-border/40">
     <span className="text-xs text-muted-foreground">{label}</span>
-    <span className="font-mono text-sm gold-text font-semibold">{value}</span>
+    <span className="font-mono text-sm text-primary-glow">{value}</span>
   </div>
 );
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { ticketsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,17 +19,20 @@ const Tickets = () => {
 
   const load = async () => {
     if (!user) return;
-    const { data } = await supabase.from("tickets").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-    setTickets((data ?? []) as Ticket[]);
+    try {
+      const { tickets: t } = await ticketsApi.mine();
+      setTickets((t ?? []) as Ticket[]);
+    } catch { /* ignore */ }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { load(); }, [user]);
 
   const submit = async () => {
     if (!user || !subject || !message) return;
-    const { error } = await supabase.from("tickets").insert({ user_id: user.id, subject, message });
-    if (error) return toast.error(error.message);
-    toast.success("Ticket created");
-    setSubject(""); setMessage(""); setOpen(false); load();
+    try {
+      await ticketsApi.create({ subject, body: message });
+      toast.success("Ticket created");
+      setSubject(""); setMessage(""); setOpen(false); load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   return (
