@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { adminApi, cardsApi, announcementsApi, depositsApi, payoutsApi, setToken } from "@/lib/api";
+import { adminApi, cardsApi, depositsApi, payoutsApi, setToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -20,8 +20,8 @@ interface Profile {
   id: string; username: string; email?: string; balance: number;
   is_seller: boolean; banned: boolean; role?: string; created_at?: string;
 }
-interface Deposit { id: string; user_id: string; amount: number; method: string; txid: string | null; status: string; created_at: string; }
-interface Payout { id: string; seller_id: string; amount: number; method: string; address: string; status: string; created_at: string; }
+interface Deposit { id: string; user_id: string; amount: number; method: string; proof_url: string | null; status: string; created_at: string; }
+interface Payout { id: string; seller_id: string; amount: number; method: string; destination: string; status: string; created_at: string; }
 interface DailyRevenue { day: string; revenue: number; orders: number; }
 interface TopSeller { id: string; username: string; cards_sold: number; total_sold: number; }
 interface RecentOrder { id: string; total: number; status: string; created_at: string; buyer: string; }
@@ -269,7 +269,7 @@ const Admin = () => {
                         <div className="min-w-0 flex-1">
                           <p className="font-display text-sm">${Number(d.amount).toFixed(2)} · <span className="text-primary-glow">{d.method}</span>
                             <span className="text-xs text-muted-foreground"> · {u?.username ?? "?"}</span></p>
-                          <p className="text-[10px] font-mono text-muted-foreground truncate">{d.txid}</p>
+                          <p className="text-[10px] font-mono text-muted-foreground truncate">{d.proof_url}</p>
                         </div>
                         <div className="flex gap-1.5">
                           <Button size="sm" onClick={() => decideDeposit(d, true)} className="bg-success/90 text-white h-8"><Check className="h-3 w-3 mr-1" />Approve</Button>
@@ -291,7 +291,7 @@ const Admin = () => {
                         <div className="min-w-0 flex-1">
                           <p className="font-display text-sm">${Number(p.amount).toFixed(2)} · <span className="text-primary-glow">{p.method}</span>
                             <span className="text-xs text-muted-foreground"> · {u?.username ?? "?"}</span></p>
-                          <p className="text-[10px] font-mono text-muted-foreground truncate">{p.address}</p>
+                          <p className="text-[10px] font-mono text-muted-foreground truncate">{p.destination}</p>
                         </div>
                         <div className="flex gap-1.5">
                           <Button size="sm" onClick={() => decidePayout(p, true)} className="bg-success/90 text-white h-8"><Check className="h-3 w-3 mr-1" />Paid</Button>

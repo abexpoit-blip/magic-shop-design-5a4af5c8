@@ -12,7 +12,7 @@ import { Plus, Trash2, Upload, DollarSign, TrendingUp, Package, CheckCircle2, Wa
 import { toast } from "sonner";
 
 interface CardRow { id: string; bin: string; brand: string; country: string; price: number; status: string; base: string; created_at: string; }
-interface Payout { id: string; amount: number; method: string; address: string; status: string; created_at: string; }
+interface Payout { id: string; amount: number; method: string; address?: string; destination?: string; status: string; created_at: string; }
 
 const SellerPanel = () => {
   const { user } = useAuth();
@@ -273,7 +273,7 @@ const SellerPanel = () => {
                       <td className="p-2.5 font-mono text-xs">{new Date(p.created_at).toLocaleDateString()}</td>
                       <td className="p-2.5 text-right font-display text-primary-glow">${Number(p.amount).toFixed(2)}</td>
                       <td className="p-2.5 text-center">{p.method}</td>
-                      <td className="p-2.5 font-mono text-[10px] text-muted-foreground max-w-[160px] truncate" title={p.address}>{p.address}</td>
+                      <td className="p-2.5 font-mono text-[10px] text-muted-foreground max-w-[160px] truncate" title={p.destination ?? p.address}>{p.destination ?? p.address}</td>
                       <td className="p-2.5 text-center">
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
                           p.status === "paid" ? "bg-success/20 text-success" :
