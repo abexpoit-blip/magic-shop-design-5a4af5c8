@@ -1,4 +1,6 @@
 import { Router } from "express";
+import fs from "fs";
+import path from "path";
 import { db } from "../db.js";
 import { requireAuth, requireRole } from "../auth-middleware.js";
 
