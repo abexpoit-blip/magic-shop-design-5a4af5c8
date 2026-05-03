@@ -55,7 +55,7 @@ jobs:
             npx tsx scripts/migrate.ts || echo "Migration skipped or already up-to-date"
 
             # ── Restart backend ──
-            pm2 reload cruzercc-api --update-env || pm2 start ecosystem.config.cjs
+            pm2 reload cruzercc-api --update-env || pm2 start $APP_DIR/backend/ecosystem.config.cjs
             pm2 save
             curl -sf http://127.0.0.1:8080/api/health > /dev/null
 
