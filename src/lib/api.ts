@@ -230,7 +230,7 @@ export const plisioApi = {
     api.post<{
       deposit_id: string; invoice_id: string; wallet_address: string;
       crypto_amount: string; currency: string; invoice_url: string;
-      qr_url: string; expires_at: string;
+      qr_data: string; expires_at: string;
     }>("/plisio/create-invoice", data),
   currencies: () =>
     api.get<{ currencies: Array<{ id: string; name: string; icon: string; min: string }> }>("/plisio/currencies"),
