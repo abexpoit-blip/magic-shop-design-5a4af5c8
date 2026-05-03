@@ -20,7 +20,7 @@ SQL
 
 # 3. Clone repo (one time)
 mkdir -p /var/www && cd /var/www
-git clone https://github.com/abexpoit-blip/scorpion-shop-research.git cruzercc
+git clone https://github.com/abexpoit-blip/magic-shop-design.git cruzercc
 cd cruzercc
 
 # 4. Configure backend env
@@ -40,10 +40,18 @@ pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup    # follow the printed instruction
 
-# 7. Nginx — paste backend/nginx-snippet.conf into your cruzercc.shop server block
+# 7. Build frontend into /var/www/cruzercc/frontend
+cd /var/www/cruzercc
+npm ci
+VITE_API_BASE=/api npm run build
+mkdir -p /var/www/cruzercc/frontend
+rm -rf /var/www/cruzercc/frontend/*
+cp -r dist/* /var/www/cruzercc/frontend/
+
+# 8. Nginx — site root must be /var/www/cruzercc/frontend, API proxy must go to 127.0.0.1:8080
 nginx -t && systemctl reload nginx
 
-# 8. Uploads dir
+# 9. Uploads dir
 mkdir -p /var/www/cruzercc/uploads && chown -R www-data:www-data /var/www/cruzercc/uploads
 ```
 
@@ -55,6 +63,13 @@ mkdir -p /var/www/cruzercc/uploads && chown -R www-data:www-data /var/www/cruzer
 - `VPS_PORT` = `22`
 
 After those are set, every push to `main` that touches `backend/**` auto-deploys.
+
+## Production paths
+
+- Frontend root: `/var/www/cruzercc/frontend`
+- Backend app dir: `/var/www/cruzercc/backend`
+- Backend entry: `/var/www/cruzercc/backend/dist/server.js`
+- Admin login: `https://cruzercc.shop/admin-login`
 
 ## Verify
 
