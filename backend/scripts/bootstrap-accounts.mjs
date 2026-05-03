@@ -27,8 +27,8 @@ async function bootstrap() {
     console.log(`✅ Updated existing user: ${email} (${userId})`);
   } else {
     const { rows } = await pool.query(
-      `INSERT INTO users (email, username, username_ci, password_hash, is_active)
-       VALUES ($1, $2, lower($2), $3, true) RETURNING id`,
+      `INSERT INTO users (email, username, password_hash, is_active)
+       VALUES ($1, $2, $3, true) RETURNING id`,
       [email, username, hash]
     );
     userId = rows[0].id;
