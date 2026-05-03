@@ -369,8 +369,11 @@ const SellerPanel = () => {
               {cards.map((c) => (
                 <tr key={c.id} className={`border-t border-border/40 ${selected.has(c.id) ? "bg-primary/5" : ""}`}>
                   <td className="p-2.5 text-center"><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="accent-primary" /></td>
-                  <td className="p-2.5 font-mono">{c.bin}</td>
-                  <td className="p-2.5 text-center">{c.brand}</td>
+                  <td className="p-2.5 font-mono flex items-center gap-2">
+                    <BrandLogo brand={c.brand || detectBrandFromBin(c.bin)} className="h-4" />
+                    {c.bin}
+                  </td>
+                  <td className="p-2.5 text-center"><BrandLogo brand={c.brand || detectBrandFromBin(c.bin)} className="h-4" /></td>
                   <td className="p-2.5 text-center">{countryFlag(c.country)} {c.country}</td>
                   <td className="p-2.5 text-right text-primary-glow font-display">
                     {editingId === c.id ? (
