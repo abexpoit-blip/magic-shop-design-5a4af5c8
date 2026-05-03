@@ -12,6 +12,7 @@ const items: Item[] = [
   { to: "/admin/cards", label: "Card moderation", icon: CreditCard },
   { to: "/admin/refunds", label: "Refund requests", icon: Undo2 },
   { to: "/admin/deposit-addresses", label: "Deposit addresses", icon: Landmark },
+  { to: "/admin/payment-gateway", label: "Payment Gateway", icon: Banknote },
   { to: "/admin/site", label: "Site settings", icon: SettingsIcon },
   { to: "/admin/settings", label: "Credentials", icon: KeyRound },
 ];
