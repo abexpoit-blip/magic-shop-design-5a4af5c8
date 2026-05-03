@@ -115,6 +115,7 @@ const Shop = () => {
       setCartIds((s) => { const n = new Set(s); ids.forEach((id) => n.add(id)); return n; });
       setSelected(new Set());
       toast.success(`Added ${ids.length} to cart`);
+      nav("/cart");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
