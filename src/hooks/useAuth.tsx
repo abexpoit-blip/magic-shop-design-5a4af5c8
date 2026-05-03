@@ -73,6 +73,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    setLoading(true);
+
     // Decode token for basic user info
     const decoded = decodeToken(token);
     if (!decoded?.sub) {
