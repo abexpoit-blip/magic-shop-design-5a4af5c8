@@ -251,6 +251,15 @@ const Auth = () => {
             redirectPath="/reset-password"
           />
 
+          <div className="flex justify-center gap-4 mt-4">
+            <button onClick={() => nav("/seller-login")} className="text-xs text-gold/70 hover:text-gold transition font-mono tracking-wider">
+              SELLER LOGIN →
+            </button>
+            <button onClick={() => nav("/admin-login")} className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition font-mono tracking-wider">
+              ADMIN →
+            </button>
+          </div>
+
           <p className="text-center text-[10px] font-mono tracking-[0.3em] text-muted-foreground mt-6 lg:hidden">
             © {new Date().getFullYear()} CRUZERCC.SHOP
           </p>
