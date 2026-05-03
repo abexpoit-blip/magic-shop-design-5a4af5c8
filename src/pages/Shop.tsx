@@ -47,8 +47,8 @@ const Shop = () => {
 
   const loadSellers = async () => {
     try {
-      const { sellers: s } = await sellersApi.visible() as { sellers: Seller[] };
-      setSellers(s ?? []);
+      const res = await sellersApi.visible();
+      setSellers((res.sellers ?? []) as unknown as Seller[]);
     } catch { setSellers([]); }
   };
 

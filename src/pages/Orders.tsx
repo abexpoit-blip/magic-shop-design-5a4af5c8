@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-interface OrderItem { id: string; price: number; card_snapshot: Record<string, unknown>; }
+interface OrderItem { id?: string; price: number; card_snapshot?: Record<string, unknown>; card_id?: string; brand?: string; bin?: string; country?: string; }
 interface Order { id: string; total: number; status: string; created_at: string; order_items?: OrderItem[]; items?: OrderItem[]; }
 
 const Orders = () => {
@@ -20,7 +20,7 @@ const Orders = () => {
     (async () => {
       try {
         const { orders: data } = await ordersApi.mine();
-        setOrders((data ?? []) as Order[]);
+        setOrders((data ?? []) as unknown as Order[]);
       } catch { setOrders([]); }
     })();
   }, [user]);
