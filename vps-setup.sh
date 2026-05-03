@@ -71,7 +71,7 @@ done
 # ── 5. Setup backend ──
 echo "→ [5/8] Setting up backend…"
 cd "$APP_DIR/backend"
-npm install --production
+npm install
 
 # Create .env if it doesn't exist
 if [ ! -f .env ]; then
@@ -95,7 +95,7 @@ echo "   .env already exists — skipping"
 fi
 
 # Build TypeScript
-npx tsc -p tsconfig.json
+npm run build
 
 # ── 6. Create admin account ──
 echo "→ [6/8] Bootstrapping admin account…"
