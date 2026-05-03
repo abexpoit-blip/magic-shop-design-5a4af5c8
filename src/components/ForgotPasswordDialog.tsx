@@ -2,21 +2,17 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Mail, Loader2 } from "lucide-react";
-import { describeAuthError } from "@/lib/authErrors";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   defaultEmail?: string;
-  /** "/reset-password" for buyers/sellers, "/admin/reset-password" for admin */
   redirectPath?: string;
 }
 
-export const ForgotPasswordDialog = ({ open, onOpenChange, defaultEmail = "", redirectPath = "/reset-password" }: Props) => {
+export const ForgotPasswordDialog = ({ open, onOpenChange, defaultEmail = "" }: Props) => {
   const [email, setEmail] = useState(defaultEmail);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -25,15 +21,12 @@ export const ForgotPasswordDialog = ({ open, onOpenChange, defaultEmail = "", re
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}${redirectPath}`,
-      });
-      if (error) throw error;
+      // VPS backend doesn't have password reset email flow yet.
+      // Show a message directing users to contact admin.
       setSent(true);
-      toast.success("Reset link sent — check your inbox");
-    } catch (err) {
-      const f = describeAuthError(err);
-      toast.error(f.title, f.hint ? { description: f.hint } : undefined);
+      toast.success("Contact admin to reset your password");
+    } catch {
+      toast.error("Failed to submit reset request");
     } finally { setLoading(false); }
   };
 
@@ -43,13 +36,12 @@ export const ForgotPasswordDialog = ({ open, onOpenChange, defaultEmail = "", re
         <DialogHeader>
           <DialogTitle>Forgot password</DialogTitle>
           <DialogDescription>
-            Enter the email tied to your account. We'll send you a secure reset link.
+            Contact admin via Telegram @cruzercc_support to reset your password.
           </DialogDescription>
         </DialogHeader>
         {sent ? (
           <div className="text-sm text-muted-foreground py-2">
-            ✅ A reset link is on its way to <span className="text-foreground font-semibold">{email}</span>.
-            Check spam if you don't see it within 2 minutes.
+            ✅ Please contact admin via Telegram <span className="text-foreground font-semibold">@cruzercc_support</span> to reset your password for <span className="text-foreground font-semibold">{email}</span>.
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -62,7 +54,7 @@ export const ForgotPasswordDialog = ({ open, onOpenChange, defaultEmail = "", re
               </div>
             </div>
             <button type="submit" disabled={loading} className="btn-luxe w-full h-11 disabled:opacity-60">
-              {loading ? <Loader2 className="h-4 w-4 mx-auto animate-spin" /> : "Send reset link"}
+              {loading ? <Loader2 className="h-4 w-4 mx-auto animate-spin" /> : "Request password reset"}
             </button>
           </form>
         )}

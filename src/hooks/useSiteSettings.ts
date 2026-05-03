@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export interface SiteSettings {
   shop_name: string;
@@ -41,21 +41,22 @@ const broadcast = (s: SiteSettings) => {
 };
 
 export const refreshSiteSettings = async (): Promise<SiteSettings> => {
-  const { data } = await supabase
-    .from("site_settings" as never)
-    .select("*")
-    .eq("id", 1)
-    .maybeSingle();
-  const row = (data ?? null) as Partial<SiteSettings> | null;
-  const merged: SiteSettings = {
-    ...DEFAULT_SETTINGS,
-    ...(row ?? {}),
-    ticker_items: Array.isArray(row?.ticker_items)
-      ? (row!.ticker_items as string[])
-      : DEFAULT_SETTINGS.ticker_items,
-  };
-  broadcast(merged);
-  return merged;
+  try {
+    const { settings } = await api.get<{ settings: Record<string, unknown> }>("/site-settings");
+    const row = settings as Partial<SiteSettings> | null;
+    const merged: SiteSettings = {
+      ...DEFAULT_SETTINGS,
+      ...(row ?? {}),
+      ticker_items: Array.isArray(row?.ticker_items)
+        ? (row!.ticker_items as string[])
+        : DEFAULT_SETTINGS.ticker_items,
+    };
+    broadcast(merged);
+    return merged;
+  } catch {
+    broadcast(DEFAULT_SETTINGS);
+    return DEFAULT_SETTINGS;
+  }
 };
 
 export function useSiteSettings() {
