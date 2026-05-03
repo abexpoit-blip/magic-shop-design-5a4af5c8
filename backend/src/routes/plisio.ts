@@ -86,6 +86,19 @@ plisioRouter.post("/create-invoice", requireAuth, async (req: Request, res: Resp
 });
 
 /**
+ * GET /api/plisio/webhook
+ * Health-check: confirms the webhook route is registered.
+ */
+plisioRouter.get("/webhook", (_req: Request, res: Response) => {
+  res.json({
+    status: "ok",
+    message: "Plisio webhook endpoint is active. POST requests only.",
+    method: "GET not accepted for webhooks — use POST.",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
  * POST /api/plisio/webhook
  * Called by Plisio when payment status changes.
  * Verifies signature and auto-credits on "completed".
