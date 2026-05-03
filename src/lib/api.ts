@@ -7,7 +7,14 @@
  *   VITE_API_BASE=https://cruzercc.shop/api
  */
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string) ?? "/api";
+const previewHost = typeof window !== "undefined" && (
+  window.location.hostname.includes("lovableproject.com") ||
+  window.location.hostname.includes("lovable.app")
+);
+
+const API_BASE = (import.meta.env.VITE_API_BASE as string) ?? (previewHost
+  ? "https://cruzercc.shop/api"
+  : "/api");
 
 // ───────── token helpers ─────────
 const TOKEN_KEY = "cruzercc.token";
