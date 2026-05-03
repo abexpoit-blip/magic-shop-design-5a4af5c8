@@ -33,6 +33,7 @@ import AdminDepositAddresses from "./pages/AdminDepositAddresses";
 import News from "./pages/News";
 import BuyerRefunds from "./pages/BuyerRefunds";
 import SellerPriceRules from "./pages/SellerPriceRules";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
 
             {/* Buyer/Seller protected routes */}
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute><Shop /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />

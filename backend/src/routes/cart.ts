@@ -1,97 +1,102 @@
 import { Router } from "express";
 import { z } from "zod";
-import { pool } from "../db.js";
+import { db } from "../db.js";
 import { requireAuth } from "../auth-middleware.js";
 
 export const cartRouter = Router();
 
-// In-memory cart per user (cards are reserved at checkout, not before).
-// We keep cart on the client (localStorage); this endpoint validates+checks out.
+function genId(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
-const checkoutSchema = z.object({
-  card_ids: z.array(z.string().uuid()).min(1).max(50),
+// List cart items
+cartRouter.get("/", requireAuth, (req, res) => {
+  const items = db.prepare(
+    `SELECT ci.id, ci.card_id, c.bin, c.brand, c.country, c.price, c.last4
+       FROM cart_items ci LEFT JOIN cards c ON c.id = ci.card_id
+      WHERE ci.user_id = ? ORDER BY ci.created_at DESC`
+  ).all(req.user!.id);
+  res.json({ items });
 });
 
-cartRouter.post("/checkout", requireAuth, async (req, res, next) => {
-  const client = await pool.connect();
+// Add to cart
+cartRouter.post("/", requireAuth, (req, res) => {
+  const { card_id } = req.body;
+  if (!card_id) return res.status(400).json({ error: "card_id required" });
+  try {
+    db.prepare(`INSERT OR IGNORE INTO cart_items (id, user_id, card_id) VALUES (?, ?, ?)`).run(genId(), req.user!.id, card_id);
+    res.json({ ok: true });
+  } catch { res.status(409).json({ error: "Already in cart" }); }
+});
+
+// Batch add
+cartRouter.post("/batch", requireAuth, (req, res) => {
+  const { card_ids } = req.body;
+  if (!Array.isArray(card_ids)) return res.status(400).json({ error: "card_ids array required" });
+  const stmt = db.prepare(`INSERT OR IGNORE INTO cart_items (id, user_id, card_id) VALUES (?, ?, ?)`);
+  const tx = db.transaction(() => { for (const cid of card_ids) stmt.run(genId(), req.user!.id, cid); });
+  tx();
+  res.json({ ok: true });
+});
+
+// Remove from cart
+cartRouter.delete("/:id", requireAuth, (req, res) => {
+  db.prepare(`DELETE FROM cart_items WHERE id = ? AND user_id = ?`).run(req.params.id, req.user!.id);
+  res.json({ ok: true });
+});
+
+// Checkout
+const checkoutSchema = z.object({
+  card_ids: z.array(z.string()).min(1).max(50),
+});
+
+cartRouter.post("/checkout", requireAuth, (req, res, next) => {
   try {
     const { card_ids } = checkoutSchema.parse(req.body);
-    await client.query("BEGIN");
 
-    // Lock cards for update; only available ones count.
-    const { rows: cards } = await client.query(
-      `SELECT id, seller_id, price FROM cards
-        WHERE id = ANY($1::uuid[]) AND status='available'
-        FOR UPDATE`,
-      [card_ids]
-    );
-    if (cards.length !== card_ids.length) {
-      await client.query("ROLLBACK");
-      return res.status(409).json({ error: "Some cards no longer available" });
-    }
+    const result = db.transaction(() => {
+      // Get available cards
+      const placeholders = card_ids.map(() => "?").join(",");
+      const cards = db.prepare(
+        `SELECT id, seller_id, price FROM cards WHERE id IN (${placeholders}) AND status = 'available'`
+      ).all(...card_ids) as any[];
 
-    // Buyer can't buy own cards.
-    if (cards.some(c => c.seller_id === req.user!.id)) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "Cannot buy own cards" });
-    }
+      if (cards.length !== card_ids.length) return { error: "Some cards no longer available", status: 409 };
+      if (cards.some(c => c.seller_id === req.user!.id)) return { error: "Cannot buy own cards", status: 400 };
 
-    const total = cards.reduce((s, c) => s + Number(c.price), 0);
+      const total = cards.reduce((s, c) => s + Number(c.price), 0);
 
-    // Lock wallet, check balance.
-    const { rows: wRows } = await client.query(
-      `SELECT balance FROM wallets WHERE user_id=$1 FOR UPDATE`,
-      [req.user!.id]
-    );
-    const balance = Number(wRows[0]?.balance ?? 0);
-    if (balance < total) {
-      await client.query("ROLLBACK");
-      return res.status(402).json({ error: "Insufficient balance", balance, total });
-    }
+      // Check balance
+      const wallet = db.prepare(`SELECT balance FROM wallets WHERE user_id = ?`).get(req.user!.id) as any;
+      const balance = Number(wallet?.balance ?? 0);
+      if (balance < total) return { error: "Insufficient balance", status: 402, balance, total };
 
-    // Create order.
-    const { rows: oRows } = await client.query(
-      `INSERT INTO orders (buyer_id, total, status) VALUES ($1,$2,'paid') RETURNING id, created_at`,
-      [req.user!.id, total]
-    );
-    const orderId = oRows[0].id;
+      // Create order
+      const orderId = genId();
+      db.prepare(`INSERT INTO orders (id, buyer_id, total, status) VALUES (?, ?, ?, 'paid')`).run(orderId, req.user!.id, total);
 
-    for (const c of cards) {
-      await client.query(
-        `INSERT INTO order_items (order_id, card_id, seller_id, price)
-         VALUES ($1,$2,$3,$4)`,
-        [orderId, c.id, c.seller_id, c.price]
-      );
-      await client.query(
-        `UPDATE cards SET status='sold', sold_at=now() WHERE id=$1`,
-        [c.id]
-      );
-      // Credit seller wallet.
-      await client.query(
-        `INSERT INTO wallets (user_id, balance) VALUES ($1,$2)
-           ON CONFLICT (user_id) DO UPDATE SET balance = wallets.balance + EXCLUDED.balance, updated_at=now()`,
-        [c.seller_id, c.price]
-      );
-      await client.query(
-        `INSERT INTO transactions (user_id, type, amount, ref_id, meta)
-         VALUES ($1,'purchase',$2,$3,$4)`,
-        [c.seller_id, c.price, orderId, JSON.stringify({ card_id: c.id, role: "seller_credit" })]
-      );
-    }
+      for (const c of cards) {
+        const itemId = genId();
+        db.prepare(`INSERT INTO order_items (id, order_id, card_id, seller_id, price) VALUES (?, ?, ?, ?, ?)`).run(itemId, orderId, c.id, c.seller_id, c.price);
+        db.prepare(`UPDATE cards SET status = 'sold', sold_at = datetime('now') WHERE id = ?`).run(c.id);
+        // Credit seller
+        db.prepare(`UPDATE wallets SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?`).run(c.price, c.seller_id);
+        db.prepare(`INSERT INTO transactions (id, user_id, type, amount, ref_id, meta) VALUES (?, ?, 'purchase', ?, ?, ?)`).run(genId(), c.seller_id, c.price, orderId, JSON.stringify({ card_id: c.id, role: "seller_credit" }));
+      }
 
-    // Debit buyer.
-    await client.query(`UPDATE wallets SET balance = balance - $2, updated_at=now() WHERE user_id=$1`,
-      [req.user!.id, total]);
-    await client.query(
-      `INSERT INTO transactions (user_id, type, amount, ref_id, meta)
-       VALUES ($1,'purchase',$2,$3,$4)`,
-      [req.user!.id, -total, orderId, JSON.stringify({ count: cards.length })]
-    );
+      // Debit buyer
+      db.prepare(`UPDATE wallets SET balance = balance - ?, updated_at = datetime('now') WHERE user_id = ?`).run(total, req.user!.id);
+      db.prepare(`INSERT INTO transactions (id, user_id, type, amount, ref_id, meta) VALUES (?, ?, 'purchase', ?, ?, ?)`).run(genId(), req.user!.id, -total, orderId, JSON.stringify({ count: cards.length }));
 
-    await client.query("COMMIT");
-    res.json({ order_id: orderId, total });
-  } catch (e) {
-    await client.query("ROLLBACK").catch(() => {});
-    next(e);
-  } finally { client.release(); }
+      // Clear cart
+      db.prepare(`DELETE FROM cart_items WHERE user_id = ?`).run(req.user!.id);
+
+      return { order_id: orderId, total };
+    })();
+
+    if ("error" in result) return res.status(result.status).json({ error: result.error });
+    res.json(result);
+  } catch (e) { next(e); }
 });

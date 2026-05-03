@@ -1,13 +1,17 @@
 import { Router } from "express";
 import { z } from "zod";
-import { pool } from "../db.js";
+import { db } from "../db.js";
 import { requireAuth, requireRole } from "../auth-middleware.js";
 
 export const depositAddressesRouter = Router();
 
+function genId(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 const createAddrSchema = z.object({
-  method: z.string().trim().min(1, "Method is required").max(50),
-  address: z.string().trim().min(1, "Address is required").max(500),
+  method: z.string().trim().min(1).max(50),
+  address: z.string().trim().min(1).max(500),
   label: z.string().trim().max(100).optional().nullable(),
 });
 
@@ -18,45 +22,31 @@ const updateAddrSchema = z.object({
   is_active: z.boolean().optional(),
 });
 
-// Public — list active deposit addresses
-depositAddressesRouter.get("/", async (_req, res, next) => {
+depositAddressesRouter.get("/", (_req, res) => {
+  const rows = db.prepare(`SELECT * FROM deposit_addresses WHERE is_active = 1 ORDER BY method`).all();
+  res.json({ addresses: rows });
+});
+
+depositAddressesRouter.post("/", requireAuth, requireRole("admin"), (req, res, next) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT * FROM deposit_addresses WHERE is_active = true ORDER BY method`
-    );
-    res.json({ addresses: rows });
+    const { method, address, label } = createAddrSchema.parse(req.body);
+    const id = genId();
+    db.prepare(`INSERT INTO deposit_addresses (id, method, address, label) VALUES (?, ?, ?, ?)`).run(id, method, address, label || null);
+    res.status(201).json({ address: { id, method, address, label } });
   } catch (e) { next(e); }
 });
 
-// Admin — create
-depositAddressesRouter.post("/", requireAuth, requireRole("admin"), async (req, res, next) => {
+depositAddressesRouter.patch("/:id", requireAuth, requireRole("admin"), (req, res, next) => {
   try {
-    const parsed = createAddrSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.errors.map(e => e.message).join(", ") });
-    const { method, address, label } = parsed.data;
-    const { rows } = await pool.query(
-      `INSERT INTO deposit_addresses (method, address, label) VALUES ($1,$2,$3) RETURNING *`,
-      [method, address, label || null]
-    );
-    res.status(201).json({ address: rows[0] });
-  } catch (e) { next(e); }
-});
-
-// Admin — update
-depositAddressesRouter.patch("/:id", requireAuth, requireRole("admin"), async (req, res, next) => {
-  try {
-    const parsed = updateAddrSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.errors.map(e => e.message).join(", ") });
-    const { method, address, label, is_active } = parsed.data;
-    await pool.query(
+    const { method, address, label, is_active } = updateAddrSchema.parse(req.body);
+    db.prepare(
       `UPDATE deposit_addresses SET
-         method = COALESCE($2, method),
-         address = COALESCE($3, address),
-         label = COALESCE($4, label),
-         is_active = COALESCE($5, is_active)
-       WHERE id = $1`,
-      [req.params.id, method, address, label, is_active]
-    );
+         method = COALESCE(?, method),
+         address = COALESCE(?, address),
+         label = COALESCE(?, label),
+         is_active = COALESCE(?, is_active)
+       WHERE id = ?`
+    ).run(method ?? null, address ?? null, label ?? null, is_active !== undefined ? (is_active ? 1 : 0) : null, req.params.id);
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
