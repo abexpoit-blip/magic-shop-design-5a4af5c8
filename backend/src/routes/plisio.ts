@@ -76,7 +76,7 @@ plisioRouter.post("/create-invoice", requireAuth, async (req: Request, res: Resp
       crypto_amount: invoice.amount,
       currency: currency,
       invoice_url: invoice.invoice_url,
-      qr_url: `https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=${encodeURIComponent(invoice.wallet_hash)}`,
+      qr_data: invoice.wallet_hash,
       expires_at: invoice.expire_utc,
     });
   } catch (err: any) {
