@@ -16,15 +16,31 @@ async function bootstrap() {
 
   const hash = await bcrypt.hash(password, 12);
 
-  // Check if user exists
-  const existing = await pool.query("SELECT id FROM users WHERE lower(email) = lower($1)", [email]);
+  // Reuse an existing account by email OR case-insensitive username to avoid
+  // colliding with the generated unique username_ci column.
+  const existing = await pool.query(
+    "SELECT id, email, username FROM users WHERE lower(email) = lower($1) OR username_ci = lower($2) ORDER BY CASE WHEN lower(email) = lower($1) THEN 0 ELSE 1 END LIMIT 1",
+    [email, username]
+  );
 
   let userId;
 
   if (existing.rows[0]) {
     userId = existing.rows[0].id;
-    await pool.query("UPDATE users SET password_hash = $1, is_active = true, updated_at = now() WHERE id = $2", [hash, userId]);
-    console.log(`✅ Updated existing user: ${email} (${userId})`);
+    await pool.query(
+      "UPDATE users SET email = $1, password_hash = $2, is_active = true, updated_at = now() WHERE id = $3",
+      [email.toLowerCase(), hash, userId]
+    );
+    console.log(`✅ Updated existing user: ${existing.rows[0].email} / ${existing.rows[0].username} (${userId})`);
+
+    await pool.query(
+      `INSERT INTO profiles (user_id, display_name) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [userId, "Admin"]
+    );
+    await pool.query(
+      `INSERT INTO wallets (user_id, balance) VALUES ($1, 0) ON CONFLICT DO NOTHING`,
+      [userId]
+    );
   } else {
     const { rows } = await pool.query(
       `INSERT INTO users (email, username, password_hash, is_active)
