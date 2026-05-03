@@ -175,12 +175,16 @@ const Recharge = () => {
     }
   };
 
-  const copyField = (txt: string, field: string) => {
+  const copyField = async (txt: string, field: string) => {
     if (isExpired) return;
-    navigator.clipboard.writeText(txt);
-    setCopiedField(field);
-    toast.success("Copied!");
-    setTimeout(() => setCopiedField(null), 2000);
+    try {
+      await navigator.clipboard.writeText(txt);
+      setCopiedField(field);
+      toast.success("Copied to clipboard!");
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      toast.error("Failed to copy — please copy manually");
+    }
   };
 
   const buildQrValue = () => {
@@ -245,6 +249,14 @@ const Recharge = () => {
                   <p className="font-display text-2xl font-black text-primary-glow">
                     ${activeInvoice.usd_amount.toFixed(2)}
                   </p>
+                  {(feePercent > 0 || feeFlat > 0) && (
+                    <div className="text-xs space-y-0.5 text-muted-foreground">
+                      <p>Fee: -${computeFee(activeInvoice.usd_amount).toFixed(2)}</p>
+                      <p className="text-primary-glow font-bold">
+                        You receive: ${Math.max(0, activeInvoice.usd_amount - computeFee(activeInvoice.usd_amount)).toFixed(2)}
+                      </p>
+                    </div>
+                  )}
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-xs font-display tracking-wider text-primary-glow">
                     <Bitcoin className="h-3.5 w-3.5" />
                     {activeInvoice.currency} Network
