@@ -66,9 +66,7 @@ const Auth = () => {
         const result = await authApi.login({ identifier: username.trim(), password });
         setToken(result.token);
 
-        const userRoles = result.user.roles ?? [];
-        const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
-        setActiveRole(result.user.id, isSeller ? "seller" : "buyer");
+        const isSeller = result.user.role === "seller" || result.user.role === "admin";
 
         toast.success("Welcome back, hunter");
         nav(isSeller ? "/seller" : "/shop", { replace: true });
