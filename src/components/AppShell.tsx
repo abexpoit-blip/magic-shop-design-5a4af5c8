@@ -284,7 +284,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/40 bg-black/30 backdrop-blur-xl mt-16">
-        <div className="mx-auto max-w-[1500px] px-4 lg:px-8 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 xl:px-10 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-3">
               <img src={logo} alt="" className="h-8 w-8" />
