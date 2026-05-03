@@ -181,7 +181,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
                   {profile?.username?.[0]?.toUpperCase() ?? "U"}
                 </div>
               )}
-              <div className="hidden xl:block leading-tight pr-1">
+              <div className="hidden lg:block leading-tight pr-1">
                 {showProfileError ? (
                   <>
                     <div className="nav-profile-name font-bold text-destructive -mb-0.5">Unavailable</div>
