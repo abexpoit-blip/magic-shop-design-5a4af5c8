@@ -1,4 +1,6 @@
 import { Router } from "express";
+import fs from "fs";
+import path from "path";
 import { db } from "../db.js";
 import { requireAuth, requireRole } from "../auth-middleware.js";
 
@@ -187,4 +189,38 @@ adminRouter.post("/news", (req, res) => {
 adminRouter.delete("/news/:id", (req, res) => {
   db.prepare(`DELETE FROM news WHERE id = ?`).run(req.params.id);
   res.json({ ok: true });
+});
+
+// ── Plisio API key management ──
+adminRouter.get("/plisio-key-status", (_req, res) => {
+  const configured = !!process.env.PLISIO_SECRET_KEY;
+  res.json({ configured });
+});
+
+adminRouter.post("/plisio-key", (req, res) => {
+  const { key } = req.body;
+  if (!key || typeof key !== "string" || key.trim().length < 10) {
+    return res.status(400).json({ error: "Invalid API key" });
+  }
+  // Update the .env file on disk and set in process
+  const envPath = path.resolve(process.cwd(), ".env");
+  try {
+    let content = "";
+    if (fs.existsSync(envPath)) {
+      content = fs.readFileSync(envPath, "utf8");
+    }
+    // Replace or add PLISIO_SECRET_KEY
+    const regex = /^PLISIO_SECRET_KEY=.*$/m;
+    const line = `PLISIO_SECRET_KEY=${key.trim()}`;
+    if (regex.test(content)) {
+      content = content.replace(regex, line);
+    } else {
+      content = content.trimEnd() + "\n" + line + "\n";
+    }
+    fs.writeFileSync(envPath, content);
+    process.env.PLISIO_SECRET_KEY = key.trim();
+    res.json({ ok: true });
+  } catch (e: unknown) {
+    res.status(500).json({ error: "Failed to save key" });
+  }
 });

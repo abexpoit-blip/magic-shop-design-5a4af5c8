@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState, useCallback } from "react";
 import { Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, ShieldCheck, PackagePlus, LogOut, Menu, X, Search, Bell, Maximize2, Minimize2, AlertTriangle, RefreshCw, Newspaper, Undo2 } from "lucide-react";
+import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, ShieldCheck, PackagePlus, LogOut, Menu, X, Bell, Maximize2, Minimize2, AlertTriangle, RefreshCw, Newspaper, Undo2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/panther-logo.png";
 import { Button } from "@/components/ui/button";
@@ -158,9 +158,6 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 
           {/* Right cluster */}
           <div className="nav-right flex items-center shrink-0">
-            <button className="nav-icon-btn hidden md:inline-flex !text-foreground/90 hover:!text-primary-glow" aria-label="Search">
-              <Search className="nav-icon" strokeWidth={2} />
-            </button>
             <div className="relative">
               <button onClick={() => setShowNotifs(!showNotifs)} className="nav-icon-btn hidden md:inline-flex relative !text-foreground/90 hover:!text-primary-glow" aria-label="Notifications">
                 <Bell className="nav-icon" strokeWidth={2} />
