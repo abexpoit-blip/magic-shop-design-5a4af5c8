@@ -15,6 +15,11 @@ import { depositsRouter } from "./routes/deposits.js";
 import { payoutsRouter } from "./routes/payouts.js";
 import { ticketsRouter } from "./routes/tickets.js";
 import { announcementsRouter } from "./routes/announcements.js";
+import { siteSettingsRouter } from "./routes/site-settings.js";
+import { refundsRouter } from "./routes/refunds.js";
+import { newsRouter } from "./routes/news.js";
+import { priceRulesRouter } from "./routes/price-rules.js";
+import { depositAddressesRouter } from "./routes/deposit-addresses.js";
 import swaggerUi from "swagger-ui-express";
 import { openapiSpec } from "./openapi.js";
 import { listRoutes } from "./routes-introspect.js";
@@ -41,6 +46,11 @@ app.use("/api/deposits", depositsRouter);
 app.use("/api/payouts", payoutsRouter);
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/announcements", announcementsRouter);
+app.use("/api/site-settings", siteSettingsRouter);
+app.use("/api/refunds", refundsRouter);
+app.use("/api/news", newsRouter);
+app.use("/api/price-rules", priceRulesRouter);
+app.use("/api/deposit-addresses", depositAddressesRouter);
 
 // Swagger / OpenAPI docs.
 // Use a dedicated CSP for the docs route — Swagger UI needs inline scripts/styles.
