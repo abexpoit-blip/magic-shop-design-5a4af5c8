@@ -7,14 +7,23 @@
  *   VITE_API_BASE=https://cruzercc.shop/api
  */
 
-const previewHost = typeof window !== "undefined" && (
-  window.location.hostname.includes("lovableproject.com") ||
-  window.location.hostname.includes("lovable.app")
-);
+function resolveApiBase(): string {
+  // Explicit env override takes priority
+  const envBase = import.meta.env.VITE_API_BASE as string | undefined;
+  if (envBase && envBase.length > 0) return envBase.replace(/\/+$/, "");
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string) ?? (previewHost
-  ? "https://cruzercc.shop/api"
-  : "/api");
+  // When served from Lovable preview or any non-production host, call the live VPS
+  if (typeof window !== "undefined") {
+    const h = window.location.hostname;
+    const isProduction = h === "cruzercc.shop" || h === "www.cruzercc.shop";
+    if (!isProduction) return "https://cruzercc.shop/api";
+  }
+
+  // Production: same-origin via nginx proxy
+  return "/api";
+}
+
+const API_BASE = resolveApiBase();
 
 // ───────── token helpers ─────────
 const TOKEN_KEY = "cruzercc.token";
