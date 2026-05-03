@@ -175,12 +175,16 @@ const Recharge = () => {
     }
   };
 
-  const copyField = (txt: string, field: string) => {
+  const copyField = async (txt: string, field: string) => {
     if (isExpired) return;
-    navigator.clipboard.writeText(txt);
-    setCopiedField(field);
-    toast.success("Copied!");
-    setTimeout(() => setCopiedField(null), 2000);
+    try {
+      await navigator.clipboard.writeText(txt);
+      setCopiedField(field);
+      toast.success("Copied to clipboard!");
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      toast.error("Failed to copy — please copy manually");
+    }
   };
 
   const buildQrValue = () => {
