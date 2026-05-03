@@ -248,7 +248,7 @@ const Shop = () => {
                     </td>
                     <td className="p-3 font-mono text-foreground whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <BrandLogo brand={c.brand} className="h-4" />
+                        <BrandLogo brand={c.brand || detectBrandFromBin(c.bin)} className="h-4" />
                         <span>{c.bin}<span className="text-muted-foreground">••••••</span></span>
                       </div>
                       {sellerMap.get(c.seller_id) && (
