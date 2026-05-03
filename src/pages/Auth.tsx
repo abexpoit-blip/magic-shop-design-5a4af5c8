@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { authApi, setToken, ApiError } from "@/lib/api";
 import { Captcha } from "@/components/Captcha";
 import { BuildBadge } from "@/components/BuildBadge";
@@ -15,7 +15,6 @@ import { Loader2 } from "lucide-react";
 
 const Auth = () => {
   const nav = useNavigate();
-  const loc = useLocation();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -23,7 +22,7 @@ const Auth = () => {
   const [captcha, setCaptcha] = useState("");
   const [captchaOk, setCaptchaOk] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [statusBanner, setStatusBanner] = useState<{ kind: "info" | "error"; title: string; hint?: string } | null>(null);
+  const [statusBanner, setStatusBanner] = useState<{ kind: "error"; title: string; hint?: string } | null>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
 
