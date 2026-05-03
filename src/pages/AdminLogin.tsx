@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { authApi, setToken } from "@/lib/api";
+import { authApi, setToken, ApiError } from "@/lib/api";
 import { BuildBadge } from "@/components/BuildBadge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,13 +43,28 @@ const AdminLogin = () => {
       toast.success("Admin console unlocked");
       nav(safeAdminFrom ?? "/admin", { replace: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed";
-      if (message.includes("admin privileges")) {
-        setStatusBanner({ kind: "error", title: "Not an admin account", hint: "This login is for the configured admin only." });
+      if (err instanceof ApiError) {
+        const detail = [
+          `HTTP ${err.status}`,
+          err.contentType ? `Content-Type: ${err.contentType}` : null,
+          err.bodySnippet ? `Body: ${err.bodySnippet.slice(0, 120)}…` : null,
+        ].filter(Boolean).join(" · ");
+
+        if (err.message.includes("admin privileges")) {
+          setStatusBanner({ kind: "error", title: "Not an admin account", hint: "This login is for the configured admin only." });
+        } else {
+          setStatusBanner({ kind: "error", title: err.message, hint: detail });
+        }
+        toast.error(err.message);
       } else {
-        setStatusBanner({ kind: "error", title: message });
+        const message = err instanceof Error ? err.message : "Login failed";
+        if (message.includes("admin privileges")) {
+        setStatusBanner({ kind: "error", title: "Not an admin account", hint: "This login is for the configured admin only." });
+        } else {
+          setStatusBanner({ kind: "error", title: message });
+        }
+        toast.error(message);
       }
-      toast.error(message);
     } finally { setLoading(false); }
   };
 
