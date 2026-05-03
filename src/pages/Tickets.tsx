@@ -21,7 +21,7 @@ const Tickets = () => {
     if (!user) return;
     try {
       const { tickets: t } = await ticketsApi.mine();
-      setTickets((t ?? []) as Ticket[]);
+      setTickets((t ?? []) as unknown as Ticket[]);
     } catch { /* ignore */ }
   };
   useEffect(() => { load(); }, [user]);

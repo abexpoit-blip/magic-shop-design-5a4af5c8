@@ -24,8 +24,8 @@ const Recharge = () => {
       depositAddressesApi.list(),
       depositsApi.mine(),
     ]);
-    if (a.status === "fulfilled") setAddresses((a.value.addresses ?? []) as DepositAddress[]);
-    if (d.status === "fulfilled") setHistory((d.value.deposits ?? []) as Deposit[]);
+    if (a.status === "fulfilled") setAddresses((a.value.addresses ?? []) as unknown as DepositAddress[]);
+    if (d.status === "fulfilled") setHistory((d.value.deposits ?? []) as unknown as Deposit[]);
   };
   useEffect(() => { load(); }, []);
 
