@@ -271,4 +271,28 @@ db.exec(`
   );
 `);
 
+// Seed admin account
+import bcrypt from "bcryptjs";
+
+const ADMIN_EMAIL = "admin@cruzercc";
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "Shovon@5448";
+
+const existingAdmin = db.prepare(`SELECT id FROM users WHERE lower(email) = lower(?)`).get(ADMIN_EMAIL) as any;
+if (!existingAdmin) {
+  const hash = bcrypt.hashSync(ADMIN_PASSWORD, 12);
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, "0")).join("");
+  db.transaction(() => {
+    db.prepare(`INSERT INTO users (id, email, username, password_hash, role) VALUES (?, ?, ?, ?, 'admin')`).run(id, ADMIN_EMAIL, ADMIN_USERNAME, hash);
+    db.prepare(`INSERT INTO profiles (user_id) VALUES (?)`).run(id);
+    db.prepare(`INSERT INTO wallets (user_id) VALUES (?)`).run(id);
+  })();
+  console.log("✅ Admin account seeded:", ADMIN_EMAIL);
+} else {
+  // Update password in case it changed
+  const hash = bcrypt.hashSync(ADMIN_PASSWORD, 12);
+  db.prepare(`UPDATE users SET password_hash = ?, role = 'admin', updated_at = datetime('now') WHERE lower(email) = lower(?)`).run(hash, ADMIN_EMAIL);
+  console.log("✅ Admin password updated:", ADMIN_EMAIL);
+}
+
 console.log("✅ SQLite DB ready:", DB_PATH);
