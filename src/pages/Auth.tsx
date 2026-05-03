@@ -15,8 +15,6 @@ import { setActiveRole } from "@/lib/activeRole";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 import { Loader2 } from "lucide-react";
 
-type Role = "buyer" | "seller";
-
 const Auth = () => {
   const nav = useNavigate();
   const loc = useLocation();
@@ -24,7 +22,6 @@ const Auth = () => {
   const safeFrom = fromPath && !fromPath.startsWith("/auth") && !fromPath.startsWith("/admin-login")
     ? fromPath
     : null;
-  const [role, setRole] = useState<Role>("buyer");
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -70,27 +67,14 @@ const Auth = () => {
         const fakeEmail = email || `${username.toLowerCase()}@cruzercc.shop`;
         const result = await authApi.signup({ email: fakeEmail, username, password });
         setToken(result.token);
-        toast.success(role === "seller" ? "Account created — apply to become a seller next" : "Account created — entering the den…");
-        nav(role === "seller" ? "/seller/apply" : (safeFrom ?? "/shop"), { replace: true });
+        toast.success("Account created — entering the den…");
+        nav(safeFrom ?? "/shop", { replace: true });
       } else {
         const result = await authApi.login({ identifier: username.trim(), password });
         setToken(result.token);
 
         const userRoles = result.user.roles ?? [];
         const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
-
-        if (isSeller && role !== "seller") {
-          toast.info("This account is locked to seller mode.", {
-            description: "Seller access stays on the seller dashboard and cannot switch back to buyer mode.",
-          });
-        }
-
-        if (role === "seller" && !isSeller) {
-          setToken("");
-          toast.error("This account isn't a seller. Apply for a seller account or sign in as a buyer.");
-          setLoading(false);
-          return;
-        }
         setActiveRole(result.user.id, isSeller ? "seller" : "buyer");
 
         toast.success("Welcome back, hunter");
@@ -156,24 +140,7 @@ const Auth = () => {
           </div>
 
           <div className="glass-neon rounded-2xl p-7 panther-claw">
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {(["buyer", "seller"] as const).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  className={`py-2 rounded-lg text-[11px] font-display tracking-[0.2em] uppercase border transition ${
-                    role === r
-                      ? r === "seller"
-                        ? "bg-gold/15 border-gold/50 text-gold shadow-[0_0_16px_hsl(var(--gold)/0.35)]"
-                        : "bg-primary/15 border-primary/50 text-primary-glow shadow-neon"
-                      : "border-border/50 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {r === "buyer" ? "I'm a buyer" : "I'm a seller"}
-                </button>
-              ))}
-            </div>
+            {/* Only buyer login/signup — no role toggle */}
             <div className="flex gap-2 mb-6 p-1 rounded-xl bg-secondary/50 border border-border/50">
               {(["login", "signup"] as const).map((m) => (
                 <button
@@ -295,12 +262,6 @@ const Auth = () => {
             defaultEmail={username.includes("@") ? username : ""}
             redirectPath="/reset-password"
           />
-
-          <div className="mt-5 text-center">
-            <a href="/admin-login" className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground hover:text-destructive transition">
-              Admin? Sign in here →
-            </a>
-          </div>
 
           <p className="text-center text-[10px] font-mono tracking-[0.3em] text-muted-foreground mt-6 lg:hidden">
             © {new Date().getFullYear()} CRUZERCC.SHOP
