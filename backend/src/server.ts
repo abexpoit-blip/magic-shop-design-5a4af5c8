@@ -30,10 +30,44 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
+const allowedOrigins = new Set(
+  (process.env.CORS_ORIGIN ?? "https://cruzercc.shop,https://www.cruzercc.shop")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
+
+function isAllowedOrigin(origin?: string | null) {
+  if (!origin) return true;
+
+  try {
+    const { hostname } = new URL(origin);
+    const host = hostname.toLowerCase();
+
+    return allowedOrigins.has(origin)
+      || host === "cruzercc.shop"
+      || host === "www.cruzercc.shop"
+      || host.endsWith(".lovable.app")
+      || host.endsWith(".lovableproject.com");
+  } catch {
+    return false;
+  }
+}
+
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") ?? true, credentials: true }));
+app.use(cors({
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("Origin not allowed by CORS"));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: "5mb" }));
 app.use(morgan("tiny"));
 
