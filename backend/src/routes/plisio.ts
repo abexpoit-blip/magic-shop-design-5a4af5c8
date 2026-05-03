@@ -192,7 +192,7 @@ plisioRouter.post("/webhook", async (req: Request, res: Response) => {
         );
       })();
 
-      console.log(`[plisio webhook] ✅ Auto-credited $${actualUsd} to user ${dep.user_id} (deposit ${orderId})`);
+      console.log(`[plisio webhook] ✅ Auto-credited $${credited.toFixed(2)} (gross $${actualUsd}) to user ${dep.user_id} (deposit ${orderId})`);
     } else if (status === "expired" || status === "cancelled") {
       db.prepare(`UPDATE deposits SET status = 'rejected', admin_notes = ? WHERE id = ?`)
         .run(`Plisio status: ${status}`, orderId);
