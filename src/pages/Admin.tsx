@@ -6,10 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
-  Check, X, Shield, Users, Megaphone, Ticket, DollarSign, ShoppingBag, TrendingUp,
-  CreditCard, Ban, UserCheck, Wallet, Upload, Trash2, Eye, EyeOff, BadgeCheck, Search, ExternalLink,
+  Check, X, Users, Megaphone, Ticket,
+  CreditCard, Ban, UserCheck, Wallet,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+
 import { useAuth } from "@/hooks/useAuth";
 
 interface Profile { id: string; username: string; balance: number; is_seller: boolean; banned: boolean; is_seller_verified?: boolean; is_seller_visible?: boolean; commission_percent?: number; seller_display_name?: string | null; }
