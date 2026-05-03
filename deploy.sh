@@ -30,33 +30,38 @@ cd ..
 # ── 3. Upload to VPS ──
 echo "→ Uploading to VPS ($VPS_HOST)…"
 
-# Upload frontend dist
-rsync -avz --delete dist/ $VPS_USER@$VPS_HOST:$APP_DIR/frontend/
-
-# Upload backend (dist + package.json + node_modules)
+# Sync repo to VPS app dir
 rsync -avz --delete \
-  backend/dist/ \
-  $VPS_USER@$VPS_HOST:$APP_DIR/backend/dist/
-
-rsync -avz \
-  backend/package.json \
-  backend/package-lock.json \
-  backend/ecosystem.config.cjs \
-  backend/scripts/ \
-  $VPS_USER@$VPS_HOST:$APP_DIR/backend/
+  --exclude node_modules \
+  --exclude backend/node_modules \
+  --exclude .git \
+  ./ $VPS_USER@$VPS_HOST:$APP_DIR/
 
 # ── 4. Install deps & restart on VPS ──
 echo "→ Installing backend deps & restarting…"
 ssh $VPS_USER@$VPS_HOST << 'EOF'
   set -e
+
+  cd /var/www/cruzercc
+  npm ci
+  VITE_API_BASE=/api npm run build
+  mkdir -p /var/www/cruzercc/frontend
+  rm -rf /var/www/cruzercc/frontend/*
+  cp -r dist/* /var/www/cruzercc/frontend/
+
   cd /var/www/cruzercc/backend
   npm ci --production
+  npm run build
 
   # Run migrations
   npx tsx scripts/migrate.ts 2>/dev/null || echo "Migrations: nothing new"
 
   # Restart
   pm2 reload cruzercc-api --update-env 2>/dev/null || pm2 start ecosystem.config.cjs
+  pm2 save
+  test -f /var/www/cruzercc/frontend/index.html
+  grep -q '/assets/' /var/www/cruzercc/frontend/index.html
+  curl -sf http://127.0.0.1:8080/api/health > /dev/null
   sudo nginx -t && sudo systemctl reload nginx
   echo "✅ VPS deploy complete"
 EOF
