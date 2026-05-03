@@ -499,7 +499,11 @@ const Recharge = () => {
           <h3 className="font-display tracking-wider mb-3 text-primary-glow">RECENT DEPOSITS</h3>
           <div className="space-y-2">
             {history.length === 0 && <p className="text-sm text-muted-foreground">No deposits yet.</p>}
-            {history.map((d) => (
+            {history.map((d) => {
+              // If pending and older than 30 minutes, show as expired
+              const isDepositExpired = d.status === "pending" && (Date.now() - new Date(d.created_at).getTime() > 30 * 60 * 1000);
+              const displayStatus = isDepositExpired ? "expired" : d.status;
+              return (
               <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-border/40">
                 <div>
                   <p className="font-display text-foreground">
@@ -507,16 +511,25 @@ const Recharge = () => {
                     <span className="text-xs text-muted-foreground ml-2">· {d.crypto_currency || d.method}</span>
                   </p>
                   {d.txid && <p className="text-[10px] font-mono text-muted-foreground truncate max-w-[260px] sm:max-w-md">{d.txid}</p>}
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {new Date(d.created_at).toLocaleDateString()} {new Date(d.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {d.status === "pending" && !isDepositExpired && (
+                      <span className="ml-2">· expires in {Math.max(0, Math.ceil((30 * 60 * 1000 - (Date.now() - new Date(d.created_at).getTime())) / 60000))} min</span>
+                    )}
+                  </p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
-                  d.status === "approved" ? "bg-success/20 text-success" :
-                  d.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"
+                  displayStatus === "approved" ? "bg-success/20 text-success" :
+                  displayStatus === "rejected" || displayStatus === "expired" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"
                 }`}>
-                  {d.status === "approved" ? <CheckCircle2 className="h-3 w-3" /> :
-                   d.status === "rejected" ? <XCircle className="h-3 w-3" /> :
+                  {displayStatus === "approved" ? <CheckCircle2 className="h-3 w-3" /> :
+                   displayStatus === "rejected" || displayStatus === "expired" ? <XCircle className="h-3 w-3" /> :
                    <Clock className="h-3 w-3" />}
-                  {d.status}
+                  {displayStatus}
                 </span>
+              </div>
+              );
+            })}
               </div>
             ))}
           </div>
