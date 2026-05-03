@@ -279,6 +279,7 @@ export const priceRulesApi = {
 export const refundsApi = {
   create: (data: Record<string, unknown>) =>
     api.post<{ refund: Record<string, unknown> }>("/refunds", data),
+  mine: () => api.get<{ refunds: Array<Record<string, unknown>> }>("/refunds/mine"),
   all: (status?: string) => api.get<{ refunds: Array<Record<string, unknown>> }>("/refunds", { status }),
   decide: (id: string, approve: boolean, note?: string) =>
     api.post<{ ok: true }>(`/refunds/${id}/${approve ? "approve" : "reject"}`, { resolution_note: note }),
