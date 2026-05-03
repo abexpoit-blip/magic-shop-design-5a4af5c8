@@ -531,7 +531,6 @@ const Recharge = () => {
               );
             })}
           </div>
-          </div>
         </section>
       </div>
     </AppShell>
