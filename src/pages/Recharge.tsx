@@ -221,7 +221,7 @@ const Recharge = () => {
               /* ─── Active Invoice ─── */
               <div className="space-y-5">
                 {/* Countdown timer */}
-                {activeInvoice.expires_at && (
+                {activeInvoice.expires_at && countdown >= 0 && (
                   <div className={`flex items-center justify-center gap-2 p-3 rounded-xl border ${
                     isExpired
                       ? "bg-destructive/10 border-destructive/40 text-destructive"
