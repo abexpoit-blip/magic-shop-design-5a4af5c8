@@ -65,6 +65,7 @@ const App = () => (
             <Route path="/admin/cards" element={<AdminRoute><AdminCards /></AdminRoute>} />
             <Route path="/admin/refunds" element={<AdminRoute><AdminRefunds /></AdminRoute>} />
             <Route path="/admin/deposit-addresses" element={<AdminRoute><AdminDepositAddresses /></AdminRoute>} />
+            <Route path="/admin/payment-gateway" element={<AdminRoute><AdminPaymentGateway /></AdminRoute>} />
 
             {/* Buyer/Seller protected routes */}
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
