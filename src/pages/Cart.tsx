@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { cartApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Trash2, ShoppingBag, CreditCard } from "lucide-react";
@@ -18,29 +18,19 @@ const Cart = () => {
 
   const load = async () => {
     if (!user) return;
-    const { data } = await supabase.from("cart_items")
-      .select("id, card_id").eq("user_id", user.id);
-    const rows = (data ?? []) as { id: string; card_id: string }[];
-    const ids = rows.map((r) => r.card_id);
-    let cards: Card[] = [];
-    if (ids.length) {
-      const { data: cardRows } = await supabase
-        .from("cards_public" as never)
-        .select("id,bin,brand,country,price,base,exp_month,exp_year")
-        .in("id", ids);
-      cards = (cardRows ?? []) as Card[];
-    }
-    const cardMap = new Map(cards.map((c) => [c.id, c]));
-    const list: Item[] = rows
-      .map((r) => ({ id: r.id, card: cardMap.get(r.card_id) }))
-      .filter((x): x is Item => !!x.card);
-    setItems(list);
-    setSelected(new Set(list.map((i) => i.id)));
+    try {
+      const { items: raw } = await cartApi.list();
+      const list: Item[] = (raw ?? [])
+        .filter((r) => r.card)
+        .map((r) => ({ id: r.id, card: r.card as unknown as Card }));
+      setItems(list);
+      setSelected(new Set(list.map((i) => i.id)));
+    } catch { setItems([]); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
 
   const remove = async (id: string) => {
-    await supabase.from("cart_items").delete().eq("id", id);
+    try { await cartApi.remove(id); } catch { /* ignore */ }
     setItems((arr) => arr.filter((i) => i.id !== id));
     setSelected((s) => { const n = new Set(s); n.delete(id); return n; });
   };
@@ -57,45 +47,8 @@ const Cart = () => {
     if (Number(profile.balance) < total) return toast.error("Insufficient balance — please recharge");
     setBusy(true);
     try {
-      const { data: order, error } = await supabase.from("orders")
-        .insert({ user_id: user.id, total }).select().single();
-      if (error) throw error;
       const cardIds = selectedItems.map((i) => i.card.id);
-      // Insert order_items first with metadata snapshot (id is required so the
-      // RLS policy "Buyer view purchased card" matches on the next fetch).
-      const initialItems = selectedItems.map((i) => ({
-        order_id: order.id,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        card_snapshot: JSON.parse(JSON.stringify(i.card)) as any,
-        price: Number(i.card.price),
-      }));
-      const { data: insertedItems, error: oiErr } = await supabase
-        .from("order_items").insert(initialItems).select();
-      if (oiErr) throw oiErr;
-
-      // Buyer fetches full card data via SECURITY DEFINER RPC that verifies
-      // ownership server-side. Backfill snapshot with sensitive fields.
-      const { data: full } = await (supabase as unknown as {
-        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>;
-      }).rpc("get_purchased_card_full", { _card_ids: cardIds });
-      const fullArr = (Array.isArray(full) ? full : []) as Array<Record<string, unknown> & { id: string }>;
-      const fullMap = new Map(fullArr.map((c) => [c.id, c]));
-      await Promise.all(
-        (insertedItems ?? []).map((row) => {
-          const snap = (row as unknown as { card_snapshot: { id: string } }).card_snapshot;
-          const merged = { ...snap, ...(fullMap.get(snap.id) ?? {}) };
-          return supabase
-            .from("order_items")
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .update({ card_snapshot: merged as any })
-            .eq("id", (row as { id: string }).id);
-        })
-      );
-
-      await supabase.from("cards").update({ status: "sold" }).in("id", cardIds);
-      await supabase.from("cart_items").delete().in("id", selectedItems.map((i) => i.id));
-      await supabase.from("profiles").update({ balance: Number(profile.balance) - total }).eq("id", user.id);
-      await supabase.from("transactions").insert({ user_id: user.id, amount: -total, kind: "purchase", note: `Order ${order.id}` });
+      await cartApi.checkout(cardIds);
       toast.success(`Order placed — $${total.toFixed(2)}`);
       await refresh();
       load();

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { ordersApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Download, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface OrderItem { id: string; price: number; card_snapshot: Record<string, unknown>; }
-interface Order { id: string; total: number; status: string; created_at: string; order_items: OrderItem[]; }
+interface Order { id: string; total: number; status: string; created_at: string; order_items?: OrderItem[]; items?: OrderItem[]; }
 
 const Orders = () => {
   const { user } = useAuth();
@@ -18,15 +18,19 @@ const Orders = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("orders")
-        .select("*, order_items(*)").eq("user_id", user.id).order("created_at", { ascending: false });
-      setOrders((data ?? []) as Order[]);
+      try {
+        const { orders: data } = await ordersApi.mine();
+        setOrders((data ?? []) as Order[]);
+      } catch { setOrders([]); }
     })();
   }, [user]);
 
+  const getItems = (o: Order) => o.order_items ?? o.items ?? [];
+
   const download = (o: Order) => {
+    const items = getItems(o);
     const lines = ["bin,brand,country,exp,price"];
-    o.order_items.forEach((it) => {
+    items.forEach((it) => {
       const c = it.card_snapshot as Record<string, string>;
       lines.push(`${c.bin},${c.brand},${c.country},${c.exp_month}/${c.exp_year},${it.price}`);
     });
@@ -71,7 +75,7 @@ const Orders = () => {
               {filtered.map((o) => (
                 <tr key={o.id} className="border-t border-border/40 hover:bg-secondary/30 transition">
                   <td className="p-3 font-mono text-xs">{o.id.slice(0, 16)}…</td>
-                  <td className="p-3">{o.order_items?.length ?? 0}</td>
+                  <td className="p-3">{getItems(o).length}</td>
                   <td className="p-3 font-display text-primary-glow">${Number(o.total).toFixed(2)}</td>
                   <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleString()}</td>
                   <td className="p-3 text-right">
