@@ -12,6 +12,7 @@ git reset --hard origin/main
 echo "📦 Building frontend..."
 npm ci
 VITE_API_BASE=/api npm run build
+mkdir -p $APP/frontend
 rm -rf $APP/frontend/*
 cp -r dist/* $APP/frontend/
 
