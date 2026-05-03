@@ -118,8 +118,8 @@ echo "── Setting up Nginx ──"
 cd "$PROJECT_DIR"
 
 NGINX_SRC="nginx/cruzercc.conf"
-NGINX_DEST="/etc/nginx/sites-available/cruzercc.conf"
-NGINX_LINK="/etc/nginx/sites-enabled/cruzercc.conf"
+NGINX_DEST="/etc/nginx/sites-available/cruzercc"
+NGINX_LINK="/etc/nginx/sites-enabled/cruzercc"
 
 if [ ! -f "$NGINX_SRC" ]; then
   fail "Nginx config not found at $NGINX_SRC"
@@ -132,10 +132,9 @@ if [ "$BACKEND_PORT" != "8080" ]; then
 fi
 
 sudo cp "$NGINX_SRC" "$NGINX_DEST"
+sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
+sudo rm -f /etc/nginx/sites-enabled/cruzercc /etc/nginx/sites-enabled/cruzercc.conf /etc/nginx/sites-enabled/cruzercc-api.conf 2>/dev/null || true
 sudo ln -sf "$NGINX_DEST" "$NGINX_LINK"
-
-# Remove old API-only config if it exists
-sudo rm -f /etc/nginx/sites-enabled/cruzercc-api.conf 2>/dev/null || true
 
 if sudo nginx -t 2>&1; then
   sudo systemctl reload nginx
