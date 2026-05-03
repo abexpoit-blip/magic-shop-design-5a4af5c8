@@ -11,6 +11,8 @@ export interface SiteSettings {
   ticker_items: string[];
   default_commission_percent: number;
   min_card_price: number;
+  deposit_fee_percent: number;
+  deposit_fee_flat: number;
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -30,6 +32,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   ],
   default_commission_percent: 20,
   min_card_price: 1,
+  deposit_fee_percent: 0,
+  deposit_fee_flat: 0,
 };
 
 let cache: SiteSettings | null = null;
