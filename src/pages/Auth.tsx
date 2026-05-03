@@ -87,34 +87,35 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-stretch relative overflow-hidden bg-background">
+    <div className="min-h-screen flex flex-col lg:flex-row items-stretch relative overflow-hidden bg-background">
       <BuildBadge />
-      <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-primary/25 blur-[140px] pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-gold/15 blur-[140px] pointer-events-none" />
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] sm:w-[600px] sm:h-[600px] rounded-full bg-primary/25 blur-[140px] pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] sm:w-[600px] sm:h-[600px] rounded-full bg-gold/15 blur-[140px] pointer-events-none" />
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
 
-      <div className="hidden lg:flex flex-col justify-between w-[48%] p-14 relative z-10">
+      {/* Left branding panel — desktop only */}
+      <div className="hidden lg:flex flex-col justify-between w-[46%] xl:w-[48%] p-10 xl:p-14 relative z-10">
         <div className="flex items-center gap-3">
           <img src={logo} alt="cruzercc.shop" width={56} height={56}
-            className="h-14 w-14 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-float" />
+            className="h-12 w-12 xl:h-14 xl:w-14 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-float" />
           <div>
-            <div className="font-display text-2xl font-black neon-text tracking-[0.18em]">CRUZERCC.SHOP</div>
+            <div className="font-display text-xl xl:text-2xl font-black neon-text tracking-[0.18em]">CRUZERCC.SHOP</div>
             <div className="text-[10px] font-mono tracking-[0.4em] text-gold/80 mt-1">GIFT CARD · CC PROVIDER</div>
           </div>
         </div>
 
         <div>
-          <h1 className="font-display text-6xl xl:text-7xl font-black leading-[1.05] mb-6">
+          <h1 className="font-display text-5xl xl:text-6xl 2xl:text-7xl font-black leading-[1.05] mb-6">
             <span className="block text-foreground">PREMIUM.</span>
             <span className="block neon-text">VERIFIED.</span>
             <span className="block gold-text">INSTANT.</span>
           </h1>
-          <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
+          <p className="text-muted-foreground text-base xl:text-lg max-w-md leading-relaxed">
             Your trusted Gift Card and CC provider. Verified inventory, instant
             delivery, vault-grade security — every order, every time.
           </p>
 
-          <div className="mt-10 grid grid-cols-3 gap-4 max-w-md">
+          <div className="mt-8 xl:mt-10 grid grid-cols-3 gap-4 max-w-md">
             <Feature icon={ShieldCheck} label="Vault-grade" />
             <Feature icon={Zap} label="Instant" />
             <Feature icon={Crown} label="Curated" />
@@ -126,16 +127,18 @@ const Auth = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
-        <div className="w-full max-w-md animate-fade-up">
+      {/* Right form panel */}
+      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:px-10 xl:px-14 relative z-10">
+        <div className="w-full max-w-[420px] animate-fade-up">
+          {/* Mobile branding header */}
           <div className="lg:hidden flex flex-col items-center mb-6">
             <img src={logo} alt="cruzercc.shop logo" width={84} height={84}
-              className="h-20 w-20 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-pulse-glow" />
-            <h1 className="font-display text-3xl font-black neon-text mt-4 tracking-[0.18em]">CRUZERCC.SHOP</h1>
+              className="h-16 w-16 sm:h-20 sm:w-20 drop-shadow-[0_0_24px_hsl(268_90%_60%/0.7)] animate-pulse-glow" />
+            <h1 className="font-display text-2xl sm:text-3xl font-black neon-text mt-4 tracking-[0.18em]">CRUZERCC.SHOP</h1>
             <p className="text-[10px] font-mono tracking-[0.4em] text-gold/80 mt-1">GIFT CARD · CC PROVIDER</p>
           </div>
 
-          <div className="glass-neon rounded-2xl p-7 panther-claw">
+          <div className="glass-neon rounded-2xl p-5 sm:p-7 panther-claw">
             {/* Only buyer login/signup — no role toggle */}
             <div className="flex gap-2 mb-6 p-1 rounded-xl bg-secondary/50 border border-border/50">
               {(["login", "signup"] as const).map((m) => (

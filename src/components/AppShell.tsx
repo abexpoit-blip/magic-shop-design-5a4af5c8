@@ -91,7 +91,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 
       {/* Top Navbar */}
       <header className="nav-header sticky top-0 z-40 border-b border-border/40 bg-background/75 backdrop-blur-2xl">
-        <div className="nav-inner mx-auto max-w-[1500px] flex items-center justify-between">
+        <div className="nav-inner mx-auto max-w-[1440px] flex items-center justify-between">
           {/* Brand */}
           <NavLink to="/" className="nav-brand flex items-center group shrink-0">
             <div className="relative">
@@ -278,13 +278,13 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       </header>
 
       {/* Main */}
-      <main className="flex-1 mx-auto w-full max-w-[1500px] px-4 lg:px-8 py-8 animate-fade-up relative z-10">
+      <main className="flex-1 mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8 xl:px-10 py-6 sm:py-8 animate-fade-up relative z-10">
         {children}
       </main>
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/40 bg-black/30 backdrop-blur-xl mt-16">
-        <div className="mx-auto max-w-[1500px] px-4 lg:px-8 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 xl:px-10 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-3">
               <img src={logo} alt="" className="h-8 w-8" />
