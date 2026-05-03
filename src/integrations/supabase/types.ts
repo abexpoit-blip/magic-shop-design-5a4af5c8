@@ -563,6 +563,8 @@ export type Database = {
       site_settings: {
         Row: {
           default_commission_percent: number
+          deposit_fee_flat: number
+          deposit_fee_percent: number
           hero_cta: string
           hero_eyebrow: string
           hero_sub: string
@@ -576,6 +578,8 @@ export type Database = {
         }
         Insert: {
           default_commission_percent?: number
+          deposit_fee_flat?: number
+          deposit_fee_percent?: number
           hero_cta?: string
           hero_eyebrow?: string
           hero_sub?: string
@@ -589,6 +593,8 @@ export type Database = {
         }
         Update: {
           default_commission_percent?: number
+          deposit_fee_flat?: number
+          deposit_fee_percent?: number
           hero_cta?: string
           hero_eyebrow?: string
           hero_sub?: string
