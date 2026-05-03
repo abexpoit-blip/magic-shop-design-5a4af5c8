@@ -9,7 +9,7 @@ depositsRouter.post("/", requireAuth, (req, res) => {
   if (!amount || !method) return res.status(400).json({ error: "amount and method required" });
   const id = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
   db.prepare(`INSERT INTO deposits (id, user_id, amount, method, proof_url) VALUES (?, ?, ?, ?, ?)`)
-    .run(id, req.user!.id, amount, method, proof_url || null);
+    .run(id, req.user!.id, amount, method, note || proof_url || null);
   res.json({ deposit: { id, status: "pending" } });
 });
 
