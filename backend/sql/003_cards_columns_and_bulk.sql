@@ -9,3 +9,7 @@ ALTER TABLE cards ADD COLUMN IF NOT EXISTS cc_data TEXT;
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS address TEXT;
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS cc_number TEXT;
+
+-- Add missing columns to price_rules for pricing rule matching
+ALTER TABLE price_rules ADD COLUMN IF NOT EXISTS refundable BOOLEAN;
+ALTER TABLE price_rules ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0;
