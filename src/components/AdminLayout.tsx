@@ -1,7 +1,7 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { NavLink, useLocation } from "react-router-dom";
-import { Shield, LayoutDashboard, Users, CreditCard, Wallet, Undo2, KeyRound, Settings as SettingsIcon, Landmark } from "lucide-react";
+import { Shield, LayoutDashboard, Users, CreditCard, Wallet, Undo2, KeyRound, Settings as SettingsIcon, Landmark, Menu, X } from "lucide-react";
 
 interface Item { to: string; label: string; icon: React.ComponentType<{ className?: string }>; }
 
@@ -16,43 +16,75 @@ const items: Item[] = [
   { to: "/admin/settings", label: "Credentials", icon: KeyRound },
 ];
 
+const SidebarContent = ({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) => (
+  <>
+    <div className="flex items-center gap-3 mb-6 px-2">
+      <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center">
+        <Shield className="h-5 w-5 text-primary-glow" />
+      </div>
+      <span className="font-display font-bold tracking-[0.15em] text-primary-glow text-base uppercase">Admin</span>
+    </div>
+    <nav className="space-y-1.5">
+      {items.map((it) => {
+        const active = it.to === "/admin" ? pathname === "/admin" : pathname.startsWith(it.to);
+        const Icon = it.icon;
+        return (
+          <NavLink
+            key={it.to}
+            to={it.to}
+            onClick={onNavigate}
+            className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-[15px] font-medium transition-all ${
+              active
+                ? "bg-gradient-to-r from-primary/20 to-primary/5 text-primary-glow border border-primary/40 shadow-[0_0_16px_-4px_hsl(268_90%_62%/0.4)]"
+                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent"
+            }`}
+          >
+            <Icon className={`h-5 w-5 shrink-0 ${active ? "text-primary-glow" : ""}`} />
+            <span>{it.label}</span>
+          </NavLink>
+        );
+      })}
+    </nav>
+  </>
+);
+
 export const AdminLayout = ({ children, title }: { children: ReactNode; title: string }) => {
   const { pathname } = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
     <AppShell>
-      <div className="flex flex-col lg:flex-row gap-8">
-        <aside className="lg:w-72 xl:w-80 lg:shrink-0">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* Mobile sidebar toggle */}
+        <div className="lg:hidden flex items-center gap-3">
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary/40 border border-border/50 text-sm font-medium text-foreground hover:bg-secondary/60 hover:border-primary/40 transition-all"
+          >
+            {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            <Shield className="h-4 w-4 text-primary-glow" />
+            <span>Admin Menu</span>
+          </button>
+          <h1 className="font-display text-xl font-black neon-text tracking-tight truncate">{title}</h1>
+        </div>
+
+        {/* Mobile sidebar drawer */}
+        {mobileOpen && (
+          <div className="lg:hidden glass-neon rounded-2xl p-5 animate-fade-up">
+            <SidebarContent pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+          </div>
+        )}
+
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:block lg:w-[280px] xl:w-[300px] lg:shrink-0">
           <div className="glass-neon rounded-2xl p-6 lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)]">
-            <div className="flex items-center gap-3 mb-6 px-2">
-              <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center">
-                <Shield className="h-5 w-5 text-primary-glow" />
-              </div>
-              <span className="font-display font-bold tracking-[0.15em] text-primary-glow text-base uppercase">Admin</span>
-            </div>
-            <nav className="space-y-1.5">
-              {items.map((it) => {
-                const active = it.to === "/admin" ? pathname === "/admin" : pathname.startsWith(it.to);
-                const Icon = it.icon;
-                return (
-                  <NavLink
-                    key={it.to}
-                    to={it.to}
-                    className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-[15px] font-medium transition-all ${
-                      active
-                        ? "bg-gradient-to-r from-primary/20 to-primary/5 text-primary-glow border border-primary/40 shadow-[0_0_16px_-4px_hsl(268_90%_62%/0.4)]"
-                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent"
-                    }`}
-                  >
-                    <Icon className={`h-5 w-5 shrink-0 ${active ? "text-primary-glow" : ""}`} />
-                    <span>{it.label}</span>
-                  </NavLink>
-                );
-              })}
-            </nav>
+            <SidebarContent pathname={pathname} />
           </div>
         </aside>
+
+        {/* Main content */}
         <div className="flex-1 min-w-0 space-y-6">
-          <h1 className="font-display text-3xl font-black neon-text tracking-tight">{title}</h1>
+          <h1 className="hidden lg:block font-display text-3xl font-black neon-text tracking-tight">{title}</h1>
           {children}
         </div>
       </div>
