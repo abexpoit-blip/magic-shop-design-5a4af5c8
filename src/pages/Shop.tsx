@@ -5,7 +5,7 @@ import { cardsApi, cartApi, sellersApi } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { COUNTRIES, countryFlag, BrandLogo } from "@/lib/brands";
+import { COUNTRIES, countryFlag, BrandLogo, detectBrandFromBin } from "@/lib/brands";
 import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, BadgeCheck, Store } from "lucide-react";
 import { TrustBadge } from "@/components/TrustBadge";
 import { toast } from "sonner";
