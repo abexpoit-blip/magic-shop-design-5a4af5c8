@@ -158,9 +158,6 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 
           {/* Right cluster */}
           <div className="nav-right flex items-center shrink-0">
-            <button className="nav-icon-btn hidden md:inline-flex !text-foreground/90 hover:!text-primary-glow" aria-label="Search">
-              <Search className="nav-icon" strokeWidth={2} />
-            </button>
             <div className="relative">
               <button onClick={() => setShowNotifs(!showNotifs)} className="nav-icon-btn hidden md:inline-flex relative !text-foreground/90 hover:!text-primary-glow" aria-label="Notifications">
                 <Bell className="nav-icon" strokeWidth={2} />
