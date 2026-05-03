@@ -1,39 +1,23 @@
 import { Router } from "express";
-import { z } from "zod";
-import { pool } from "../db.js";
+import { db } from "../db.js";
 import { requireAuth, requireRole } from "../auth-middleware.js";
 
 export const announcementsRouter = Router();
 
-announcementsRouter.get("/", async (_req, res, next) => {
-  try {
-    const { rows } = await pool.query(
-      `SELECT id, title, body, created_at FROM announcements
-        WHERE is_active=true ORDER BY created_at DESC LIMIT 20`
-    );
-    res.json({ announcements: rows });
-  } catch (e) { next(e); }
+announcementsRouter.get("/", (_req, res) => {
+  const rows = db.prepare(`SELECT * FROM announcements WHERE is_active = 1 ORDER BY created_at DESC`).all();
+  res.json({ announcements: rows });
 });
 
-const createSchema = z.object({
-  title: z.string().min(2).max(200),
-  body: z.string().min(2).max(4000),
+announcementsRouter.post("/", requireAuth, requireRole("admin"), (req, res) => {
+  const { title, body } = req.body;
+  if (!title || !body) return res.status(400).json({ error: "title and body required" });
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+  db.prepare(`INSERT INTO announcements (id, title, body) VALUES (?, ?, ?)`).run(id, title, body);
+  res.json({ announcement: { id, title, body } });
 });
 
-announcementsRouter.post("/", requireAuth, requireRole("admin"), async (req, res, next) => {
-  try {
-    const d = createSchema.parse(req.body);
-    const { rows } = await pool.query(
-      `INSERT INTO announcements (title, body) VALUES ($1,$2) RETURNING *`,
-      [d.title, d.body]
-    );
-    res.json({ announcement: rows[0] });
-  } catch (e) { next(e); }
-});
-
-announcementsRouter.delete("/:id", requireAuth, requireRole("admin"), async (req, res, next) => {
-  try {
-    await pool.query(`UPDATE announcements SET is_active=false WHERE id=$1`, [req.params.id]);
-    res.json({ ok: true });
-  } catch (e) { next(e); }
+announcementsRouter.delete("/:id", requireAuth, requireRole("admin"), (req, res) => {
+  db.prepare(`DELETE FROM announcements WHERE id = ?`).run(req.params.id);
+  res.json({ ok: true });
 });

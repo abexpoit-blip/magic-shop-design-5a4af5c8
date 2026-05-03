@@ -1,108 +1,130 @@
 import { Router } from "express";
-import { z } from "zod";
-import { pool } from "../db.js";
+import { db } from "../db.js";
 import { requireAuth, requireRole } from "../auth-middleware.js";
 
 export const sellerAppsRouter = Router();
 
-const submitSchema = z.object({ reason: z.string().min(20).max(2000) });
+// ── Submit application (buyer only) ──
+sellerAppsRouter.post("/", requireAuth, (req, res) => {
+  if (req.user!.role === "seller") return res.status(400).json({ error: "Already a seller" });
 
-// Logged-in user submits a seller application.
-sellerAppsRouter.post("/", requireAuth, async (req, res, next) => {
-  try {
-    const { reason } = submitSchema.parse(req.body);
+  // Check for existing pending application
+  const existing = db.prepare(
+    `SELECT id FROM seller_applications WHERE user_id = ? AND status = 'pending' LIMIT 1`
+  ).get(req.user!.id);
+  if (existing) return res.status(409).json({ error: "You already have a pending application" });
 
-    // Already a seller?
-    if (req.user!.roles.includes("seller")) {
-      return res.status(409).json({ error: "You are already a seller" });
-    }
-    // Existing pending app?
-    const pending = await pool.query(
-      `SELECT 1 FROM seller_applications WHERE user_id=$1 AND status='pending' LIMIT 1`,
-      [req.user!.id]
-    );
-    if (pending.rowCount) return res.status(409).json({ error: "Application already pending" });
+  const { telegram, jabber, expected_volume, sample_bins, message } = req.body;
+  if (!telegram && !jabber) return res.status(400).json({ error: "Provide at least Telegram or Jabber" });
 
-    const { rows } = await pool.query(
-      `INSERT INTO seller_applications (user_id, reason) VALUES ($1,$2) RETURNING *`,
-      [req.user!.id, reason]
-    );
-    res.json({ application: rows[0] });
-  } catch (e) { next(e); }
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  db.prepare(`
+    INSERT INTO seller_applications (id, user_id, reason)
+    VALUES (?, ?, ?)
+  `).run(id, req.user!.id, JSON.stringify({ telegram, jabber, expected_volume, sample_bins, message }));
+
+  res.json({ application: { id, status: "pending", created_at: new Date().toISOString() } });
 });
 
-sellerAppsRouter.get("/mine", requireAuth, async (req, res, next) => {
-  try {
-    const { rows } = await pool.query(
-      `SELECT * FROM seller_applications WHERE user_id=$1 ORDER BY created_at DESC`,
-      [req.user!.id]
-    );
-    res.json({ applications: rows });
-  } catch (e) { next(e); }
+// ── My applications ──
+sellerAppsRouter.get("/mine", requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT id, user_id, status, reason, admin_notes, reviewed_at, created_at
+      FROM seller_applications
+     WHERE user_id = ?
+     ORDER BY created_at DESC
+  `).all(req.user!.id);
+
+  // Parse the JSON reason field into individual fields
+  const applications = (rows as any[]).map(r => {
+    let parsed: any = {};
+    try { parsed = JSON.parse(r.reason || "{}"); } catch { /* ignore */ }
+    return {
+      id: r.id,
+      status: r.status,
+      telegram: parsed.telegram || null,
+      jabber: parsed.jabber || null,
+      expected_volume: parsed.expected_volume || null,
+      sample_bins: parsed.sample_bins || null,
+      message: parsed.message || null,
+      admin_note: r.admin_notes,
+      created_at: r.created_at,
+      reviewed_at: r.reviewed_at,
+    };
+  });
+
+  res.json({ applications });
 });
 
-// --- Admin endpoints ---
-sellerAppsRouter.get("/", requireAuth, requireRole("admin"), async (req, res, next) => {
-  try {
-    const status = (req.query.status as string) || "pending";
-    const { rows } = await pool.query(
-      `SELECT a.*, u.email, u.username
-         FROM seller_applications a
-         JOIN users u ON u.id = a.user_id
-        WHERE a.status = $1::seller_app_status
-        ORDER BY a.created_at DESC`,
-      [status]
-    );
-    res.json({ applications: rows });
-  } catch (e) { next(e); }
+// ── Admin: List all applications ──
+sellerAppsRouter.get("/", requireAuth, requireRole("admin"), (req, res) => {
+  const status = req.query.status as string | undefined;
+  let rows;
+  if (status) {
+    rows = db.prepare(`
+      SELECT sa.*, u.username, u.email
+        FROM seller_applications sa
+        JOIN users u ON u.id = sa.user_id
+       WHERE sa.status = ?
+       ORDER BY sa.created_at DESC
+    `).all(status);
+  } else {
+    rows = db.prepare(`
+      SELECT sa.*, u.username, u.email
+        FROM seller_applications sa
+        JOIN users u ON u.id = sa.user_id
+       ORDER BY sa.created_at DESC
+    `).all();
+  }
+
+  const applications = (rows as any[]).map(r => {
+    let parsed: any = {};
+    try { parsed = JSON.parse(r.reason || "{}"); } catch { /* ignore */ }
+    return {
+      ...r,
+      telegram: parsed.telegram || null,
+      jabber: parsed.jabber || null,
+      expected_volume: parsed.expected_volume || null,
+      sample_bins: parsed.sample_bins || null,
+      message: parsed.message || null,
+    };
+  });
+
+  res.json({ applications });
 });
 
-const decideSchema = z.object({ admin_notes: z.string().max(1000).optional() });
+// ── Admin: Approve ──
+sellerAppsRouter.post("/:id/approve", requireAuth, requireRole("admin"), (req, res) => {
+  const app = db.prepare(`SELECT * FROM seller_applications WHERE id = ?`).get(req.params.id) as any;
+  if (!app) return res.status(404).json({ error: "Application not found" });
+  if (app.status !== "pending") return res.status(400).json({ error: "Already decided" });
 
-sellerAppsRouter.post("/:id/approve", requireAuth, requireRole("admin"), async (req, res, next) => {
-  const client = await pool.connect();
-  try {
-    const { admin_notes } = decideSchema.parse(req.body);
-    await client.query("BEGIN");
-    const a = await client.query(
-      `UPDATE seller_applications
-          SET status='approved', admin_notes=$2, reviewed_by=$3, reviewed_at=now()
-        WHERE id=$1 AND status='pending'
-        RETURNING *`,
-      [req.params.id, admin_notes ?? null, req.user!.id]
-    );
-    if (!a.rowCount) { await client.query("ROLLBACK"); return res.status(404).json({ error: "Not found or not pending" }); }
-    await client.query(
-      `INSERT INTO user_roles (user_id, role) VALUES ($1,'seller') ON CONFLICT DO NOTHING`,
-      [a.rows[0].user_id]
-    );
-    await client.query(
-      `INSERT INTO audit_log (actor_id, action, target, meta) VALUES ($1,'seller.approve',$2,$3)`,
-      [req.user!.id, a.rows[0].user_id, JSON.stringify({ application_id: a.rows[0].id })]
-    );
-    await client.query("COMMIT");
-    res.json({ application: a.rows[0] });
-  } catch (e) {
-    await client.query("ROLLBACK");
-    next(e);
-  } finally { client.release(); }
+  db.transaction(() => {
+    db.prepare(`
+      UPDATE seller_applications
+         SET status = 'approved', admin_notes = ?, reviewed_by = ?, reviewed_at = datetime('now')
+       WHERE id = ?
+    `).run(req.body.admin_notes || null, req.user!.id, req.params.id);
+
+    // Promote user to seller
+    db.prepare(`UPDATE users SET role = 'seller', updated_at = datetime('now') WHERE id = ?`).run(app.user_id);
+  })();
+
+  res.json({ application: { id: req.params.id, status: "approved" } });
 });
 
-sellerAppsRouter.post("/:id/reject", requireAuth, requireRole("admin"), async (req, res, next) => {
-  try {
-    const { admin_notes } = decideSchema.parse(req.body);
-    const { rows } = await pool.query(
-      `UPDATE seller_applications
-          SET status='rejected', admin_notes=$2, reviewed_by=$3, reviewed_at=now()
-        WHERE id=$1 AND status='pending'
-        RETURNING *`,
-      [req.params.id, admin_notes ?? null, req.user!.id]
-    );
-    if (!rows[0]) return res.status(404).json({ error: "Not found or not pending" });
-    await pool.query(
-      `INSERT INTO audit_log (actor_id, action, target, meta) VALUES ($1,'seller.reject',$2,$3)`,
-      [req.user!.id, rows[0].user_id, JSON.stringify({ application_id: rows[0].id })]
-    );
-    res.json({ application: rows[0] });
-  } catch (e) { next(e); }
+// ── Admin: Reject ──
+sellerAppsRouter.post("/:id/reject", requireAuth, requireRole("admin"), (req, res) => {
+  const app = db.prepare(`SELECT * FROM seller_applications WHERE id = ?`).get(req.params.id) as any;
+  if (!app) return res.status(404).json({ error: "Application not found" });
+  if (app.status !== "pending") return res.status(400).json({ error: "Already decided" });
+
+  db.prepare(`
+    UPDATE seller_applications
+       SET status = 'rejected', admin_notes = ?, reviewed_by = ?, reviewed_at = datetime('now')
+     WHERE id = ?
+  `).run(req.body.admin_notes || null, req.user!.id, req.params.id);
+
+  res.json({ application: { id: req.params.id, status: "rejected" } });
 });
