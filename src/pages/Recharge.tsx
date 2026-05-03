@@ -107,7 +107,14 @@ const Recharge = () => {
     }
   };
 
-  useEffect(() => { loadHistory(); loadCurrencies(); loadTransactions(); }, []);
+  useEffect(() => {
+    loadHistory(); loadCurrencies(); loadTransactions();
+    // Resume polling if we restored an active invoice from localStorage
+    if (activeInvoice?.deposit_id && activeInvoice.status === "pending") {
+      startPolling(activeInvoice.deposit_id);
+    }
+    // eslint-disable-next-line
+  }, []);
 
   // Countdown timer
   useEffect(() => {
