@@ -73,8 +73,8 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-gradient-glow opacity-60" />
 
       {/* Announcement bar */}
-      <div className="relative z-40 border-b border-border/40 bg-black/40 backdrop-blur-xl overflow-hidden">
-        <div className="flex items-center gap-12 py-2 text-[11px] font-mono tracking-[0.18em] text-muted-foreground whitespace-nowrap">
+      <div className="relative z-40 border-b border-border/40 bg-black/40 backdrop-blur-xl overflow-hidden max-w-full">
+        <div className="flex items-center gap-12 py-2 text-[11px] font-mono tracking-[0.18em] text-muted-foreground whitespace-nowrap overflow-hidden">
           <div className="ticker shrink-0 gap-12 flex pl-6">
             {Array.from({ length: 2 }).map((_, k) => (
               <div key={k} className="flex gap-12">
