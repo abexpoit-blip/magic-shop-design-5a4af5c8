@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { cardsApi, payoutsApi, profileApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,20 +32,23 @@ const SellerPanel = () => {
 
   const load = async () => {
     if (!user) return;
-    const [c, p, prof] = await Promise.all([
-      supabase.from("cards").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("payouts").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("profiles").select("commission_percent,is_seller_visible,is_seller_verified").eq("id", user.id).maybeSingle(),
-    ]);
-    setCards((c.data ?? []) as CardRow[]);
-    setPayouts((p.data ?? []) as Payout[]);
-    if (prof.data) {
-      setCommissionPct(Number(prof.data.commission_percent ?? 20));
-      setIsVisible(!!prof.data.is_seller_visible);
-      setIsVerified(!!prof.data.is_seller_verified);
-    }
+    try {
+      const [c, p, prof] = await Promise.allSettled([
+        cardsApi.mine(),
+        payoutsApi.mine(),
+        profileApi.get(),
+      ]);
+      if (c.status === "fulfilled") setCards((c.value.cards ?? []) as unknown as CardRow[]);
+      if (p.status === "fulfilled") setPayouts((p.value.payouts ?? []) as unknown as Payout[]);
+      if (prof.status === "fulfilled") {
+        const pr = prof.value.profile as any;
+        setCommissionPct(Number(pr.commission_percent ?? 20));
+        setIsVisible(!!pr.is_seller_visible);
+        setIsVerified(!!pr.is_seller_verified);
+      }
+    } catch { /* ignore */ }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { load(); }, [user]);
 
   const stats = useMemo(() => {
     const sold = cards.filter((c) => c.status === "sold");
@@ -69,12 +72,14 @@ const SellerPanel = () => {
 
   const submit = async () => {
     if (!user || !form.bin || !form.price) return toast.error("BIN and price required");
-    const { error } = await supabase.from("cards").insert({
-      seller_id: user.id, ...form, price: Number(form.price), base: form.base || `${new Date().toISOString().slice(0,10)}_${form.country}_${form.brand}_$${form.price}`,
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Card listed"); setShowForm(false); load();
-    setForm({ ...form, bin: "" });
+    try {
+      await cardsApi.create({
+        ...form, price: Number(form.price),
+        base: form.base || `${new Date().toISOString().slice(0,10)}_${form.country}_${form.brand}_$${form.price}`,
+      });
+      toast.success("Card listed"); setShowForm(false); load();
+      setForm({ ...form, bin: "" });
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const bulkUpload = async () => {
@@ -83,23 +88,22 @@ const SellerPanel = () => {
     const rows = lines.map((line) => {
       const [bin, brand, country, state, city, zip, exp_month, exp_year, price] = line.split(",").map((s) => s.trim());
       return {
-        seller_id: user.id, bin, brand: (brand || "VISA").toUpperCase(), country: (country || "US").toUpperCase(),
+        bin, brand: (brand || "VISA").toUpperCase(), country: (country || "US").toUpperCase(),
         state, city, zip, exp_month, exp_year, price: Number(price || 1.5),
         base: `${new Date().toISOString().slice(0,10)}_${country}_${brand}_$${price}`,
         refundable: false, has_phone: true, has_email: true,
       };
     });
-    const { error } = await supabase.from("cards").insert(rows);
-    if (error) return toast.error(error.message);
-    toast.success(`Uploaded ${rows.length} cards`); setBulk(""); load();
+    try {
+      await cardsApi.bulkCreate(rows);
+      toast.success(`Uploaded ${rows.length} cards`); setBulk(""); load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const remove = async (id: string) => {
-    await supabase.from("cards").delete().eq("id", id);
-    load();
+    try { await cardsApi.del(id); load(); } catch { /* ignore */ }
   };
 
-  // ─── inline + bulk price editing ───
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
@@ -119,11 +123,12 @@ const SellerPanel = () => {
   const saveEdit = async (id: string) => {
     const p = Number(editPrice);
     if (!p || p <= 0) return toast.error("Invalid price");
-    const { error } = await (supabase.from("cards") as any).update({ price: p }).eq("id", id);
-    if (error) return toast.error(error.message);
-    setCards((cs) => cs.map((c) => (c.id === id ? { ...c, price: p } : c)));
-    setEditingId(null);
-    toast.success("Price updated");
+    try {
+      await cardsApi.update(id, { price: p });
+      setCards((cs) => cs.map((c) => (c.id === id ? { ...c, price: p } : c)));
+      setEditingId(null);
+      toast.success("Price updated");
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const bulkUpdatePrice = async () => {
@@ -131,20 +136,22 @@ const SellerPanel = () => {
     const p = Number(bulkPrice);
     if (ids.length === 0) return toast.error("Select cards first");
     if (!p || p <= 0) return toast.error("Enter a valid price");
-    const { error } = await (supabase.from("cards") as any).update({ price: p }).in("id", ids);
-    if (error) return toast.error(error.message);
-    toast.success(`Updated price on ${ids.length} cards`);
-    setBulkPrice(""); setSelected(new Set()); load();
+    try {
+      await cardsApi.bulkUpdate(ids, { price: p });
+      toast.success(`Updated price on ${ids.length} cards`);
+      setBulkPrice(""); setSelected(new Set()); load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const bulkDelete = async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
     if (!confirm(`Delete ${ids.length} cards?`)) return;
-    const { error } = await supabase.from("cards").delete().in("id", ids);
-    if (error) return toast.error(error.message);
-    toast.success(`Deleted ${ids.length}`);
-    setSelected(new Set()); load();
+    try {
+      await cardsApi.bulkDelete(ids);
+      toast.success(`Deleted ${ids.length}`);
+      setSelected(new Set()); load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const requestPayout = async () => {
@@ -153,11 +160,10 @@ const SellerPanel = () => {
     if (!amt || amt < 50) return toast.error("Minimum payout is $50");
     if (amt > stats.available_balance) return toast.error("Insufficient balance");
     if (!payoutAddress.trim()) return toast.error("Wallet address required");
-    const { error } = await supabase.from("payouts").insert({
-      seller_id: user.id, amount: amt, method: payoutMethod, address: payoutAddress.trim(), status: "pending",
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Payout requested"); setPayoutAmount(""); setPayoutAddress(""); load();
+    try {
+      await payoutsApi.request({ amount: amt, method: payoutMethod, destination: payoutAddress.trim() });
+      toast.success("Payout requested"); setPayoutAmount(""); setPayoutAddress(""); load();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   return (
@@ -185,21 +191,19 @@ const SellerPanel = () => {
           </div>
         </div>
 
-        {/* COMMISSION SPLIT BANNER */}
         <section className="glass-neon rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <PiggyBank className="h-5 w-5 text-gold" />
             <h2 className="font-display tracking-wider text-primary-glow">EARNINGS &amp; COMMISSION SPLIT</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-            <Mini label={`Gross sales (100%)`} value={`$${stats.gross.toFixed(2)}`} />
+            <Mini label="Gross sales (100%)" value={`$${stats.gross.toFixed(2)}`} />
             <Mini label={`Platform fee (${commissionPct.toFixed(1)}%)`} value={`-$${stats.platformFee.toFixed(2)}`} />
             <Mini label={`Net earnings (${(100 - commissionPct).toFixed(1)}%)`} value={`$${stats.netEarnings.toFixed(2)}`} highlight />
           </div>
-          {/* Visual split bar */}
           <div className="h-3 rounded-full overflow-hidden bg-secondary/60 flex">
-            <div className="bg-gradient-to-r from-primary to-primary-glow" style={{ width: `${100 - commissionPct}%` }} title={`Your share ${(100 - commissionPct).toFixed(1)}%`} />
-            <div className="bg-gold/60" style={{ width: `${commissionPct}%` }} title={`Platform fee ${commissionPct.toFixed(1)}%`} />
+            <div className="bg-gradient-to-r from-primary to-primary-glow" style={{ width: `${100 - commissionPct}%` }} />
+            <div className="bg-gold/60" style={{ width: `${commissionPct}%` }} />
           </div>
           <div className="flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground mt-2">
             <span>You keep {(100 - commissionPct).toFixed(1)}%</span>
@@ -207,7 +211,6 @@ const SellerPanel = () => {
           </div>
         </section>
 
-        {/* STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Stat icon={DollarSign} label="Net earnings" value={`$${stats.netEarnings.toFixed(2)}`} accent="gold" />
           <Stat icon={TrendingUp} label="Cards sold" value={String(stats.soldCount)} accent="primary" />
@@ -215,7 +218,6 @@ const SellerPanel = () => {
           <Stat icon={CheckCircle2} label="Conversion" value={`${stats.conversion.toFixed(1)}%`} accent="success" />
         </div>
 
-        {/* Revenue chart */}
         <section className="glass rounded-2xl p-6">
           <h2 className="font-display tracking-wider text-primary-glow mb-4">NET EARNINGS · LAST 14 DAYS</h2>
           <div className="flex items-end gap-2 h-40">
@@ -230,7 +232,6 @@ const SellerPanel = () => {
           </div>
         </section>
 
-        {/* PAYOUT */}
         <section className="glass-neon rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <Wallet className="h-5 w-5 text-primary-glow" />
@@ -251,7 +252,6 @@ const SellerPanel = () => {
             <Button onClick={requestPayout} className="bg-gradient-primary shadow-neon">Request payout</Button>
           </div>
 
-          {/* PAYOUT HISTORY */}
           <div className="mt-5">
             <h3 className="font-display text-xs tracking-wider text-muted-foreground mb-2">PAYOUT HISTORY</h3>
             <div className="rounded-lg overflow-hidden border border-border/40">
@@ -291,7 +291,6 @@ const SellerPanel = () => {
           </div>
         </section>
 
-        {/* LISTING */}
         <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
           <h2 className="font-display text-xl text-primary-glow tracking-wider">YOUR LISTINGS</h2>
           <div className="flex gap-2 flex-wrap">
@@ -328,117 +327,74 @@ const SellerPanel = () => {
                   <SelectContent>{COUNTRIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Field label="Price (USD)"><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="bg-input/60" /></Field>
-              <Field label="State"><Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="bg-input/60" /></Field>
-              <Field label="City"><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="bg-input/60" /></Field>
-              <Field label="ZIP"><Input value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} className="bg-input/60" /></Field>
-              <Field label="Exp MM/YY">
-                <div className="flex gap-2">
-                  <Input value={form.exp_month} onChange={(e) => setForm({ ...form, exp_month: e.target.value })} placeholder="MM" className="bg-input/60" />
-                  <Input value={form.exp_year} onChange={(e) => setForm({ ...form, exp_year: e.target.value })} placeholder="YY" className="bg-input/60" />
-                </div>
-              </Field>
+              <Field label="Price ($)"><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="bg-input/60" /></Field>
             </div>
-            <Button onClick={submit} className="mt-4 bg-gradient-primary shadow-neon">Publish</Button>
+            <Button onClick={submit} className="mt-4 bg-gradient-primary shadow-neon">List card</Button>
           </section>
         )}
 
         <section className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Upload className="h-4 w-4 text-primary-glow" />
-            <h2 className="font-display tracking-wider text-primary-glow">BULK UPLOAD</h2>
-          </div>
-          <p className="text-xs text-muted-foreground mb-2">CSV format: <code className="text-primary-glow">bin,brand,country,state,city,zip,exp_month,exp_year,price</code></p>
-          <Textarea rows={6} value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder="411111,VISA,US,NY,New York,10001,12,28,1.5" className="bg-input/60 font-mono text-xs" />
-          <Button onClick={bulkUpload} className="mt-3 bg-gradient-primary shadow-neon">Upload all</Button>
+          <h2 className="font-display tracking-wider text-primary-glow mb-3">BULK UPLOAD (CSV)</h2>
+          <p className="text-xs text-muted-foreground mb-2">Format: <code className="text-primary-glow">bin,brand,country,state,city,zip,exp_month,exp_year,price</code></p>
+          <Textarea rows={4} value={bulk} onChange={(e) => setBulk(e.target.value)} className="bg-input/60 font-mono text-xs" placeholder="411111,VISA,US,NY,New York,10001,12,28,1.5" />
+          <Button onClick={bulkUpload} className="mt-3 bg-gradient-primary shadow-neon"><Upload className="h-4 w-4 mr-1" />Upload</Button>
         </section>
 
-        <div className="glass rounded-2xl overflow-hidden">
-          {selected.size > 0 && (
-            <div className="p-3 bg-primary/10 border-b border-primary/40 flex items-center gap-2 flex-wrap">
-              <span className="font-display text-sm text-primary-glow">{selected.size} selected</span>
-              <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border/40">
-                <DollarSign className="h-3.5 w-3.5 text-primary-glow" />
-                <Input
-                  value={bulkPrice}
-                  onChange={(e) => setBulkPrice(e.target.value)}
-                  type="number"
-                  step="0.01"
-                  placeholder="New price"
-                  className="bg-input/60 h-8 w-28 text-xs"
-                />
-                <Button size="sm" onClick={bulkUpdatePrice} className="bg-gradient-primary">Set price</Button>
-              </div>
-              <Button size="sm" variant="destructive" onClick={bulkDelete}>
-                <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
-              </Button>
-              <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear</button>
-            </div>
-          )}
+        {selected.size > 0 && (
+          <div className="p-3 rounded-xl bg-primary/10 border border-primary/40 flex items-center gap-2 flex-wrap">
+            <span className="font-display text-sm text-primary-glow">{selected.size} selected</span>
+            <Input value={bulkPrice} onChange={(e) => setBulkPrice(e.target.value)} type="number" step="0.01" placeholder="New price" className="bg-input/60 h-8 w-28 text-xs" />
+            <Button size="sm" onClick={bulkUpdatePrice} className="bg-gradient-primary">Set price</Button>
+            <Button size="sm" variant="destructive" onClick={bulkDelete}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>
+            <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear</button>
+          </div>
+        )}
+
+        <div className="overflow-x-auto glass rounded-2xl">
           <table className="w-full text-sm">
-            <thead className="bg-secondary/60 text-xs uppercase tracking-wider text-muted-foreground">
+            <thead className="bg-secondary/60 text-[10px] uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="p-3 w-10 text-center">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-primary cursor-pointer" />
-                </th>
-                <th className="p-3 text-left">Brand</th>
-                <th className="p-3 text-left">BIN</th>
-                <th className="p-3 text-left">Country</th>
-                <th className="p-3 text-right">Price</th>
-                <th className="p-3 text-left">Status</th>
-                <th className="p-3"></th>
+                <th className="p-2.5 w-10"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-primary" /></th>
+                <th className="p-2.5 text-left">BIN</th>
+                <th className="p-2.5">Brand</th>
+                <th className="p-2.5">Country</th>
+                <th className="p-2.5 text-right">Price</th>
+                <th className="p-2.5">Status</th>
+                <th className="p-2.5"></th>
               </tr>
             </thead>
             <tbody>
               {cards.map((c) => (
-                <tr key={c.id} className={`border-t border-border/40 ${selected.has(c.id) ? "bg-primary/5" : ""} hover:bg-secondary/30`}>
-                  <td className="p-3 text-center">
-                    <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="accent-primary cursor-pointer" />
-                  </td>
-                  <td className="p-3"><BrandLogo brand={c.brand} /></td>
-                  <td className="p-3 font-mono">{c.bin}</td>
-                  <td className="p-3">{countryFlag(c.country)} {c.country}</td>
-                  <td className="p-3 text-right font-display text-primary-glow">
+                <tr key={c.id} className={`border-t border-border/40 ${selected.has(c.id) ? "bg-primary/5" : ""}`}>
+                  <td className="p-2.5 text-center"><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="accent-primary" /></td>
+                  <td className="p-2.5 font-mono">{c.bin}</td>
+                  <td className="p-2.5 text-center">{c.brand}</td>
+                  <td className="p-2.5 text-center">{countryFlag(c.country)} {c.country}</td>
+                  <td className="p-2.5 text-right text-primary-glow font-display">
                     {editingId === c.id ? (
                       <div className="flex items-center justify-end gap-1">
-                        <Input
-                          value={editPrice}
-                          onChange={(e) => setEditPrice(e.target.value)}
-                          type="number"
-                          step="0.01"
-                          className="bg-input/60 h-7 w-20 text-xs text-right"
-                          autoFocus
-                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(c.id); if (e.key === "Escape") setEditingId(null); }}
-                        />
-                        <button onClick={() => saveEdit(c.id)} className="text-success hover:text-success/80"><Check className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                        <Input value={editPrice} onChange={(e) => setEditPrice(e.target.value)} type="number" step="0.01"
+                          className="bg-input/60 h-7 w-20 text-xs text-right" autoFocus
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(c.id); if (e.key === "Escape") setEditingId(null); }} />
+                        <button onClick={() => saveEdit(c.id)} className="text-success"><Check className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => setEditingId(null)} className="text-muted-foreground"><X className="h-3.5 w-3.5" /></button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => { setEditingId(c.id); setEditPrice(String(c.price)); }}
-                        className="hover:underline"
-                        title="Click to edit price"
-                      >
-                        ${Number(c.price).toFixed(2)}
-                      </button>
+                      <button onClick={() => { setEditingId(c.id); setEditPrice(String(c.price)); }} className="hover:underline">${Number(c.price).toFixed(2)}</button>
                     )}
                   </td>
-                  <td className="p-3">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      c.status === "available" ? "bg-success/20 text-success" :
-                      c.status === "sold" ? "bg-muted text-muted-foreground" : "bg-warning/20 text-warning"
+                  <td className="p-2.5 text-center">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${
+                      c.status === "available" ? "bg-success/20 text-success border-success/40" :
+                      c.status === "sold" ? "bg-secondary text-muted-foreground border-border" : "bg-warning/20 text-warning border-warning/40"
                     }`}>{c.status}</span>
                   </td>
-                  <td className="p-3 text-right">
-                    <button onClick={() => remove(c.id)} className="text-muted-foreground hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  <td className="p-2.5 text-right">
+                    <button onClick={() => remove(c.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </td>
                 </tr>
               ))}
-              {cards.length === 0 && (
-                <tr><td colSpan={7} className="p-12 text-center text-muted-foreground">No cards listed yet.</td></tr>
-              )}
+              {cards.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No cards listed yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -447,22 +403,26 @@ const SellerPanel = () => {
   );
 };
 
-const Stat = ({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; accent: "gold" | "primary" | "success" }) => (
-  <div className="glass rounded-2xl p-4">
-    <div className="flex items-center justify-between">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <Icon className={`h-4 w-4 ${accent === "gold" ? "text-gold" : accent === "success" ? "text-success" : "text-primary-glow"}`} />
-    </div>
-    <p className={`mt-2 font-display text-2xl font-bold ${accent === "gold" ? "gold-text" : accent === "success" ? "text-success" : "neon-text"}`}>{value}</p>
+const Mini = ({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) => (
+  <div className={`p-3 rounded-lg border ${highlight ? "bg-primary/10 border-primary/40" : "bg-secondary/30 border-border/40"}`}>
+    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+    <p className={`font-display text-xl font-bold mt-1 ${highlight ? "neon-text" : "text-foreground"}`}>{value}</p>
   </div>
 );
 
-const Mini = ({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) => (
-  <div className={`p-3 rounded-lg border ${highlight ? "bg-primary/10 border-primary/40" : "bg-secondary/40 border-border/40"}`}>
-    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-    <p className={`font-display text-lg font-bold mt-0.5 ${highlight ? "gold-text" : "text-foreground"}`}>{value}</p>
-  </div>
-);
+const Stat = ({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; accent: "gold" | "primary" | "success" }) => {
+  const color = accent === "gold" ? "gold-text" : accent === "success" ? "text-success" : "neon-text";
+  const iconColor = accent === "gold" ? "text-gold" : accent === "success" ? "text-success" : "text-primary-glow";
+  return (
+    <div className="glass rounded-2xl p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+        <Icon className={`h-4 w-4 ${iconColor}`} />
+      </div>
+      <p className={`mt-2 font-display text-2xl font-bold ${color}`}>{value}</p>
+    </div>
+  );
+};
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div>
