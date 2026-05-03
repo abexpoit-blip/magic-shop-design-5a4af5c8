@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, Settings, ShieldCheck, PackagePlus, LogOut, Menu, X, Search, Bell, Maximize2, Minimize2, AlertTriangle, RefreshCw, Repeat } from "lucide-react";
+import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, Settings, ShieldCheck, PackagePlus, LogOut, Menu, X, Search, Bell, Maximize2, Minimize2, AlertTriangle, RefreshCw, Repeat, Newspaper, Undo2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/panther-logo.png";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ const baseNav = [
   { to: "/cart", label: "Cart", icon: ShoppingCart },
   { to: "/orders", label: "Orders", icon: ListOrdered },
   { to: "/recharge", label: "Wallet", icon: Wallet },
+  { to: "/news", label: "News", icon: Newspaper },
+  { to: "/refunds", label: "Refunds", icon: Undo2 },
   { to: "/tickets", label: "Support", icon: LifeBuoy },
 ];
 
