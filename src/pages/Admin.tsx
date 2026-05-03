@@ -269,7 +269,7 @@ const Admin = () => {
                         <div className="min-w-0 flex-1">
                           <p className="font-display text-sm">${Number(d.amount).toFixed(2)} · <span className="text-primary-glow">{d.method}</span>
                             <span className="text-xs text-muted-foreground"> · {u?.username ?? "?"}</span></p>
-                          <p className="text-[10px] font-mono text-muted-foreground truncate">{d.txid}</p>
+                          <p className="text-[10px] font-mono text-muted-foreground truncate">{d.proof_url}</p>
                         </div>
                         <div className="flex gap-1.5">
                           <Button size="sm" onClick={() => decideDeposit(d, true)} className="bg-success/90 text-white h-8"><Check className="h-3 w-3 mr-1" />Approve</Button>
@@ -291,7 +291,7 @@ const Admin = () => {
                         <div className="min-w-0 flex-1">
                           <p className="font-display text-sm">${Number(p.amount).toFixed(2)} · <span className="text-primary-glow">{p.method}</span>
                             <span className="text-xs text-muted-foreground"> · {u?.username ?? "?"}</span></p>
-                          <p className="text-[10px] font-mono text-muted-foreground truncate">{p.address}</p>
+                          <p className="text-[10px] font-mono text-muted-foreground truncate">{p.destination}</p>
                         </div>
                         <div className="flex gap-1.5">
                           <Button size="sm" onClick={() => decidePayout(p, true)} className="bg-success/90 text-white h-8"><Check className="h-3 w-3 mr-1" />Paid</Button>
