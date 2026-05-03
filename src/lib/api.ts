@@ -267,15 +267,22 @@ export const announcementsApi = {
 
 export const adminApi = {
   users: (q?: string) => api.get<{ users: Array<Record<string, unknown>> }>("/admin/users", { q }),
-  stats: () => api.get<Record<string, number>>("/admin/stats"),
+  stats: () => api.get<Record<string, unknown>>("/admin/stats"),
   updateProfile: (id: string, data: Record<string, unknown>) =>
     api.patch<{ ok: true }>(`/admin/users/${id}/profile`, data),
   adjustBalance: (id: string, delta: number) =>
     api.post<{ ok: true }>(`/admin/users/${id}/balance`, { delta }),
   toggleBan: (id: string) => api.post<{ ok: true }>(`/admin/users/${id}/toggle-ban`),
   revokeSeller: (id: string) => api.post<{ ok: true }>(`/admin/users/${id}/revoke-seller`),
+  makeSeller: (id: string) => api.post<{ ok: true }>(`/admin/users/${id}/make-seller`),
   changePassword: (password: string) =>
     api.post<{ ok: true }>("/admin/change-password", { password }),
+  impersonate: (id: string) =>
+    api.post<{ token: string; user: { id: string; email: string; username: string; role: string } }>(`/admin/users/${id}/impersonate`),
+  getNews: () => api.get<{ news: Array<Record<string, unknown>> }>("/admin/news"),
+  postNews: (data: { title: string; body: string; type?: string }) =>
+    api.post<{ id: string }>("/admin/news", data),
+  deleteNews: (id: string) => api.del<{ ok: true }>(`/admin/news/${id}`),
 };
 
 export const siteSettingsApi = {
