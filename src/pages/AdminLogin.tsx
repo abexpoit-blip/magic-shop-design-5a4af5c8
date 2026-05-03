@@ -8,6 +8,7 @@ import { ShieldAlert, Lock, KeyRound, Loader2, ArrowLeft, ArrowRight, AlertCircl
 import { useAuth } from "@/hooks/useAuth";
 
 const ADMIN_LOGIN_URL = "https://cruzercc.shop/admin-login";
+const API_BASE_URL = "https://cruzercc.shop/api";
 
 const AdminLogin = () => {
   const nav = useNavigate();
@@ -61,7 +62,7 @@ const AdminLogin = () => {
       if (err instanceof ApiError) {
         if (err.status === 0) {
           title = "Cannot reach server";
-          detail = "The backend at cruzercc.shop is unreachable. Check that nginx and the Node server are running on your VPS.";
+          detail = `The backend at ${API_BASE_URL} is unreachable. Check that nginx is proxying /api and the Node server is running on your VPS.`;
         } else if (err.status === 401) {
           title = "Invalid credentials";
           detail = "Check your email and password.";
