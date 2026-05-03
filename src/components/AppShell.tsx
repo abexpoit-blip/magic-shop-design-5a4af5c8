@@ -91,7 +91,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 
       {/* Top Navbar */}
       <header className="nav-header sticky top-0 z-40 border-b border-border/40 bg-background/75 backdrop-blur-2xl">
-        <div className="nav-inner mx-auto max-w-[1500px] flex items-center justify-between">
+        <div className="nav-inner mx-auto max-w-[1440px] flex items-center justify-between">
           {/* Brand */}
           <NavLink to="/" className="nav-brand flex items-center group shrink-0">
             <div className="relative">
