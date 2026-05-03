@@ -7,13 +7,28 @@
  *   VITE_API_BASE=https://cruzercc.shop/api
  */
 
+export const AUTH_CHANGED_EVENT = "cruzercc-auth-changed";
+
 export function resolveApiBase(): string {
-  // Explicit env override takes priority
   const envBase = import.meta.env.VITE_API_BASE as string | undefined;
   if (envBase && envBase.length > 0) return envBase.replace(/\/+$/, "");
 
-  // Always use the dedicated API subdomain on VPS
-  return "https://api.cruzercc.shop/api";
+  if (typeof window !== "undefined") {
+    const { hostname, origin } = window.location;
+    const host = hostname.toLowerCase();
+
+    if (host === "cruzercc.shop" || host === "www.cruzercc.shop") {
+      return `${origin.replace(/\/+$/, "")}/api`;
+    }
+
+    if (host.endsWith("lovable.app") || host.endsWith("lovableproject.com")) {
+      return "https://cruzercc.shop/api";
+    }
+
+    return `${origin.replace(/\/+$/, "")}/api`;
+  }
+
+  return "/api";
 }
 
 export const API_BASE = resolveApiBase();
@@ -30,9 +45,11 @@ export function getToken(): string | null {
 }
 export function setToken(t: string) {
   localStorage.setItem(TOKEN_KEY, t);
+  window.dispatchEvent(new CustomEvent(AUTH_CHANGED_EVENT));
 }
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+  window.dispatchEvent(new CustomEvent(AUTH_CHANGED_EVENT));
 }
 
 /** Decode JWT payload without verification (for client-side display only). */
