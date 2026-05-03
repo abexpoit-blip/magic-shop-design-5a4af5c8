@@ -28,6 +28,8 @@ import { plisioRouter } from "./routes/plisio.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 const allowedOrigins = new Set(
   (process.env.CORS_ORIGIN ?? "https://cruzercc.shop,https://www.cruzercc.shop")
     .split(",")
@@ -51,8 +53,6 @@ function isAllowedOrigin(origin?: string | null) {
     return false;
   }
 }
-
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app = express();
 
