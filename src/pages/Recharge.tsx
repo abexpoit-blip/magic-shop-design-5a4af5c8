@@ -232,12 +232,16 @@ const Recharge = () => {
                   </div>
                 )}
 
-                {/* Amount summary */}
-                <div className="text-center p-3 rounded-xl bg-primary/10 border border-primary/30">
+                {/* Amount + network summary */}
+                <div className="text-center p-4 rounded-xl bg-primary/10 border border-primary/30 space-y-2">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">You are depositing</p>
-                  <p className="font-display text-2xl font-black text-primary-glow mt-1">
+                  <p className="font-display text-2xl font-black text-primary-glow">
                     ${activeInvoice.usd_amount.toFixed(2)}
                   </p>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-xs font-display tracking-wider text-primary-glow">
+                    <Bitcoin className="h-3.5 w-3.5" />
+                    {activeInvoice.currency} Network
+                  </div>
                 </div>
 
                 {/* QR Code */}
