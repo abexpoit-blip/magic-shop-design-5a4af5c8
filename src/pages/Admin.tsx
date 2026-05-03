@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { adminApi, cardsApi, announcementsApi, depositsApi, payoutsApi, setToken } from "@/lib/api";
+import { adminApi, cardsApi, depositsApi, payoutsApi, setToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
