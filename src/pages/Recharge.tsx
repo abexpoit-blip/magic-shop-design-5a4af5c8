@@ -530,8 +530,7 @@ const Recharge = () => {
               </div>
               );
             })}
-              </div>
-            ))}
+          </div>
           </div>
         </section>
       </div>
