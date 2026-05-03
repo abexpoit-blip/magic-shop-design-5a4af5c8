@@ -1,12 +1,10 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { getActiveRole, setActiveRole as persistActiveRole, clearActiveRole, type ActiveRole } from "@/lib/activeRole";
-import { isTransientAuthServiceError } from "@/lib/authErrors";
+import { getToken, clearToken, setToken, decodeToken, profileApi, type VpsProfile } from "@/lib/api";
 
-type Role = "admin" | "seller" | "user";
+type Role = "admin" | "seller" | "user" | "buyer";
 
-interface Profile {
+export interface Profile {
   id: string;
   username: string;
   display_name: string | null;
@@ -15,26 +13,31 @@ interface Profile {
   is_seller: boolean;
   seller_status: string | null;
   banned: boolean;
+  commission_percent?: number;
+  is_seller_visible?: boolean;
+  is_seller_verified?: boolean;
+}
+
+/** Minimal user object (replaces Supabase User) */
+export interface AppUser {
+  id: string;
+  email: string;
+  username: string;
 }
 
 interface AuthCtx {
-  user: User | null;
-  session: Session | null;
+  user: AppUser | null;
+  session: null;        // kept for compat — always null
   profile: Profile | null;
   roles: Role[];
-  /** Which mode the user is operating in (buyer/seller). Honors the user's
-   *  pick at login for accounts that hold multiple roles. */
   activeRole: ActiveRole;
   setActiveRole: (role: ActiveRole) => void;
   loading: boolean;
-  /** True when profile load failed or timed out. UI should show error + retry. */
   profileError: string | null;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-// Hard ceiling for profile load. After this we stop showing skeletons and
-// flip into an error state so the navbar never spins forever.
 const PROFILE_LOAD_TIMEOUT_MS = 8000;
 
 function withTimeout<T>(p: Promise<T>, ms: number, label = "timeout"): Promise<T> {
@@ -50,144 +53,92 @@ function withTimeout<T>(p: Promise<T>, ms: number, label = "timeout"): Promise<T
 const Ctx = createContext<AuthCtx | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeRole, setActiveRoleState] = useState<ActiveRole>("buyer");
-
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  // Track which user id we last loaded for, so a TOKEN_REFRESHED event for the
-  // same user does not trigger a redundant profile reload.
   const loadedForUid = useRef<string | null>(null);
   const inFlight = useRef<Promise<void> | null>(null);
 
-  const loadProfile = async (uid: string, email?: string | null) => {
-    // De-dupe concurrent loads for the same uid
-    if (loadedForUid.current === uid && inFlight.current) return inFlight.current;
+  const loadProfile = async (skipCache = false) => {
+    const token = getToken();
+    if (!token) {
+      setUser(null); setProfile(null); setRoles([]);
+      setActiveRoleState("buyer"); clearActiveRole();
+      loadedForUid.current = null;
+      setLoading(false);
+      return;
+    }
+
+    // Decode token for basic user info
+    const decoded = decodeToken(token);
+    if (!decoded?.sub) {
+      clearToken();
+      setUser(null); setProfile(null); setRoles([]);
+      setLoading(false);
+      return;
+    }
+
+    const uid = decoded.sub as string;
+    if (!skipCache && loadedForUid.current === uid && inFlight.current) return inFlight.current;
 
     setProfileError(null);
 
-    // Try the fetch up to 4 times with exponential backoff so transient
-    // database hiccups (recovery mode, brief connection drops on the hosted
-    // backend) don't permanently flip the navbar into the red "Tap to retry"
-    // state. Only retry on transient/timeout errors.
-    const fetchOnce = () =>
-      withTimeout(
-        Promise.all([
-          supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
-          supabase.from("user_roles").select("role").eq("user_id", uid),
-        ]),
-        PROFILE_LOAD_TIMEOUT_MS,
-        "profile-load-timeout",
-      );
-
-    const attemptWithRetry = async () => {
-      const delays = [400, 1000, 2500];
-      let lastErr: unknown;
-      for (let attempt = 0; attempt <= delays.length; attempt++) {
-        try {
-          return await fetchOnce();
-        } catch (err) {
-          lastErr = err;
-          const transient =
-            (err instanceof Error && err.message === "profile-load-timeout") ||
-            isTransientAuthServiceError(err);
-          if (!transient || attempt === delays.length) throw err;
-          await new Promise((r) => setTimeout(r, delays[attempt]));
-        }
-      }
-      throw lastErr;
-    };
-
     const run = (async () => {
-      const [{ data: p, error: profileFetchError }, { data: r, error: rolesFetchError }] = await attemptWithRetry();
+      const { profile: p } = await withTimeout(profileApi.get(), PROFILE_LOAD_TIMEOUT_MS, "profile-load-timeout");
 
-      if (profileFetchError) {
-        throw profileFetchError;
-      }
+      const userRoles = (p.roles ?? []) as Role[];
+      const appUser: AppUser = { id: p.id, email: p.email, username: p.username };
+      const prof: Profile = {
+        id: p.id,
+        username: p.username,
+        display_name: p.display_name,
+        avatar_url: p.avatar_url,
+        balance: Number(p.balance ?? 0),
+        is_seller: userRoles.includes("seller"),
+        seller_status: userRoles.includes("seller") ? "approved" : null,
+        banned: false,
+      };
 
-      if (rolesFetchError) {
-        throw rolesFetchError;
-      }
-
-      let prof = p as Profile | null;
-      const userRoles = ((r as { role: Role }[] | null) ?? []).map((x) => x.role);
-
-      // FIX: if no profile row exists yet (new signup, or row never inserted),
-      // create one so the UI doesn't sit forever on the skeleton placeholder.
-      if (!prof) {
-        const fallbackUsername =
-          (email?.split("@")[0] ?? "user").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 24) ||
-          `user_${uid.slice(0, 8)}`;
-        const { data: created } = await supabase
-          .from("profiles")
-          .insert({ id: uid, username: fallbackUsername, balance: 0 })
-          .select("*")
-          .maybeSingle();
-        prof = (created as Profile | null) ?? {
-          id: uid,
-          username: fallbackUsername,
-          display_name: null,
-          avatar_url: null,
-          balance: 0,
-          is_seller: false,
-          seller_status: null,
-          banned: false,
-        };
-      }
-
+      setUser(appUser);
       setProfile(prof);
       setRoles(userRoles);
       loadedForUid.current = uid;
 
-      // Anti-auto-switch: if the persisted activeRole is "seller" but this
-      // account doesn't actually carry the seller/admin role, fall back to
-      // "buyer" — and conversely, if the user IS a seller but no choice was
-      // ever stored, pin them to "seller" so a stale buyer default can't
-      // silently downgrade an active seller session.
       const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
       const stored = getActiveRole(uid);
       if (stored === "seller" && !isSeller) {
-        setActiveRoleState("buyer");
-        clearActiveRole();
+        setActiveRoleState("buyer"); clearActiveRole();
       } else if (isSeller) {
-        setActiveRoleState("seller");
-        persistActiveRole(uid, "seller");
+        setActiveRoleState("seller"); persistActiveRole(uid, "seller");
       } else {
         setActiveRoleState("buyer");
       }
 
-      if (prof && email && !prof.banned) {
-        try {
-          const { saveAccount } = await import("@/lib/accountSwitcher");
-          const role = userRoles.includes("admin")
-            ? "admin"
-            : userRoles.includes("seller")
-            ? "seller"
-            : "user";
-          saveAccount({ email, username: prof.username, role, savedAt: Date.now() });
-        } catch {
-          /* ignore */
-        }
-      }
+      // Save account for switcher
+      try {
+        const { saveAccount } = await import("@/lib/accountSwitcher");
+        const role = userRoles.includes("admin") ? "admin"
+          : userRoles.includes("seller") ? "seller" : "user";
+        saveAccount({ email: p.email, username: p.username, role, savedAt: Date.now() });
+      } catch { /* ignore */ }
     })()
       .catch((err: unknown) => {
-        // Profile load failed or timed out. Surface a friendly error so the
-        // navbar can swap skeletons for a retry chip instead of spinning.
         const msg =
           err instanceof Error && err.message === "profile-load-timeout"
             ? "Profile took too long to load"
-            : isTransientAuthServiceError(err)
-            ? "Backend is temporarily unavailable"
             : err instanceof Error
             ? err.message
             : "Couldn't load profile";
         setProfileError(msg);
-        // Re-throw so callers can also catch if they want.
-        throw err;
+        // If it's an auth error (401), clear token
+        if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 401) {
+          clearToken();
+          setUser(null); setProfile(null); setRoles([]);
+        }
       })
       .finally(() => {
         inFlight.current = null;
@@ -199,57 +150,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // onAuthStateChange fires INITIAL_SESSION immediately on subscribe, so we
-    // do NOT also call getSession() — that was triggering two parallel profile
-    // loads on every mount (the source of the laggy first paint).
-    const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-
-      if (!sess?.user) {
-        setProfile(null);
-        setRoles([]);
-        setActiveRoleState("buyer");
-        clearActiveRole();
+    loadProfile();
+    // Listen for token changes across tabs
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "cruzercc.token") {
         loadedForUid.current = null;
-        setLoading(false);
-        return;
+        loadProfile();
       }
-
-      // Restore the user's chosen mode (buyer/seller) from localStorage.
-      const stored = getActiveRole(sess.user.id);
-      if (stored) setActiveRoleState(stored);
-
-      // Skip refetch on token refresh for the same user — the JWT changed
-      // but profile/roles did not.
-      if (event === "TOKEN_REFRESHED" && loadedForUid.current === sess.user.id) {
-        setLoading(false);
-        return;
-      }
-
-      // Defer to avoid running supabase calls inside the auth callback (their
-      // own guidance — prevents potential deadlocks on the auth lock).
-      const uid = sess.user.id;
-      const email = sess.user.email;
-      setTimeout(() => {
-        loadProfile(uid, email).catch(() => {
-          // Already handled inside loadProfile (sets profileError + loading=false).
-        });
-      }, 0);
-    });
-
-    return () => sub.subscription.unsubscribe();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const refresh = async () => {
-    if (user) {
-      loadedForUid.current = null; // force reload
-      await loadProfile(user.id, user.email);
-    }
+    loadedForUid.current = null;
+    await loadProfile(true);
   };
+
   const signOut = async () => {
     clearActiveRole();
-    await supabase.auth.signOut();
+    clearToken();
+    setUser(null);
+    setProfile(null);
+    setRoles([]);
+    setActiveRoleState("buyer");
+    loadedForUid.current = null;
   };
 
   const setActiveRole = (role: ActiveRole) => {
@@ -258,7 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <Ctx.Provider value={{ user, session, profile, roles, activeRole, setActiveRole, loading, profileError, refresh, signOut }}>
+    <Ctx.Provider value={{ user, session: null, profile, roles, activeRole, setActiveRole, loading, profileError, refresh, signOut }}>
       {children}
     </Ctx.Provider>
   );
