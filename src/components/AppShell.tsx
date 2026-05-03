@@ -278,7 +278,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       </header>
 
       {/* Main */}
-      <main className="flex-1 mx-auto w-full max-w-[1500px] px-4 lg:px-8 py-8 animate-fade-up relative z-10">
+      <main className="flex-1 mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8 xl:px-10 py-6 sm:py-8 animate-fade-up relative z-10">
         {children}
       </main>
 
