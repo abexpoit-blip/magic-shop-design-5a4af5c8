@@ -25,7 +25,7 @@ const SellerPriceRules = () => {
   const load = async () => {
     try {
       const r = await priceRulesApi.mine();
-      setRules((r.rules ?? []) as PriceRule[]);
+      setRules((r.rules ?? []) as unknown as PriceRule[]);
     } catch { /* ignore */ }
   };
 

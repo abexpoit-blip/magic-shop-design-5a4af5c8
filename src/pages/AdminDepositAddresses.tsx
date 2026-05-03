@@ -25,7 +25,7 @@ const AdminDepositAddresses = () => {
   const load = async () => {
     try {
       const r = await depositAddressesApi.list();
-      setAddrs((r.addresses ?? []) as DepositAddr[]);
+      setAddrs((r.addresses ?? []) as unknown as DepositAddr[]);
     } catch { /* ignore */ }
   };
 

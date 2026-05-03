@@ -15,7 +15,7 @@ const News = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    newsApi.list().then((r) => setUpdates((r.updates ?? []) as NewsItem[])).finally(() => setLoading(false));
+    newsApi.list().then((r) => setUpdates((r.updates ?? []) as unknown as NewsItem[])).finally(() => setLoading(false));
   }, []);
 
   return (

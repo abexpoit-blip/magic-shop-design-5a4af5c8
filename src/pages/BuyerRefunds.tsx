@@ -34,8 +34,8 @@ const BuyerRefunds = () => {
 
   const load = async () => {
     const [r, o] = await Promise.allSettled([refundsApi.mine(), ordersApi.mine()]);
-    if (r.status === "fulfilled") setRefunds((r.value.refunds ?? []) as Refund[]);
-    if (o.status === "fulfilled") setOrders((o.value.orders ?? []) as Order[]);
+    if (r.status === "fulfilled") setRefunds((r.value.refunds ?? []) as unknown as Refund[]);
+    if (o.status === "fulfilled") setOrders((o.value.orders ?? []) as unknown as Order[]);
   };
 
   useEffect(() => { load(); }, []);
