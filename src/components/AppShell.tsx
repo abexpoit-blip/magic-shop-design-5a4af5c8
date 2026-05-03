@@ -161,10 +161,39 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
             <button className="nav-icon-btn hidden md:inline-flex !text-foreground/90 hover:!text-primary-glow" aria-label="Search">
               <Search className="nav-icon" strokeWidth={2} />
             </button>
-            <button className="nav-icon-btn hidden md:inline-flex relative !text-foreground/90 hover:!text-primary-glow" aria-label="Notifications">
-              <Bell className="nav-icon" strokeWidth={2} />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-gold animate-pulse ring-2 ring-background" />
-            </button>
+            <div className="relative">
+              <button onClick={() => setShowNotifs(!showNotifs)} className="nav-icon-btn hidden md:inline-flex relative !text-foreground/90 hover:!text-primary-glow" aria-label="Notifications">
+                <Bell className="nav-icon" strokeWidth={2} />
+                {announcements.length > 0 && (
+                  <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-gold animate-pulse ring-2 ring-background" />
+                )}
+              </button>
+              {showNotifs && (
+                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-border/60 bg-background/95 backdrop-blur-xl shadow-2xl z-50">
+                  <div className="p-3 border-b border-border/40 flex items-center justify-between">
+                    <span className="font-display text-sm tracking-wider text-foreground">NOTIFICATIONS</span>
+                    <button onClick={() => setShowNotifs(false)} className="text-muted-foreground hover:text-foreground">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {announcements.length === 0 ? (
+                    <div className="p-6 text-center text-sm text-muted-foreground">No notifications</div>
+                  ) : (
+                    <div className="divide-y divide-border/30">
+                      {announcements.map((a) => (
+                        <div key={a.id} className="p-3 hover:bg-secondary/30 transition">
+                          <p className="text-sm font-semibold text-foreground">{a.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.body}</p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-1">
+                            {new Date(a.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <button
               onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}
