@@ -138,7 +138,7 @@ const Auth = () => {
             <p className="text-[10px] font-mono tracking-[0.4em] text-gold/80 mt-1">GIFT CARD · CC PROVIDER</p>
           </div>
 
-          <div className="glass-neon rounded-2xl p-7 panther-claw">
+          <div className="glass-neon rounded-2xl p-5 sm:p-7 panther-claw">
             {/* Only buyer login/signup — no role toggle */}
             <div className="flex gap-2 mb-6 p-1 rounded-xl bg-secondary/50 border border-border/50">
               {(["login", "signup"] as const).map((m) => (
