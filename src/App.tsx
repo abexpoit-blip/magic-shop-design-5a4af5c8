@@ -33,6 +33,7 @@ import AdminDepositAddresses from "./pages/AdminDepositAddresses";
 import News from "./pages/News";
 import BuyerRefunds from "./pages/BuyerRefunds";
 import SellerPriceRules from "./pages/SellerPriceRules";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
