@@ -49,6 +49,30 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     if (typeof window === "undefined") return "comfortable";
     return (localStorage.getItem("nav-density") as Density) || "comfortable";
   });
+  const [cartCount, setCartCount] = useState(0);
+  const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  // Load cart count
+  const loadCartCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { items } = await cartApi.list();
+      setCartCount((items ?? []).length);
+    } catch { /* ignore */ }
+  }, [user]);
+
+  // Load announcements for notification bell
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      const res = await announcementsApi.list();
+      setAnnouncements((res.announcements ?? []).slice(0, 10) as any);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadCartCount(); loadAnnouncements(); }, [loadCartCount, loadAnnouncements]);
+  // Re-check cart count when navigating
+  useEffect(() => { loadCartCount(); }, [loc.pathname, loadCartCount]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-density", density);
