@@ -125,6 +125,12 @@ db.exec(`
     admin_notes TEXT,
     reviewed_by TEXT REFERENCES users(id),
     reviewed_at TEXT,
+    plisio_invoice_id TEXT,
+    plisio_wallet TEXT,
+    crypto_currency TEXT,
+    crypto_amount REAL,
+    txid TEXT,
+    confirmations INTEGER DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 

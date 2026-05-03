@@ -225,6 +225,22 @@ export const depositsApi = {
     api.post<{ deposit: Record<string, unknown> }>(`/deposits/${id}/reject`, { admin_notes }),
 };
 
+export const plisioApi = {
+  createInvoice: (data: { amount: number; currency: string }) =>
+    api.post<{
+      deposit_id: string; invoice_id: string; wallet_address: string;
+      crypto_amount: string; currency: string; invoice_url: string;
+      qr_url: string; expires_at: string;
+    }>("/plisio/create-invoice", data),
+  currencies: () =>
+    api.get<{ currencies: Array<{ id: string; name: string; icon: string; min: string }> }>("/plisio/currencies"),
+  status: (depositId: string) =>
+    api.get<{
+      id: string; status: string; amount: number; crypto_currency: string;
+      crypto_amount: number; wallet: string; confirmations: number; txid: string;
+    }>(`/plisio/deposit-status/${depositId}`),
+};
+
 export const payoutsApi = {
   request: (data: { amount: number; method: string; destination: string }) =>
     api.post<{ payout: Record<string, unknown> }>("/payouts", data),
