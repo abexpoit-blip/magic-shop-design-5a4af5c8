@@ -1,4 +1,6 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -22,6 +24,11 @@ import { depositAddressesRouter } from "./routes/deposit-addresses.js";
 import { priceRulesRouter } from "./routes/price-rules.js";
 import { sellersRouter } from "./routes/sellers.js";
 import { plisioRouter } from "./routes/plisio.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app = express();
 

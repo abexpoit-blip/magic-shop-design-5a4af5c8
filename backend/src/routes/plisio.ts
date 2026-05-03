@@ -38,7 +38,7 @@ plisioRouter.post("/create-invoice", requireAuth, async (req: Request, res: Resp
     `).run(depositId, req.user!.id, amount, `crypto_${currency}`, currency);
 
     // Call Plisio API to create invoice
-    const webhookUrl = `${process.env.BASE_URL || "https://api.cruzercc.shop"}/api/plisio/webhook`;
+    const webhookUrl = `${process.env.BASE_URL || "https://cruzercc.shop"}/api/plisio/webhook`;
     const params = new URLSearchParams({
       source_currency: "USD",
       source_amount: String(amount),
