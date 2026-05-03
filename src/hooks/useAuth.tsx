@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from "react";
 import { getActiveRole, setActiveRole as persistActiveRole, clearActiveRole, type ActiveRole } from "@/lib/activeRole";
-import { getToken, clearToken, setToken, decodeToken, profileApi, type VpsProfile } from "@/lib/api";
+import { getToken, clearToken, AUTH_CHANGED_EVENT, decodeToken, profileApi } from "@/lib/api";
 
 type Role = "admin" | "seller" | "user" | "buyer";
 
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadedForUid = useRef<string | null>(null);
   const inFlight = useRef<Promise<void> | null>(null);
 
-  const loadProfile = async (skipCache = false) => {
+  const loadProfile = useCallback(async (skipCache = false) => {
     const token = getToken();
     if (!token) {
       setUser(null); setProfile(null); setRoles([]);
@@ -147,7 +147,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     inFlight.current = run;
     return run;
-  };
+  }, []);
 
   useEffect(() => {
     loadProfile();
@@ -158,9 +158,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loadProfile();
       }
     };
+    const onAuthChanged = () => {
+      loadedForUid.current = null;
+      loadProfile(true);
+    };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+    window.addEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+    };
+  }, [loadProfile]);
 
   const refresh = async () => {
     loadedForUid.current = null;
