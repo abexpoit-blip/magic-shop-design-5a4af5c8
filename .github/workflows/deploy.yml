@@ -54,11 +54,26 @@ jobs:
             pm2 save
 
             # ── Nginx ──
-            cp $APP/nginx/cruzercc.conf /etc/nginx/sites-available/cruzercc.conf
-            ln -sf /etc/nginx/sites-available/cruzercc.conf /etc/nginx/sites-enabled/
+            cp $APP/nginx/cruzercc.conf /etc/nginx/sites-available/cruzercc
+            rm -f /etc/nginx/sites-enabled/default
+            rm -f /etc/nginx/sites-enabled/cruzercc /etc/nginx/sites-enabled/cruzercc.conf /etc/nginx/sites-enabled/cruzercc-api.conf
+            ln -sf /etc/nginx/sites-available/cruzercc /etc/nginx/sites-enabled/cruzercc
             nginx -t && systemctl reload nginx
 
             # ── Health check ──
-            sleep 2
-            curl -sf http://127.0.0.1:8080/api/health || echo "⚠️ Health check failed"
+            for url in http://127.0.0.1:8080/api/health https://cruzercc.shop/api/health; do
+              ok=false
+              for i in $(seq 1 15); do
+                if curl -fsS "$url" >/dev/null; then
+                  echo "✅ Healthy: $url"
+                  ok=true
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$ok" = false ]; then
+                echo "❌ Health check failed: $url"
+                exit 1
+              fi
+            done
             echo "✅ Deploy complete"
