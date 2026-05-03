@@ -1,0 +1,244 @@
+import { Router, type Request, type Response } from "express";
+import crypto from "crypto";
+import { db } from "../db.js";
+import { requireAuth } from "../auth-middleware.js";
+
+export const plisioRouter = Router();
+
+const PLISIO_API = "https://plisio.net/api/v1";
+
+function getSecretKey(): string {
+  const key = process.env.PLISIO_SECRET_KEY;
+  if (!key) throw new Error("PLISIO_SECRET_KEY not configured");
+  return key;
+}
+
+/**
+ * POST /api/plisio/create-invoice
+ * User-facing: creates a Plisio invoice and returns the wallet address + pay URL.
+ * Body: { amount: number, currency: "LTC" | "BTC" | "USDT" | ... }
+ */
+plisioRouter.post("/create-invoice", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { amount, currency } = req.body;
+    if (!amount || !currency) {
+      return res.status(400).json({ error: "amount and currency required" });
+    }
+    if (Number(amount) <= 0) {
+      return res.status(400).json({ error: "amount must be positive" });
+    }
+
+    const secretKey = getSecretKey();
+    const depositId = Array.from(crypto.randomBytes(16)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+    // Create the deposit record first (pending)
+    db.prepare(`
+      INSERT INTO deposits (id, user_id, amount, method, status, crypto_currency)
+      VALUES (?, ?, ?, ?, 'pending', ?)
+    `).run(depositId, req.user!.id, amount, `crypto_${currency}`, currency);
+
+    // Call Plisio API to create invoice
+    const webhookUrl = `${process.env.BASE_URL || "https://api.cruzercc.shop"}/api/plisio/webhook`;
+    const params = new URLSearchParams({
+      source_currency: "USD",
+      source_amount: String(amount),
+      currency: currency,
+      order_name: `Deposit ${depositId}`,
+      order_number: depositId,
+      callback_url: webhookUrl,
+      api_key: secretKey,
+      // expire_min: "60", // optional: invoice expires in 60 min
+    });
+
+    const plisioRes = await fetch(`${PLISIO_API}/invoices/new?${params.toString()}`);
+    const plisioData = await plisioRes.json() as any;
+
+    if (plisioData.status !== "success" || !plisioData.data) {
+      console.error("[plisio] Invoice creation failed:", plisioData);
+      // Clean up the pending deposit
+      db.prepare(`DELETE FROM deposits WHERE id = ?`).run(depositId);
+      return res.status(502).json({ error: "Failed to create payment invoice", detail: plisioData.data?.message });
+    }
+
+    const invoice = plisioData.data;
+
+    // Update deposit with Plisio info
+    db.prepare(`
+      UPDATE deposits
+      SET plisio_invoice_id = ?, plisio_wallet = ?, crypto_amount = ?
+      WHERE id = ?
+    `).run(invoice.txn_id, invoice.wallet_hash, Number(invoice.amount), depositId);
+
+    res.json({
+      deposit_id: depositId,
+      invoice_id: invoice.txn_id,
+      wallet_address: invoice.wallet_hash,
+      crypto_amount: invoice.amount,
+      currency: currency,
+      invoice_url: invoice.invoice_url,
+      qr_url: `https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=${encodeURIComponent(invoice.wallet_hash)}`,
+      expires_at: invoice.expire_utc,
+    });
+  } catch (err: any) {
+    console.error("[plisio] create-invoice error:", err);
+    res.status(500).json({ error: err.message || "Internal error" });
+  }
+});
+
+/**
+ * POST /api/plisio/webhook
+ * Called by Plisio when payment status changes.
+ * Verifies signature and auto-credits on "completed".
+ */
+plisioRouter.post("/webhook", async (req: Request, res: Response) => {
+  try {
+    const data = req.body;
+    console.log("[plisio webhook] Received:", JSON.stringify(data));
+
+    // Verify signature
+    const secretKey = getSecretKey();
+    if (!verifyPlisioSignature(data, secretKey)) {
+      console.warn("[plisio webhook] Invalid signature");
+      return res.status(403).json({ error: "Invalid signature" });
+    }
+
+    const orderId = data.order_number; // our deposit ID
+    const status = data.status; // new, pending, expired, completed, mismatch, error, cancelled
+    const txId = data.txn_id; // Plisio transaction ID
+    const confirmations = Number(data.confirmations || 0);
+
+    if (!orderId) {
+      return res.status(400).json({ error: "Missing order_number" });
+    }
+
+    const dep = db.prepare(`SELECT * FROM deposits WHERE id = ?`).get(orderId) as any;
+    if (!dep) {
+      console.warn("[plisio webhook] Deposit not found:", orderId);
+      return res.status(404).json({ error: "Deposit not found" });
+    }
+
+    // Already approved — skip
+    if (dep.status === "approved") {
+      return res.json({ ok: true, message: "Already credited" });
+    }
+
+    // Update confirmations and txid
+    db.prepare(`
+      UPDATE deposits SET confirmations = ?, txid = ?, plisio_invoice_id = COALESCE(plisio_invoice_id, ?)
+      WHERE id = ?
+    `).run(confirmations, data.source_txid || null, txId, orderId);
+
+    if (status === "completed" || status === "mismatch") {
+      // Auto-credit the user's balance
+      const creditAmount = Number(dep.amount); // USD amount they requested
+
+      // If mismatch (underpaid/overpaid), use actual received USD
+      const actualUsd = status === "mismatch" && data.source_amount
+        ? Number(data.source_amount)
+        : creditAmount;
+
+      db.transaction(() => {
+        db.prepare(`
+          UPDATE deposits SET status = 'approved', admin_notes = ?, reviewed_at = datetime('now')
+          WHERE id = ?
+        `).run(`Auto-confirmed via Plisio (${status}, ${confirmations} conf, txid: ${data.source_txid || "n/a"})`, orderId);
+
+        db.prepare(`
+          UPDATE wallets SET balance = balance + ?, updated_at = datetime('now')
+          WHERE user_id = ?
+        `).run(actualUsd, dep.user_id);
+
+        db.prepare(`
+          INSERT INTO transactions (id, user_id, type, amount, ref_id, meta)
+          VALUES (?, ?, 'deposit', ?, ?, ?)
+        `).run(
+          Array.from(crypto.randomBytes(16)).map(b => b.toString(16).padStart(2, "0")).join(""),
+          dep.user_id,
+          actualUsd,
+          orderId,
+          JSON.stringify({ plisio_txn: txId, crypto: dep.crypto_currency, confirmations, source_txid: data.source_txid })
+        );
+      })();
+
+      console.log(`[plisio webhook] ✅ Auto-credited $${actualUsd} to user ${dep.user_id} (deposit ${orderId})`);
+    } else if (status === "expired" || status === "cancelled") {
+      db.prepare(`UPDATE deposits SET status = 'rejected', admin_notes = ? WHERE id = ?`)
+        .run(`Plisio status: ${status}`, orderId);
+      console.log(`[plisio webhook] ❌ Deposit ${orderId} ${status}`);
+    }
+    // For "new", "pending" — just wait
+
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[plisio webhook] Error:", err);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+/**
+ * GET /api/plisio/currencies
+ * Returns list of supported cryptocurrencies from Plisio.
+ */
+plisioRouter.get("/currencies", requireAuth, async (_req: Request, res: Response) => {
+  try {
+    const secretKey = getSecretKey();
+    const resp = await fetch(`${PLISIO_API}/currencies?api_key=${secretKey}`);
+    const data = await resp.json() as any;
+    if (data.status === "success") {
+      // Filter to common ones
+      const supported = (data.data || [])
+        .filter((c: any) => ["LTC", "BTC", "ETH", "USDT", "TRX", "DOGE", "BNB"].includes(c.cid))
+        .map((c: any) => ({ id: c.cid, name: c.name, icon: c.icon, min: c.min_sum_in }));
+      return res.json({ currencies: supported });
+    }
+    res.json({ currencies: [] });
+  } catch (err: any) {
+    console.error("[plisio] currencies error:", err);
+    res.status(500).json({ error: "Failed to fetch currencies" });
+  }
+});
+
+/**
+ * GET /api/plisio/deposit-status/:depositId
+ * Check the latest status of a deposit from our DB.
+ */
+plisioRouter.get("/deposit-status/:depositId", requireAuth, (req: Request, res: Response) => {
+  const dep = db.prepare(`SELECT * FROM deposits WHERE id = ? AND user_id = ?`)
+    .get(req.params.depositId, req.user!.id) as any;
+  if (!dep) return res.status(404).json({ error: "Not found" });
+  res.json({
+    id: dep.id,
+    status: dep.status,
+    amount: dep.amount,
+    crypto_currency: dep.crypto_currency,
+    crypto_amount: dep.crypto_amount,
+    wallet: dep.plisio_wallet,
+    confirmations: dep.confirmations,
+    txid: dep.txid,
+    created_at: dep.created_at,
+  });
+});
+
+/**
+ * Verify Plisio webhook signature.
+ * Plisio signs webhooks with HMAC-SHA1 of the JSON body sorted by keys.
+ */
+function verifyPlisioSignature(data: Record<string, any>, secretKey: string): boolean {
+  const receivedSign = data.verify_hash;
+  if (!receivedSign) return false;
+
+  // Remove verify_hash from data before computing
+  const payload = { ...data };
+  delete payload.verify_hash;
+
+  // Sort keys and build the string
+  const sorted = Object.keys(payload).sort().reduce((acc, key) => {
+    acc[key] = payload[key];
+    return acc;
+  }, {} as Record<string, any>);
+
+  const message = JSON.stringify(sorted);
+  const computed = crypto.createHmac("sha1", secretKey).update(message).digest("hex");
+
+  return computed === receivedSign;
+}
