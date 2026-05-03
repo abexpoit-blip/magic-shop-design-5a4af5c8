@@ -6,7 +6,7 @@ import { Captcha } from "@/components/Captcha";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Lock, User as UserIcon, TrendingUp, Package } from "lucide-react";
+import { Lock, User as UserIcon, Package } from "lucide-react";
 import logo from "@/assets/panther-logo.png";
 import { Loader2 } from "lucide-react";
 
