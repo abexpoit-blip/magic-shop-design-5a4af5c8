@@ -4,11 +4,22 @@ import { depositsApi, plisioApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Bitcoin, Wallet, CheckCircle2, Copy, Clock, XCircle, Loader2, QrCode } from "lucide-react";
+import { Bitcoin, Wallet, CheckCircle2, Copy, Clock, XCircle, Loader2, QrCode, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
 
 interface Deposit { id: string; amount: number; method: string; txid: string | null; status: string; created_at: string; crypto_currency?: string; plisio_wallet?: string; confirmations?: number; }
 interface PlisioCurrency { id: string; name: string; icon: string; min: string; }
+
+const CRYPTO_URI_PREFIX: Record<string, string> = {
+  BTC: "bitcoin",
+  LTC: "litecoin",
+  ETH: "ethereum",
+  USDT: "tether",
+  TRX: "tron",
+  DOGE: "dogecoin",
+  BCH: "bitcoincash",
+};
 
 const Recharge = () => {
   const { profile } = useAuth();
@@ -17,11 +28,13 @@ const Recharge = () => {
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<Deposit[]>([]);
   const [currencies, setCurrencies] = useState<PlisioCurrency[]>([]);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Active invoice state
   const [activeInvoice, setActiveInvoice] = useState<{
     deposit_id: string; wallet_address: string; crypto_amount: string;
-    currency: string; invoice_url: string; qr_url: string; status: string; confirmations: number;
+    currency: string; invoice_url: string; qr_data: string; status: string; confirmations: number;
+    usd_amount: number;
   } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -72,7 +85,7 @@ const Recharge = () => {
           loadHistory();
         }
       } catch { /* continue polling */ }
-    }, 10_000); // every 10s
+    }, 10_000);
   }, []);
 
   useEffect(() => {
@@ -87,13 +100,14 @@ const Recharge = () => {
       const inv = await plisioApi.createInvoice({ amount: amt, currency });
       setActiveInvoice({
         deposit_id: inv.deposit_id,
-        wallet_address: inv.wallet_address,
+        wallet_address: inv.wallet_address || inv.qr_data || "",
         crypto_amount: inv.crypto_amount,
-        currency: inv.currency,
+        currency: inv.currency || currency,
         invoice_url: inv.invoice_url,
-        qr_url: inv.qr_url,
+        qr_data: inv.qr_data || inv.wallet_address || "",
         status: "pending",
         confirmations: 0,
+        usd_amount: amt,
       });
       startPolling(inv.deposit_id);
       toast.success("Invoice created! Send crypto to the address below.");
@@ -104,7 +118,23 @@ const Recharge = () => {
     }
   };
 
-  const copy = (txt: string) => { navigator.clipboard.writeText(txt); toast.success("Copied!"); };
+  const copyField = (txt: string, field: string) => {
+    navigator.clipboard.writeText(txt);
+    setCopiedField(field);
+    toast.success("Copied!");
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  // Build crypto URI for QR (e.g. litecoin:LXyz...?amount=0.09)
+  const buildQrValue = () => {
+    if (!activeInvoice) return "";
+    const prefix = CRYPTO_URI_PREFIX[activeInvoice.currency.toUpperCase()] || "";
+    const addr = activeInvoice.qr_data || activeInvoice.wallet_address;
+    if (prefix && activeInvoice.crypto_amount) {
+      return `${prefix}:${addr}?amount=${activeInvoice.crypto_amount}`;
+    }
+    return addr;
+  };
 
   return (
     <AppShell>
@@ -123,27 +153,74 @@ const Recharge = () => {
             </p>
 
             {activeInvoice ? (
-              /* Active Invoice View */
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-background/60 border border-primary/40">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                    Send exactly <span className="text-primary-glow font-bold">{activeInvoice.crypto_amount} {activeInvoice.currency}</span> to:
+              /* ─── Active Invoice: Show everything on this page ─── */
+              <div className="space-y-5">
+                {/* Amount summary */}
+                <div className="text-center p-3 rounded-xl bg-primary/10 border border-primary/30">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">You are depositing</p>
+                  <p className="font-display text-2xl font-black text-primary-glow mt-1">
+                    ${activeInvoice.usd_amount.toFixed(2)}
                   </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <code className="text-xs text-primary-glow break-all flex-1 font-mono">
-                      {activeInvoice.wallet_address}
-                    </code>
-                    <button onClick={() => copy(activeInvoice.wallet_address)} className="text-muted-foreground hover:text-primary-glow shrink-0">
-                      <Copy className="h-4 w-4" />
+                </div>
+
+                {/* QR Code - large and centered */}
+                <div className="flex justify-center">
+                  <div className="p-4 bg-white rounded-2xl shadow-lg">
+                    <QRCodeSVG
+                      value={buildQrValue()}
+                      size={200}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Scan with your {activeInvoice.currency} wallet app
+                </p>
+
+                {/* Crypto amount - copyable */}
+                <div className="p-4 rounded-xl bg-background/60 border border-primary/40 space-y-1">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Send exactly
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-lg font-bold text-primary-glow flex-1 break-all">
+                      {activeInvoice.crypto_amount} {activeInvoice.currency}
+                    </span>
+                    <button
+                      onClick={() => copyField(activeInvoice.crypto_amount, "amount")}
+                      className="shrink-0 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary-glow transition"
+                    >
+                      {copiedField === "amount" ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* QR Code */}
-                <div className="flex justify-center">
-                  <div className="p-3 bg-white rounded-xl">
-                    <img src={activeInvoice.qr_url} alt="QR Code" className="w-48 h-48" />
+                {/* Wallet address - copyable */}
+                <div className="p-4 rounded-xl bg-background/60 border border-border/40 space-y-1">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    To this {activeInvoice.currency} address
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs text-foreground/90 break-all flex-1 font-mono leading-relaxed">
+                      {activeInvoice.wallet_address}
+                    </code>
+                    <button
+                      onClick={() => copyField(activeInvoice.wallet_address, "address")}
+                      className="shrink-0 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary-glow transition"
+                    >
+                      {copiedField === "address" ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </button>
                   </div>
+                </div>
+
+                {/* Warning */}
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/30">
+                  <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                  <p className="text-xs text-warning/90">
+                    Send <strong>only {activeInvoice.currency}</strong> to this address.
+                    Sending any other coin will result in permanent loss.
+                  </p>
                 </div>
 
                 {/* Status */}
@@ -155,21 +232,15 @@ const Recharge = () => {
                   </span>
                 </div>
 
-                <div className="flex gap-2">
-                  <a href={activeInvoice.invoice_url} target="_blank" rel="noopener noreferrer"
-                    className="flex-1 text-center text-sm py-2 rounded-lg bg-primary/20 border border-primary/40 text-primary-glow hover:bg-primary/30 transition">
-                    Open Plisio invoice page →
-                  </a>
-                  <Button variant="outline" size="sm" onClick={() => {
-                    setActiveInvoice(null);
-                    if (pollRef.current) clearInterval(pollRef.current);
-                  }}>
-                    Cancel
-                  </Button>
-                </div>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => {
+                  setActiveInvoice(null);
+                  if (pollRef.current) clearInterval(pollRef.current);
+                }}>
+                  Cancel
+                </Button>
 
                 <p className="text-xs text-muted-foreground text-center">
-                  ✅ Your balance is credited <strong>automatically</strong> once payment is confirmed on the blockchain.
+                  ✅ Your balance is credited <strong>automatically</strong> once payment is confirmed on the blockchain (~2-10 min).
                 </p>
               </div>
             ) : (
