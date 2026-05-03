@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { authApi, setToken } from "@/lib/api";
+import { authApi, setToken, ApiError } from "@/lib/api";
 import { Captcha } from "@/components/Captcha";
 import { BuildBadge } from "@/components/BuildBadge";
 import { ApiHealthBadge } from "@/components/ApiHealthBadge";
@@ -81,9 +81,19 @@ const Auth = () => {
         nav(isSeller ? "/seller" : (safeFrom ?? "/shop"), { replace: true });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Login failed";
-      setStatusBanner({ kind: "error", title: msg });
-      toast.error(msg);
+      if (err instanceof ApiError) {
+        const detail = [
+          `HTTP ${err.status}`,
+          err.contentType ? `Content-Type: ${err.contentType}` : null,
+          err.bodySnippet ? `Body: ${err.bodySnippet.slice(0, 120)}…` : null,
+        ].filter(Boolean).join(" · ");
+        setStatusBanner({ kind: "error", title: err.message, hint: detail });
+        toast.error(err.message);
+      } else {
+        const msg = err instanceof Error ? err.message : "Login failed";
+        setStatusBanner({ kind: "error", title: msg });
+        toast.error(msg);
+      }
     } finally { setLoading(false); }
   };
 
