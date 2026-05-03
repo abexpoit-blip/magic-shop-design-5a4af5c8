@@ -1,47 +1,65 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AppShell } from "@/components/AppShell";
-import { depositsApi, plisioApi } from "@/lib/api";
+import { depositsApi, plisioApi, walletApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Bitcoin, Wallet, CheckCircle2, Copy, Clock, XCircle, Loader2, QrCode, AlertCircle } from "lucide-react";
+import {
+  Bitcoin, Wallet, CheckCircle2, Copy, Clock, XCircle, Loader2,
+  QrCode, AlertCircle, ArrowDownLeft, ArrowUpRight, TimerReset, Receipt
+} from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
 interface Deposit { id: string; amount: number; method: string; txid: string | null; status: string; created_at: string; crypto_currency?: string; plisio_wallet?: string; confirmations?: number; }
+interface Transaction { id: string; type: string; amount: number; note?: string; method?: string; ref_id?: string; meta?: string; created_at: string; }
 interface PlisioCurrency { id: string; name: string; icon: string; min: string; }
 
 const CRYPTO_URI_PREFIX: Record<string, string> = {
-  BTC: "bitcoin",
-  LTC: "litecoin",
-  ETH: "ethereum",
-  USDT: "tether",
-  TRX: "tron",
-  DOGE: "dogecoin",
-  BCH: "bitcoincash",
+  BTC: "bitcoin", LTC: "litecoin", ETH: "ethereum", USDT: "tether",
+  TRX: "tron", DOGE: "dogecoin", BCH: "bitcoincash",
+};
+
+const formatCountdown = (seconds: number) => {
+  if (seconds <= 0) return "00:00";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 };
 
 const Recharge = () => {
   const { profile } = useAuth();
+  const settings = useSiteSettings();
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("LTC");
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<Deposit[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currencies, setCurrencies] = useState<PlisioCurrency[]>([]);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Active invoice state
   const [activeInvoice, setActiveInvoice] = useState<{
     deposit_id: string; wallet_address: string; crypto_amount: string;
-    currency: string; invoice_url: string; qr_data: string; status: string; confirmations: number;
-    usd_amount: number;
+    currency: string; invoice_url: string; qr_data: string; status: string;
+    confirmations: number; usd_amount: number; expires_at: string | null;
   } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [countdown, setCountdown] = useState<number>(-1);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadHistory = async () => {
     try {
       const d = await depositsApi.mine();
       setHistory((d.deposits ?? []) as unknown as Deposit[]);
+    } catch { /* ignore */ }
+  };
+
+  const loadTransactions = async () => {
+    try {
+      const t = await walletApi.transactions();
+      setTransactions((t.transactions ?? []) as unknown as Transaction[]);
     } catch { /* ignore */ }
   };
 
@@ -64,7 +82,25 @@ const Recharge = () => {
     }
   };
 
-  useEffect(() => { loadHistory(); loadCurrencies(); }, []);
+  useEffect(() => { loadHistory(); loadCurrencies(); loadTransactions(); }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!activeInvoice?.expires_at) return;
+    const calcRemaining = () => {
+      const exp = new Date(activeInvoice.expires_at!).getTime();
+      return Math.max(0, Math.floor((exp - Date.now()) / 1000));
+    };
+    setCountdown(calcRemaining());
+    countdownRef.current = setInterval(() => {
+      const remaining = calcRemaining();
+      setCountdown(remaining);
+      if (remaining <= 0 && countdownRef.current) clearInterval(countdownRef.current);
+    }, 1000);
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [activeInvoice?.expires_at]);
+
+  const isExpired = countdown === 0 && activeInvoice?.expires_at;
 
   // Poll for active invoice status
   const startPolling = useCallback((depositId: string) => {
@@ -78,6 +114,7 @@ const Recharge = () => {
           setActiveInvoice(null);
           if (pollRef.current) clearInterval(pollRef.current);
           loadHistory();
+          loadTransactions();
         } else if (s.status === "rejected") {
           toast.error("Deposit expired or cancelled.");
           setActiveInvoice(null);
@@ -89,15 +126,27 @@ const Recharge = () => {
   }, []);
 
   useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
   }, []);
 
+  // Fee calculation
+  const feePercent = settings.deposit_fee_percent || 0;
+  const feeFlat = settings.deposit_fee_flat || 0;
+  const computeFee = (amt: number) => {
+    return (amt * feePercent / 100) + feeFlat;
+  };
+  const amtNum = Number(amount) || 0;
+  const fee = computeFee(amtNum);
+  const credited = Math.max(0, amtNum - fee);
+
   const createInvoice = async () => {
-    const amt = Number(amount);
-    if (!amt || amt < 5) return toast.error("Minimum deposit is $5");
+    if (!amtNum || amtNum < 5) return toast.error("Minimum deposit is $5");
     setBusy(true);
     try {
-      const inv = await plisioApi.createInvoice({ amount: amt, currency });
+      const inv = await plisioApi.createInvoice({ amount: amtNum, currency });
       setActiveInvoice({
         deposit_id: inv.deposit_id,
         wallet_address: inv.wallet_address || inv.qr_data || "",
@@ -107,7 +156,8 @@ const Recharge = () => {
         qr_data: inv.qr_data || inv.wallet_address || "",
         status: "pending",
         confirmations: 0,
-        usd_amount: amt,
+        usd_amount: amtNum,
+        expires_at: inv.expires_at || null,
       });
       startPolling(inv.deposit_id);
       toast.success("Invoice created! Send crypto to the address below.");
@@ -119,13 +169,13 @@ const Recharge = () => {
   };
 
   const copyField = (txt: string, field: string) => {
+    if (isExpired) return;
     navigator.clipboard.writeText(txt);
     setCopiedField(field);
     toast.success("Copied!");
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // Build crypto URI for QR (e.g. litecoin:LXyz...?amount=0.09)
   const buildQrValue = () => {
     if (!activeInvoice) return "";
     const prefix = CRYPTO_URI_PREFIX[activeInvoice.currency.toUpperCase()] || "";
@@ -134,6 +184,14 @@ const Recharge = () => {
       return `${prefix}:${addr}?amount=${activeInvoice.crypto_amount}`;
     }
     return addr;
+  };
+
+  const txnIcon = (type: string) => {
+    if (type === "deposit") return <ArrowDownLeft className="h-4 w-4 text-success" />;
+    if (type === "purchase") return <ArrowUpRight className="h-4 w-4 text-destructive" />;
+    if (type === "refund") return <ArrowDownLeft className="h-4 w-4 text-primary-glow" />;
+    if (type === "payout") return <ArrowUpRight className="h-4 w-4 text-warning" />;
+    return <Receipt className="h-4 w-4 text-muted-foreground" />;
   };
 
   return (
@@ -153,8 +211,27 @@ const Recharge = () => {
             </p>
 
             {activeInvoice ? (
-              /* ─── Active Invoice: Show everything on this page ─── */
+              /* ─── Active Invoice ─── */
               <div className="space-y-5">
+                {/* Countdown timer */}
+                {activeInvoice.expires_at && (
+                  <div className={`flex items-center justify-center gap-2 p-3 rounded-xl border ${
+                    isExpired
+                      ? "bg-destructive/10 border-destructive/40 text-destructive"
+                      : countdown <= 120
+                        ? "bg-warning/10 border-warning/40 text-warning"
+                        : "bg-primary/10 border-primary/30 text-primary-glow"
+                  }`}>
+                    <TimerReset className="h-4 w-4" />
+                    <span className="font-mono text-lg font-bold">
+                      {isExpired ? "EXPIRED" : formatCountdown(countdown)}
+                    </span>
+                    <span className="text-xs opacity-70">
+                      {isExpired ? "— generate a new invoice" : "remaining"}
+                    </span>
+                  </div>
+                )}
+
                 {/* Amount summary */}
                 <div className="text-center p-3 rounded-xl bg-primary/10 border border-primary/30">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">You are depositing</p>
@@ -163,41 +240,35 @@ const Recharge = () => {
                   </p>
                 </div>
 
-                {/* QR Code - large and centered */}
-                <div className="flex justify-center">
+                {/* QR Code */}
+                <div className={`flex justify-center ${isExpired ? "opacity-30 pointer-events-none" : ""}`}>
                   <div className="p-4 bg-white rounded-2xl shadow-lg">
-                    <QRCodeSVG
-                      value={buildQrValue()}
-                      size={200}
-                      level="M"
-                      includeMargin={false}
-                    />
+                    <QRCodeSVG value={buildQrValue()} size={200} level="M" includeMargin={false} />
                   </div>
                 </div>
                 <p className="text-[10px] text-center text-muted-foreground">
-                  Scan with your {activeInvoice.currency} wallet app
+                  {isExpired ? "Invoice expired — QR no longer valid" : `Scan with your ${activeInvoice.currency} wallet app`}
                 </p>
 
-                {/* Crypto amount - copyable */}
-                <div className="p-4 rounded-xl bg-background/60 border border-primary/40 space-y-1">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Send exactly
-                  </p>
+                {/* Crypto amount */}
+                <div className={`p-4 rounded-xl bg-background/60 border border-primary/40 space-y-1 ${isExpired ? "opacity-40" : ""}`}>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Send exactly</p>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-lg font-bold text-primary-glow flex-1 break-all">
                       {activeInvoice.crypto_amount} {activeInvoice.currency}
                     </span>
                     <button
                       onClick={() => copyField(activeInvoice.crypto_amount, "amount")}
-                      className="shrink-0 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary-glow transition"
+                      disabled={!!isExpired}
+                      className="shrink-0 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary-glow transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       {copiedField === "amount" ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Wallet address - copyable */}
-                <div className="p-4 rounded-xl bg-background/60 border border-border/40 space-y-1">
+                {/* Wallet address */}
+                <div className={`p-4 rounded-xl bg-background/60 border border-border/40 space-y-1 ${isExpired ? "opacity-40" : ""}`}>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     To this {activeInvoice.currency} address
                   </p>
@@ -207,7 +278,8 @@ const Recharge = () => {
                     </code>
                     <button
                       onClick={() => copyField(activeInvoice.wallet_address, "address")}
-                      className="shrink-0 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary-glow transition"
+                      disabled={!!isExpired}
+                      className="shrink-0 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary-glow transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       {copiedField === "address" ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </button>
@@ -224,27 +296,33 @@ const Recharge = () => {
                 </div>
 
                 {/* Status */}
-                <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-secondary/40 border border-border/40">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary-glow" />
-                  <span className="text-sm text-foreground/80">
-                    {activeInvoice.status === "pending" ? "Waiting for payment..." :
-                     `Status: ${activeInvoice.status} (${activeInvoice.confirmations} confirmations)`}
-                  </span>
-                </div>
+                {!isExpired && (
+                  <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-secondary/40 border border-border/40">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary-glow" />
+                    <span className="text-sm text-foreground/80">
+                      {activeInvoice.status === "pending" ? "Waiting for payment..." :
+                       `Status: ${activeInvoice.status} (${activeInvoice.confirmations} confirmations)`}
+                    </span>
+                  </div>
+                )}
 
-                <Button variant="outline" size="sm" className="w-full" onClick={() => {
+                <Button variant={isExpired ? "default" : "outline"} size="sm" className="w-full" onClick={() => {
                   setActiveInvoice(null);
+                  setCountdown(-1);
                   if (pollRef.current) clearInterval(pollRef.current);
+                  if (countdownRef.current) clearInterval(countdownRef.current);
                 }}>
-                  Cancel
+                  {isExpired ? "Generate New Invoice" : "Cancel"}
                 </Button>
 
-                <p className="text-xs text-muted-foreground text-center">
-                  ✅ Your balance is credited <strong>automatically</strong> once payment is confirmed on the blockchain (~2-10 min).
-                </p>
+                {!isExpired && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    ✅ Your balance is credited <strong>automatically</strong> once payment is confirmed on the blockchain (~2-10 min).
+                  </p>
+                )}
               </div>
             ) : (
-              /* New Deposit Form */
+              /* ─── New Deposit Form ─── */
               <div className="space-y-4">
                 <div className="grid grid-cols-4 gap-2">
                   {(currencies.length ? currencies : [{ id: "LTC" }, { id: "BTC" }, { id: "USDT" }, { id: "TRX" }]).map((c) => (
@@ -265,6 +343,32 @@ const Recharge = () => {
                     placeholder="50" className="mt-1.5 bg-input/60 text-2xl font-display h-14" />
                 </div>
 
+                {/* Fee breakdown */}
+                {amtNum > 0 && (feePercent > 0 || feeFlat > 0) && (
+                  <div className="p-3 rounded-xl bg-secondary/30 border border-border/40 space-y-1.5 text-xs">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Deposit amount</span>
+                      <span>${amtNum.toFixed(2)}</span>
+                    </div>
+                    {feePercent > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Fee ({feePercent}%)</span>
+                        <span>-${(amtNum * feePercent / 100).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {feeFlat > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Flat fee</span>
+                        <span>-${feeFlat.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="border-t border-border/40 pt-1.5 flex justify-between font-display text-primary-glow">
+                      <span>You receive</span>
+                      <span>${credited.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
                 <Button onClick={createInvoice} disabled={busy} className="w-full bg-gradient-primary shadow-neon h-12">
                   {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Bitcoin className="h-4 w-4 mr-2" />}
                   Generate Payment Address
@@ -276,7 +380,7 @@ const Recharge = () => {
             )}
           </section>
 
-          {/* Right: Bonus table */}
+          {/* Right: Bonus table + How it works */}
           <section className="glass rounded-2xl p-6">
             <h2 className="font-display tracking-wider mb-3 text-primary-glow">TOP-UP BONUS</h2>
             <ul className="space-y-2.5">
@@ -305,6 +409,35 @@ const Recharge = () => {
             </div>
           </section>
         </div>
+
+        {/* Transaction History */}
+        <section className="glass rounded-2xl p-6">
+          <h3 className="font-display tracking-wider mb-3 text-primary-glow flex items-center gap-2">
+            <Receipt className="h-5 w-5" /> TRANSACTION HISTORY
+          </h3>
+          <div className="space-y-2">
+            {transactions.length === 0 && <p className="text-sm text-muted-foreground">No transactions yet.</p>}
+            {transactions.slice(0, 20).map((t) => (
+              <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-border/40">
+                <div className="flex items-center gap-3">
+                  {txnIcon(t.type)}
+                  <div>
+                    <p className="text-sm font-display capitalize text-foreground">{t.type}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(t.created_at).toLocaleDateString()} {new Date(t.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {t.method ? ` · ${t.method}` : ""}
+                    </p>
+                  </div>
+                </div>
+                <span className={`font-mono text-sm font-bold ${
+                  Number(t.amount) >= 0 ? "text-success" : "text-destructive"
+                }`}>
+                  {Number(t.amount) >= 0 ? "+" : ""}${Math.abs(Number(t.amount)).toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Recent deposits */}
         <section className="glass rounded-2xl p-6">
