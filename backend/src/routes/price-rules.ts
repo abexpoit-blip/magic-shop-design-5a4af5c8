@@ -9,20 +9,24 @@ const createRuleSchema = z.object({
   country: z.string().trim().max(100).optional().nullable(),
   brand: z.string().trim().max(100).optional().nullable(),
   bin: z.string().trim().max(100).optional().nullable(),
+  refundable: z.boolean().optional().nullable(),
   price: z.number().positive().max(100000),
+  priority: z.number().int().min(0).max(1000).optional().default(0),
 });
 
 priceRulesRouter.get("/mine", requireAuth, requireRole("seller"), (req, res) => {
-  const rows = db.prepare(`SELECT * FROM price_rules WHERE seller_id = ? ORDER BY created_at DESC`).all(req.user!.id);
+  const rows = db.prepare(`SELECT * FROM price_rules WHERE seller_id = ? ORDER BY priority DESC, created_at DESC`).all(req.user!.id);
   res.json({ rules: rows });
 });
 
 priceRulesRouter.post("/", requireAuth, requireRole("seller"), (req, res, next) => {
   try {
-    const { country, brand, bin, price } = createRuleSchema.parse(req.body);
+    const { country, brand, bin, refundable, price, priority } = createRuleSchema.parse(req.body);
     const id = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, "0")).join("");
-    db.prepare(`INSERT INTO price_rules (id, seller_id, country, brand, bin, price) VALUES (?, ?, ?, ?, ?, ?)`).run(id, req.user!.id, country || null, brand || null, bin || null, price);
-    res.status(201).json({ rule: { id, country, brand, bin, price } });
+    db.prepare(
+      `INSERT INTO price_rules (id, seller_id, country, brand, bin, refundable, price, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(id, req.user!.id, country || null, brand || null, bin || null, refundable ?? null, price, priority);
+    res.status(201).json({ rule: { id, country, brand, bin, refundable, price, priority } });
   } catch (e) { next(e); }
 });
 

@@ -5,7 +5,7 @@ import { cardsApi, cartApi, sellersApi } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { COUNTRIES, countryFlag, BrandLogo } from "@/lib/brands";
+import { COUNTRIES, countryFlag, BrandLogo, detectBrandFromBin } from "@/lib/brands";
 import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, BadgeCheck, Store } from "lucide-react";
 import { TrustBadge } from "@/components/TrustBadge";
 import { toast } from "sonner";
@@ -248,7 +248,7 @@ const Shop = () => {
                     </td>
                     <td className="p-3 font-mono text-foreground whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <BrandLogo brand={c.brand} className="h-4" />
+                        <BrandLogo brand={c.brand || detectBrandFromBin(c.bin)} className="h-4" />
                         <span>{c.bin}<span className="text-muted-foreground">••••••</span></span>
                       </div>
                       {sellerMap.get(c.seller_id) && (
