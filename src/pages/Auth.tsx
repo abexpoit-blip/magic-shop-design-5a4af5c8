@@ -6,12 +6,10 @@ import { BuildBadge } from "@/components/BuildBadge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIcon, X } from "lucide-react";
+import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIcon, X, Loader2 } from "lucide-react";
 import logo from "@/assets/panther-logo.png";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/accountSwitcher";
-
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
-import { Loader2 } from "lucide-react";
 
 const Auth = () => {
   const nav = useNavigate();
