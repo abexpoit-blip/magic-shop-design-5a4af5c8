@@ -10,7 +10,7 @@ git reset --hard origin/main
 
 # Frontend
 echo "📦 Building frontend..."
-npm ci
+npm install
 VITE_API_BASE=/api npm run build
 mkdir -p $APP/frontend
 rm -rf $APP/frontend/*
@@ -19,7 +19,7 @@ cp -r dist/* $APP/frontend/
 # Backend
 echo "📦 Building backend..."
 cd $APP/backend
-npm ci
+npm install
 npm run build
 
 # Seed admin if fresh DB
