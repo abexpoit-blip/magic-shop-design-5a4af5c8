@@ -54,9 +54,13 @@ export function decodeToken(t: string): Record<string, unknown> | null {
 // ───────── generic fetch wrapper ─────────
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  contentType: string;
+  bodySnippet: string;
+  constructor(status: number, message: string, contentType = "", bodySnippet = "") {
     super(message);
     this.status = status;
+    this.contentType = contentType;
+    this.bodySnippet = bodySnippet;
   }
 }
 
@@ -82,22 +86,52 @@ async function request<T = unknown>(
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: body != null ? JSON.stringify(body) : undefined,
-  });
-
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = await res.json();
-      msg = j.error ?? j.message ?? msg;
-    } catch { /* ignore */ }
-    throw new ApiError(res.status, msg);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      body: body != null ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkErr) {
+    throw new ApiError(
+      0,
+      `Network error: ${networkErr instanceof Error ? networkErr.message : "Failed to fetch"}`,
+      "",
+      `URL: ${url}`,
+    );
   }
 
-  // 204 No Content
+  const ct = res.headers.get("content-type") ?? "";
+
+  if (!res.ok) {
+    const rawBody = await res.text();
+    const snippet = rawBody.slice(0, 300);
+    let msg = `HTTP ${res.status} ${res.statusText}`;
+
+    if (ct.includes("application/json")) {
+      try {
+        const j = JSON.parse(rawBody);
+        msg = j.error ?? j.message ?? msg;
+      } catch { /* keep generic msg */ }
+    } else if (ct.includes("text/html")) {
+      msg = `Server returned HTML instead of JSON (HTTP ${res.status}). Your backend/Nginx is likely misconfigured.`;
+    }
+
+    throw new ApiError(res.status, msg, ct, snippet);
+  }
+
+  // Detect HTML served on a 200 (misconfigured catch-all)
+  if (ct.includes("text/html")) {
+    const rawBody = await res.text();
+    throw new ApiError(
+      200,
+      "Server returned HTML instead of JSON (HTTP 200). Nginx is likely serving index.html as a fallback for this API route.",
+      ct,
+      rawBody.slice(0, 300),
+    );
+  }
+
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
