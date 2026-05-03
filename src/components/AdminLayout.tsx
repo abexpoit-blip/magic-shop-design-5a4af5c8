@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
 import { NavLink, useLocation } from "react-router-dom";
-import { Shield, LayoutDashboard, Users, CreditCard, Wallet, Undo2, KeyRound, Settings as SettingsIcon } from "lucide-react";
+import { Shield, LayoutDashboard, Users, CreditCard, Wallet, Undo2, KeyRound, Settings as SettingsIcon, Landmark } from "lucide-react";
 
 interface Item { to: string; label: string; icon: React.ComponentType<{ className?: string }>; }
 
@@ -11,6 +11,7 @@ const items: Item[] = [
   { to: "/admin/payouts", label: "Payouts & Commission", icon: Wallet },
   { to: "/admin/cards", label: "Card moderation", icon: CreditCard },
   { to: "/admin/refunds", label: "Refund requests", icon: Undo2 },
+  { to: "/admin/deposit-addresses", label: "Deposit addresses", icon: Landmark },
   { to: "/admin/site", label: "Site settings", icon: SettingsIcon },
   { to: "/admin/settings", label: "Credentials", icon: KeyRound },
 ];

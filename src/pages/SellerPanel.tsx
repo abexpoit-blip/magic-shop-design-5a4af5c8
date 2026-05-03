@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { cardsApi, payoutsApi, profileApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -173,6 +174,7 @@ const SellerPanel = () => {
           <div>
             <h1 className="font-display text-3xl font-black neon-text">SELLER DASHBOARD</h1>
             <p className="text-sm text-muted-foreground mt-1">Earnings, commission, and payout history</p>
+            <Link to="/seller/price-rules" className="text-xs text-primary-glow hover:underline mt-1 inline-block">⚡ Manage Price Rules</Link>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {isVerified && (

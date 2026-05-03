@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { pool } from "../db.js";
 import { requireAuth, requireRole } from "../auth-middleware.js";
 
@@ -17,7 +18,12 @@ siteSettingsRouter.get("/", async (_req, res, next) => {
 // Admin — upsert settings (body is { key: value, ... })
 siteSettingsRouter.put("/", requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
-    const entries = Object.entries(req.body);
+    const bodySchema = z.record(z.string().max(100), z.unknown());
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid settings payload" });
+    const entries = Object.entries(parsed.data);
+    if (entries.length === 0) return res.status(400).json({ error: "No settings provided" });
+    if (entries.length > 50) return res.status(400).json({ error: "Too many settings at once (max 50)" });
     for (const [key, value] of entries) {
       await pool.query(
         `INSERT INTO site_settings (key, value) VALUES ($1, $2)

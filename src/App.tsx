@@ -28,6 +28,10 @@ import AdminApplications from "./pages/AdminApplications";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminCards from "./pages/AdminCards";
 import AdminRefunds from "./pages/AdminRefunds";
+import AdminDepositAddresses from "./pages/AdminDepositAddresses";
+import News from "./pages/News";
+import BuyerRefunds from "./pages/BuyerRefunds";
+import SellerPriceRules from "./pages/SellerPriceRules";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,16 +57,20 @@ const App = () => (
             <Route path="/recharge" element={<ProtectedRoute><Recharge /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
+            <Route path="/refunds" element={<ProtectedRoute><BuyerRefunds /></ProtectedRoute>} />
             <Route path="/seller" element={<ProtectedRoute><SellerPanel /></ProtectedRoute>} />
             <Route path="/seller/apply" element={<ProtectedRoute><SellerApply /></ProtectedRoute>} />
             <Route path="/seller/upload" element={<ProtectedRoute><SellerUpload /></ProtectedRoute>} />
             <Route path="/seller/format" element={<ProtectedRoute><SellerFormat /></ProtectedRoute>} />
+            <Route path="/seller/price-rules" element={<ProtectedRoute><SellerPriceRules /></ProtectedRoute>} />
             <Route path="/seller/:id" element={<ProtectedRoute><SellerProfile /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="/admin/applications" element={<AdminRoute><AdminApplications /></AdminRoute>} />
             <Route path="/admin/payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
             <Route path="/admin/cards" element={<AdminRoute><AdminCards /></AdminRoute>} />
             <Route path="/admin/refunds" element={<AdminRoute><AdminRefunds /></AdminRoute>} />
+            <Route path="/admin/deposit-addresses" element={<AdminRoute><AdminDepositAddresses /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
