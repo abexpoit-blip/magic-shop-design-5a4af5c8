@@ -5,7 +5,6 @@ module.exports = {
     cwd: "/var/www/cruzercc/backend",
     env: {
       NODE_ENV: "production",
-      PORT: 8080,
     },
     instances: 1,
     autorestart: true,
