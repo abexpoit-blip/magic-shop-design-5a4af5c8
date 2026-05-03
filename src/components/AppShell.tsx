@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useCallback } from "react";
 import { Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, ShieldCheck, PackagePlus, LogOut, Menu, X, Search, Bell, Maximize2, Minimize2, AlertTriangle, RefreshCw, Newspaper, Undo2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { BuildBadge } from "@/components/BuildBadge";
 // Admin access is purely role-based (server-side via user_roles + RLS).
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { cartApi, announcementsApi } from "@/lib/api";
+import { toast } from "sonner";
 
 type Density = "comfortable" | "compact";
 
@@ -47,6 +49,30 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     if (typeof window === "undefined") return "comfortable";
     return (localStorage.getItem("nav-density") as Density) || "comfortable";
   });
+  const [cartCount, setCartCount] = useState(0);
+  const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  // Load cart count
+  const loadCartCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { items } = await cartApi.list();
+      setCartCount((items ?? []).length);
+    } catch { /* ignore */ }
+  }, [user]);
+
+  // Load announcements for notification bell
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      const res = await announcementsApi.list();
+      setAnnouncements((res.announcements ?? []).slice(0, 10) as any);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadCartCount(); loadAnnouncements(); }, [loadCartCount, loadAnnouncements]);
+  // Re-check cart count when navigating
+  useEffect(() => { loadCartCount(); }, [loc.pathname, loadCartCount]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-density", density);
@@ -116,11 +142,16 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
                 key={it.to}
                 to={it.to}
                 end={it.to === "/"}
-                className="nav-pill"
+                className="nav-pill relative"
                 data-active={isActive(it.to)}
               >
                 <it.icon className="nav-pill-icon" strokeWidth={1.75} />
                 <span>{it.label}</span>
+                {it.to === "/cart" && cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+                    {cartCount}
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>
@@ -130,10 +161,39 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
             <button className="nav-icon-btn hidden md:inline-flex !text-foreground/90 hover:!text-primary-glow" aria-label="Search">
               <Search className="nav-icon" strokeWidth={2} />
             </button>
-            <button className="nav-icon-btn hidden md:inline-flex relative !text-foreground/90 hover:!text-primary-glow" aria-label="Notifications">
-              <Bell className="nav-icon" strokeWidth={2} />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-gold animate-pulse ring-2 ring-background" />
-            </button>
+            <div className="relative">
+              <button onClick={() => setShowNotifs(!showNotifs)} className="nav-icon-btn hidden md:inline-flex relative !text-foreground/90 hover:!text-primary-glow" aria-label="Notifications">
+                <Bell className="nav-icon" strokeWidth={2} />
+                {announcements.length > 0 && (
+                  <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-gold animate-pulse ring-2 ring-background" />
+                )}
+              </button>
+              {showNotifs && (
+                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-border/60 bg-background/95 backdrop-blur-xl shadow-2xl z-50">
+                  <div className="p-3 border-b border-border/40 flex items-center justify-between">
+                    <span className="font-display text-sm tracking-wider text-foreground">NOTIFICATIONS</span>
+                    <button onClick={() => setShowNotifs(false)} className="text-muted-foreground hover:text-foreground">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {announcements.length === 0 ? (
+                    <div className="p-6 text-center text-sm text-muted-foreground">No notifications</div>
+                  ) : (
+                    <div className="divide-y divide-border/30">
+                      {announcements.map((a) => (
+                        <div key={a.id} className="p-3 hover:bg-secondary/30 transition">
+                          <p className="text-sm font-semibold text-foreground">{a.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.body}</p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-1">
+                            {new Date(a.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <button
               onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}
