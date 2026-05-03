@@ -20,8 +20,8 @@ interface Profile {
   id: string; username: string; email?: string; balance: number;
   is_seller: boolean; banned: boolean; role?: string; created_at?: string;
 }
-interface Deposit { id: string; user_id: string; amount: number; method: string; txid: string | null; status: string; created_at: string; }
-interface Payout { id: string; seller_id: string; amount: number; method: string; address: string; status: string; created_at: string; }
+interface Deposit { id: string; user_id: string; amount: number; method: string; proof_url: string | null; status: string; created_at: string; }
+interface Payout { id: string; seller_id: string; amount: number; method: string; destination: string; status: string; created_at: string; }
 interface DailyRevenue { day: string; revenue: number; orders: number; }
 interface TopSeller { id: string; username: string; cards_sold: number; total_sold: number; }
 interface RecentOrder { id: string; total: number; status: string; created_at: string; buyer: string; }
