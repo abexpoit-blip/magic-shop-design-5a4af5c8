@@ -1,0 +1,67 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Build frontend ──
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_API_BASE: /api
+
+      # ── Build backend ──
+      - run: cd backend && npm ci && npm run build
+
+      # ── Deploy via SSH ──
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            APP_DIR=/var/www/cruzercc
+
+            # Ensure dirs exist
+            mkdir -p $APP_DIR/frontend $APP_DIR/backend $APP_DIR/uploads /var/log/cruzercc
+
+            # Pull latest
+            cd $APP_DIR/repo
+            git fetch origin main
+            git reset --hard origin/main
+
+            # ── Frontend ──
+            rm -rf $APP_DIR/frontend/*
+            cp -r dist/* $APP_DIR/frontend/
+
+            # ── Backend ──
+            cd $APP_DIR/repo/backend
+            npm ci --production
+            cp -r dist/* $APP_DIR/backend/dist/
+            cp package.json $APP_DIR/backend/
+            cp node_modules $APP_DIR/backend/ -r 2>/dev/null || true
+
+            # ── Database migrations ──
+            cd $APP_DIR/backend
+            npx tsx scripts/migrate.ts || echo "Migration skipped or already up-to-date"
+
+            # ── Restart backend ──
+            pm2 reload cruzercc-api --update-env || pm2 start ecosystem.config.cjs
+
+            # ── Reload nginx ──
+            sudo nginx -t && sudo systemctl reload nginx
+
+            echo "✅ Deployed successfully"

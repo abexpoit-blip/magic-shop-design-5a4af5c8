@@ -151,6 +151,10 @@ export const cardsApi = {
 
 // Cart / checkout
 export const cartApi = {
+  list: () => api.get<{ items: Array<{ id: string; card_id: string; card?: Record<string, unknown> }> }>("/cart"),
+  add: (card_id: string) => api.post<{ ok: true }>("/cart", { card_id }),
+  addBatch: (card_ids: string[]) => api.post<{ ok: true }>("/cart/batch", { card_ids }),
+  remove: (item_id: string) => api.del<{ ok: true }>(`/cart/${item_id}`),
   checkout: (card_ids: string[]) =>
     api.post<{ order_id: string; total: number }>("/cart/checkout", { card_ids }),
 };

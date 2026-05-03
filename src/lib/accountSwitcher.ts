@@ -2,7 +2,7 @@
 // Stores email + a label so users can quickly switch between saved accounts.
 // Passwords are NOT stored — switching prompts re-login if the session is gone.
 
-import { supabase } from "@/integrations/supabase/client";
+import { clearToken } from "@/lib/api";
 
 export interface SavedAccount {
   email: string;
@@ -30,7 +30,7 @@ export function removeSavedAccount(email: string) {
 
 /** Sign out current session and redirect to /auth with email prefilled */
 export async function switchAccount(email: string) {
-  await supabase.auth.signOut();
+  clearToken();
   sessionStorage.setItem("cruzercc.prefillEmail", email);
   window.location.href = "/auth";
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { cardsApi, cartApi, sellersApi } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,23 +46,24 @@ const Shop = () => {
   }, [sellers]);
 
   const loadSellers = async () => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id,username,seller_display_name,display_name,is_seller_verified,trust_tier")
-      .eq("is_seller_visible", true);
-    setSellers((data ?? []) as Seller[]);
+    try {
+      const res = await sellersApi.visible();
+      setSellers((res.sellers ?? []) as unknown as Seller[]);
+    } catch { setSellers([]); }
   };
 
   const load = async (auto = false) => {
     setLoading(true);
-    let q = supabase.from("cards_public" as never).select("*").order("created_at", { ascending: false }).limit(200);
-    if (bin) q = q.ilike("bin", `${bin}%`);
-    if (base !== "all") q = q.ilike("base", `%${base}%`);
-    if (country) q = q.ilike("country", `${country}%`);
-    if (zip) q = q.ilike("zip", `${zip}%`);
-    if (seller !== "all") q = q.eq("seller_id", seller);
-    const { data } = await q;
-    setCards((data ?? []) as Card[]);
+    try {
+      const params: Record<string, string | number | boolean | undefined> = { limit: 200 };
+      if (bin) params.bin = bin;
+      if (base !== "all") params.base = base;
+      if (country) params.country = country;
+      if (zip) params.zip = zip;
+      if (seller !== "all") params.seller_id = seller;
+      const { cards: c } = await cardsApi.browse(params);
+      setCards((c ?? []) as Card[]);
+    } catch { setCards([]); }
     setLastBin(bin);
     setLoading(false);
     if (!auto) setSearched(true);
@@ -70,13 +71,14 @@ const Shop = () => {
 
   const loadCart = async () => {
     if (!user) return;
-    const { data } = await supabase.from("cart_items").select("card_id").eq("user_id", user.id);
-    setCartIds(new Set((data ?? []).map((c: { card_id: string }) => c.card_id)));
+    try {
+      const { items } = await cartApi.list();
+      setCartIds(new Set((items ?? []).map((c) => c.card_id)));
+    } catch { /* ignore */ }
   };
 
   useEffect(() => { loadSellers(); load(true); loadCart(); /* eslint-disable-next-line */ }, []);
 
-  // re-load when seller filter changes
   useEffect(() => {
     if (seller === "all") { searchParams.delete("seller"); } else { searchParams.set("seller", seller); }
     setSearchParams(searchParams, { replace: true });
@@ -84,7 +86,6 @@ const Shop = () => {
     // eslint-disable-next-line
   }, [seller]);
 
-  // Auto-detect BIN: when 6+ digits typed, auto-search
   useEffect(() => {
     if (bin.length >= 6) {
       const t = setTimeout(() => load(), 350);
@@ -94,24 +95,24 @@ const Shop = () => {
 
   const addToCart = async (cardId: string) => {
     if (!user) return toast.error("Please log in");
-    const { error } = await supabase.from("cart_items").insert({ user_id: user.id, card_id: cardId });
-    if (error) return toast.error(error.message);
-    setCartIds((s) => new Set(s).add(cardId));
-    toast.success("Added to cart");
+    try {
+      await cartApi.add(cardId);
+      setCartIds((s) => new Set(s).add(cardId));
+      toast.success("Added to cart");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const batchAdd = async () => {
     if (!user) return toast.error("Please log in");
     if (selected.size === 0) return toast.error("Select cards first");
-    const rows = Array.from(selected)
-      .filter((id) => !cartIds.has(id))
-      .map((card_id) => ({ user_id: user.id, card_id }));
-    if (!rows.length) return toast.error("Already in cart");
-    const { error } = await supabase.from("cart_items").insert(rows);
-    if (error) return toast.error(error.message);
-    setCartIds((s) => { const n = new Set(s); rows.forEach((r) => n.add(r.card_id)); return n; });
-    setSelected(new Set());
-    toast.success(`Added ${rows.length} to cart`);
+    const ids = Array.from(selected).filter((id) => !cartIds.has(id));
+    if (!ids.length) return toast.error("Already in cart");
+    try {
+      await cartApi.addBatch(ids);
+      setCartIds((s) => { const n = new Set(s); ids.forEach((id) => n.add(id)); return n; });
+      setSelected(new Set());
+      toast.success(`Added ${ids.length} to cart`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
   const reset = () => { setBin(""); setBase("all"); setCountry(""); setZip(""); setSeller("all"); setSearched(false); setTimeout(() => load(true), 0); };
@@ -130,7 +131,6 @@ const Shop = () => {
           <p className="text-sm text-muted-foreground mt-1">Search by BIN — auto-detects after 6 digits</p>
         </div>
 
-        {/* Filter bar */}
         <div className="glass rounded-2xl p-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
           <div>
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground">BIN</label>
@@ -208,7 +208,6 @@ const Shop = () => {
           </div>
         )}
 
-        {/* Results table */}
         <div className="glass rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

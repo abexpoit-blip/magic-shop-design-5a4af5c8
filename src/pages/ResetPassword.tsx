@@ -1,32 +1,21 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Lock, Loader2, ShieldCheck } from "lucide-react";
 import { BuildBadge } from "@/components/BuildBadge";
-import { describeAuthError } from "@/lib/authErrors";
 
 const ResetPassword = () => {
   const nav = useNavigate();
-  const [ready, setReady] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    document.title = "Reset password · cruzercc.shop";
-    // Supabase places the recovery token in the URL hash and creates a temporary session.
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
-    });
-    // Also check existing session in case the listener fired before mount.
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+  // Extract token from URL hash (?token=xxx or #token=xxx)
+  const params = new URLSearchParams(window.location.search || window.location.hash.replace("#", "?"));
+  const resetToken = params.get("token");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,14 +23,11 @@ const ResetPassword = () => {
     if (password !== confirm) return toast.error("Passwords don't match");
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      await api.post("/auth/reset-password", { token: resetToken, password });
       toast.success("Password updated — please sign in with your new password");
-      await supabase.auth.signOut();
       nav("/auth");
     } catch (err) {
-      const f = describeAuthError(err);
-      toast.error(f.title, f.hint ? { description: f.hint } : undefined);
+      toast.error(err instanceof Error ? err.message : "Reset failed");
     } finally { setLoading(false); }
   };
 
@@ -60,10 +46,9 @@ const ResetPassword = () => {
             <p className="text-[10px] font-mono tracking-[0.4em] text-muted-foreground mt-1">CHOOSE A NEW PASSWORD</p>
           </div>
 
-          {!ready ? (
+          {!resetToken ? (
             <div className="text-center text-sm text-muted-foreground py-6">
-              <Loader2 className="h-5 w-5 mx-auto animate-spin mb-3" />
-              Verifying reset link… If nothing happens, request a new link from the sign-in page.
+              No reset token found. Please request a new reset link from the sign-in page.
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-4">

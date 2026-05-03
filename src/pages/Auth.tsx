@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { authApi, setToken } from "@/lib/api";
 import { Captcha } from "@/components/Captcha";
 import { BuildBadge } from "@/components/BuildBadge";
 import { ApiHealthBadge } from "@/components/ApiHealthBadge";
@@ -12,7 +12,6 @@ import { Lock, User as UserIcon, Mail, ShieldCheck, Zap, Crown, Users as UsersIc
 import logo from "@/assets/panther-logo.png";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/accountSwitcher";
 import { setActiveRole } from "@/lib/activeRole";
-import { describeAuthError, isTransientAuthServiceError, withAuthRetry } from "@/lib/authErrors";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 import { Loader2 } from "lucide-react";
 
@@ -21,8 +20,6 @@ type Role = "buyer" | "seller";
 const Auth = () => {
   const nav = useNavigate();
   const loc = useLocation();
-  // Where to send the user after a successful sign-in. Falls back to /shop so
-  // they never get bounced back to /auth.
   const fromPath = (loc.state as { from?: { pathname?: string } } | null)?.from?.pathname;
   const safeFrom = fromPath && !fromPath.startsWith("/auth") && !fromPath.startsWith("/admin-login")
     ? fromPath
@@ -71,93 +68,38 @@ const Auth = () => {
     try {
       if (mode === "signup") {
         const fakeEmail = email || `${username.toLowerCase()}@cruzercc.shop`;
-        const { error } = await supabase.auth.signUp({
-          email: fakeEmail,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: { username },
-          },
-        });
-        if (error) throw error;
+        const result = await authApi.signup({ email: fakeEmail, username, password });
+        setToken(result.token);
         toast.success(role === "seller" ? "Account created — apply to become a seller next" : "Account created — entering the den…");
         nav(role === "seller" ? "/seller/apply" : (safeFrom ?? "/shop"), { replace: true });
       } else {
-        // Resolve username -> real auth email via edge function. This handles
-        // legacy accounts whose auth email doesn't match the @cruzercc.shop
-        // pattern (e.g. users who signed up with a real personal email).
-        let loginEmail = username.trim();
-        const looksLikeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail);
-        if (!looksLikeEmail) {
-          try {
-            const { data: resolved, error: resolveErr } = await supabase.functions.invoke(
-              "resolve-login-email",
-              { body: { identifier: loginEmail } },
-            );
-            if (!resolveErr && resolved?.email) {
-              loginEmail = resolved.email as string;
-            } else {
-              // Fallback to legacy convention so existing users still work.
-              loginEmail = `${loginEmail.toLowerCase()}@cruzercc.shop`;
-            }
-          } catch {
-            loginEmail = `${loginEmail.toLowerCase()}@cruzercc.shop`;
-          }
+        const result = await authApi.login({ identifier: username.trim(), password });
+        setToken(result.token);
+
+        const userRoles = result.user.roles ?? [];
+        const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
+
+        if (isSeller && role !== "seller") {
+          toast.info("This account is locked to seller mode.", {
+            description: "Seller access stays on the seller dashboard and cannot switch back to buyer mode.",
+          });
         }
-        const { data: signInData, error } = await withAuthRetry(
-          () => supabase.auth.signInWithPassword({ email: loginEmail, password }),
-          { onRetry: (n) => setStatusBanner({ kind: "info", title: `Auth service hiccup — retrying (${n}/2)…`, hint: "Hold on, this happens when the backend pool blips." }) }
-        ).then((res) => {
-          if (res.error && isTransientAuthServiceError(res.error)) throw res.error;
-          return res;
-        });
-        if (error) throw error;
 
-        // Validate the chosen role against the user's actual backend roles.
-        // This blocks "buyer logs in as seller" or vice-versa when their account
-        // doesn't carry that role.
-        const uid = signInData.user?.id;
-        if (uid) {
-          const { data: roleRows, error: rolesError } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", uid);
-          if (rolesError) {
-            await supabase.auth.signOut();
-            throw rolesError;
-          }
-          const userRoles = (roleRows ?? []).map((r) => r.role as string);
-          const isSeller = userRoles.includes("seller") || userRoles.includes("admin");
-
-          if (isSeller && role !== "seller") {
-            toast.info("This account is locked to seller mode.", {
-              description: "Seller access stays on the seller dashboard and cannot switch back to buyer mode.",
-            });
-          }
-
-          if (role === "seller" && !isSeller) {
-            await supabase.auth.signOut();
-            toast.error("This account isn't a seller. Apply for a seller account or sign in as a buyer.");
-            setLoading(false);
-            return;
-          }
-          setActiveRole(uid, isSeller ? "seller" : "buyer");
-
-          toast.success("Welcome back, hunter");
-          nav(isSeller ? "/seller" : (safeFrom ?? "/shop"), { replace: true });
+        if (role === "seller" && !isSeller) {
+          setToken("");
+          toast.error("This account isn't a seller. Apply for a seller account or sign in as a buyer.");
+          setLoading(false);
           return;
         }
+        setActiveRole(result.user.id, isSeller ? "seller" : "buyer");
 
         toast.success("Welcome back, hunter");
-        nav(safeFrom ?? "/shop", { replace: true });
+        nav(isSeller ? "/seller" : (safeFrom ?? "/shop"), { replace: true });
       }
     } catch (err: unknown) {
-      if (mode === "login" && isTransientAuthServiceError(err)) {
-        await supabase.auth.signOut();
-      }
-      const friendly = describeAuthError(err);
-      setStatusBanner({ kind: "error", title: friendly.title, hint: friendly.hint });
-      toast.error(friendly.title, friendly.hint ? { description: friendly.hint } : undefined);
+      const msg = err instanceof Error ? err.message : "Login failed";
+      setStatusBanner({ kind: "error", title: msg });
+      toast.error(msg);
     } finally { setLoading(false); }
   };
 
@@ -214,7 +156,6 @@ const Auth = () => {
           </div>
 
           <div className="glass-neon rounded-2xl p-7 panther-claw">
-            {/* Role selector: buyer vs seller. Same backend, different post-login destination. */}
             <div className="grid grid-cols-2 gap-2 mb-4">
               {(["buyer", "seller"] as const).map((r) => (
                 <button
