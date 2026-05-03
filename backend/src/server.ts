@@ -21,6 +21,7 @@ import { siteSettingsRouter } from "./routes/site-settings.js";
 import { depositAddressesRouter } from "./routes/deposit-addresses.js";
 import { priceRulesRouter } from "./routes/price-rules.js";
 import { sellersRouter } from "./routes/sellers.js";
+import { plisioRouter } from "./routes/plisio.js";
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use("/api/site-settings", siteSettingsRouter);
 app.use("/api/deposit-addresses", depositAddressesRouter);
 app.use("/api/price-rules", priceRulesRouter);
 app.use("/api/sellers", sellersRouter);
+app.use("/api/plisio", plisioRouter);
 
 // Error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
