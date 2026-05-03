@@ -22,7 +22,7 @@ jobs:
           VITE_API_BASE: /api
 
       # ── Build backend ──
-      - run: cd backend && npm ci && npm run build
+      - run: cd backend && npm install && npm run build
 
       # ── Deploy via SSH ──
       - name: Deploy to VPS
@@ -49,7 +49,7 @@ jobs:
 
             # ── Backend ──
             cd $APP_DIR/repo/backend
-            npm ci --production
+            npm install
             cp -r dist/* $APP_DIR/backend/dist/
             cp package.json $APP_DIR/backend/
             cp node_modules $APP_DIR/backend/ -r 2>/dev/null || true

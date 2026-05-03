@@ -33,8 +33,7 @@ jobs:
             git pull origin main
             cd backend
             echo "▶ Installing dependencies..."
-            npm ci --omit=dev
-            npm install --no-save typescript tsx @types/node
+            npm install
             echo "▶ Building..."
             npm run build
             echo "▶ Running migrations..."
