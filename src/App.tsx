@@ -31,6 +31,7 @@ import AdminPayouts from "./pages/AdminPayouts";
 import AdminCards from "./pages/AdminCards";
 import AdminRefunds from "./pages/AdminRefunds";
 import AdminDepositAddresses from "./pages/AdminDepositAddresses";
+import AdminPaymentGateway from "./pages/AdminPaymentGateway";
 import News from "./pages/News";
 import BuyerRefunds from "./pages/BuyerRefunds";
 import SellerPriceRules from "./pages/SellerPriceRules";
