@@ -10,7 +10,7 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { cartApi, announcementsApi } from "@/lib/api";
 import { toast } from "sonner";
 
-type Density = "comfortable" | "compact";
+
 
 const baseNav = [
   { to: "/", label: "Home", icon: Home },
