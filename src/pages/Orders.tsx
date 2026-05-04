@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-interface OrderItem { id?: string; price: number; card_snapshot?: Record<string, unknown>; card_id?: string; brand?: string; bin?: string; country?: string; }
+interface OrderItem { id?: string; price: number; card_snapshot?: Record<string, unknown>; card_id?: string; brand?: string; bin?: string; country?: string; last4?: string; city?: string; state?: string; zip?: string; base?: string; exp_month?: string; exp_year?: string; }
 interface Order { id: string; total: number; status: string; created_at: string; order_items?: OrderItem[]; items?: OrderItem[]; }
 
 const Orders = () => {
@@ -40,7 +40,19 @@ const Orders = () => {
     ];
     items.forEach((it, i) => {
       const c = (it.card_snapshot ?? it) as Record<string, string>;
-      lines.push(`${i + 1}. BIN: ${c.bin ?? ""} | Brand: ${c.brand ?? ""} | Country: ${c.country ?? ""} | Price: $${Number(it.price).toFixed(2)}`);
+      const parts = [
+        `BIN: ${c.bin ?? "N/A"}`,
+        `Brand: ${c.brand ?? "N/A"}`,
+        c.last4 ? `Last4: ${c.last4}` : null,
+        `Country: ${c.country ?? "N/A"}`,
+        c.state ? `State: ${c.state}` : null,
+        c.city ? `City: ${c.city}` : null,
+        c.zip ? `ZIP: ${c.zip}` : null,
+        (c.exp_month || c.exp_year) ? `Exp: ${c.exp_month ?? "?"}/${c.exp_year ?? "?"}` : null,
+        c.base ? `Base: ${c.base}` : null,
+        `Price: $${Number(it.price).toFixed(2)}`,
+      ].filter(Boolean);
+      lines.push(`${i + 1}. ${parts.join(" | ")}`);
     });
     const blob = new Blob([lines.join("\n")], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
