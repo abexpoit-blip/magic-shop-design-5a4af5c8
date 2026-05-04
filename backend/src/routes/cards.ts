@@ -201,17 +201,16 @@ cardsRouter.delete("/:id", requireAuth, (req, res) => {
   if (!card) return res.status(404).json({ error: "Not found" });
   if (card.seller_id !== req.user!.id && req.user!.role !== "admin") return res.status(403).json({ error: "Forbidden" });
   
-  // Check if card is referenced in orders (sold cards)
-  if (card.status === "sold") {
-    // Nullify the FK reference in order_items so we can delete
-    db.prepare(`UPDATE order_items SET card_id = NULL WHERE card_id = ?`).run(req.params.id);
-  }
-  
   try {
-    db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
+    db.transaction(() => {
+      // Remove FK references so card can be deleted (snapshot data already stored in order_items columns)
+      db.prepare(`DELETE FROM order_items WHERE card_id = ?`).run(req.params.id);
+      db.prepare(`DELETE FROM cart_items WHERE card_id = ?`).run(req.params.id);
+      db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
+    })();
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(409).json({ error: "Cannot delete: card is referenced by orders" });
+    res.status(500).json({ error: e.message || "Delete failed" });
   }
 });
 
