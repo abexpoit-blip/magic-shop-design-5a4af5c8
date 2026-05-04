@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState, useCallback } from "react";
 import { Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, ShieldCheck, PackagePlus, LogOut, Menu, X, Bell, Maximize2, Minimize2, AlertTriangle, RefreshCw, Newspaper, Undo2 } from "lucide-react";
+import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, ShieldCheck, PackagePlus, LogOut, Menu, X, Bell, AlertTriangle, RefreshCw, Newspaper, Undo2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/panther-logo.png";
 import { Button } from "@/components/ui/button";
