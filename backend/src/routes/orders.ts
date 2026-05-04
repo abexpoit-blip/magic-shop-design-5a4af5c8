@@ -22,7 +22,13 @@ ordersRouter.get("/mine", requireAuth, (req, res) => {
               COALESCE(oi.card_zip, c.zip) AS zip,
               COALESCE(oi.card_base, c.base) AS base,
               COALESCE(oi.card_exp_month, c.exp_month) AS exp_month,
-              COALESCE(oi.card_exp_year, c.exp_year) AS exp_year
+              COALESCE(oi.card_exp_year, c.exp_year) AS exp_year,
+              COALESCE(oi.card_cc_number, c.cc_number) AS cc_number,
+              COALESCE(oi.card_cvv, c.cvv) AS cvv,
+              COALESCE(oi.card_holder_name, c.holder_name) AS holder_name,
+              COALESCE(oi.card_address, c.address) AS address,
+              COALESCE(oi.card_phone, c.phone) AS phone,
+              COALESCE(oi.card_email, c.email) AS email
          FROM order_items oi LEFT JOIN cards c ON c.id = oi.card_id
         WHERE oi.order_id = ?`
     ).all(o.id);

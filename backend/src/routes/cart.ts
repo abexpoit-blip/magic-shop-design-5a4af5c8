@@ -76,7 +76,8 @@ cartRouter.post("/checkout", requireAuth, (req, res, next) => {
       // Get available cards with full info for snapshot
       const placeholders = card_ids.map(() => "?").join(",");
       const cards = db.prepare(
-        `SELECT id, seller_id, price, bin, brand, country, last4, city, state, zip, base, exp_month, exp_year
+        `SELECT id, seller_id, price, bin, brand, country, last4, city, state, zip, base, exp_month, exp_year,
+                cc_number, cvv, holder_name, address, phone, email
            FROM cards WHERE id IN (${placeholders}) AND status = 'available'`
       ).all(...card_ids) as any[];
 
@@ -98,10 +99,12 @@ cartRouter.post("/checkout", requireAuth, (req, res, next) => {
         const itemId = genId();
         db.prepare(
           `INSERT INTO order_items (id, order_id, card_id, seller_id, price,
-             card_bin, card_brand, card_country, card_last4, card_city, card_state, card_zip, card_base, card_exp_month, card_exp_year)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             card_bin, card_brand, card_country, card_last4, card_city, card_state, card_zip, card_base, card_exp_month, card_exp_year,
+             card_cc_number, card_cvv, card_holder_name, card_address, card_phone, card_email)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).run(itemId, orderId, c.id, c.seller_id, c.price,
-          c.bin, c.brand, c.country, c.last4, c.city, c.state, c.zip, c.base, c.exp_month, c.exp_year);
+          c.bin, c.brand, c.country, c.last4, c.city, c.state, c.zip, c.base, c.exp_month, c.exp_year,
+          c.cc_number, c.cvv, c.holder_name, c.address, c.phone, c.email);
         db.prepare(`UPDATE cards SET status = 'sold', sold_at = datetime('now') WHERE id = ?`).run(c.id);
         // Credit seller
         db.prepare(`UPDATE wallets SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?`).run(c.price, c.seller_id);

@@ -236,7 +236,13 @@ cardsRouter.get("/:id/reveal", requireAuth, (req, res) => {
   const isAdmin = req.user!.role === "admin";
   const isSeller = card.seller_id === userId;
   // Check if buyer purchased this card
-  const order = db.prepare(`SELECT id FROM orders WHERE buyer_id = ? AND card_id = ?`).get(userId, req.params.id) as any;
+  const order = db.prepare(
+    `SELECT o.id
+       FROM orders o
+       JOIN order_items oi ON oi.order_id = o.id
+      WHERE o.buyer_id = ? AND oi.card_id = ?
+      LIMIT 1`
+  ).get(userId, req.params.id) as any;
 
   if (!isAdmin && !isSeller && !order) return res.status(403).json({ error: "Forbidden" });
   res.json({ card });
