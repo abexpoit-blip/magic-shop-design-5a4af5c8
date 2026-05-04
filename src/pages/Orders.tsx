@@ -29,15 +29,23 @@ const Orders = () => {
 
   const download = (o: Order) => {
     const items = getItems(o);
-    const lines = ["bin,brand,country,price"];
-    items.forEach((it) => {
+    const date = new Date(o.created_at);
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const lines = [
+      `Order: ${o.id}`,
+      `Date: ${date.toLocaleString()}`,
+      `Total: $${Number(o.total).toFixed(2)}`,
+      `Items: ${items.length}`,
+      `---`,
+    ];
+    items.forEach((it, i) => {
       const c = (it.card_snapshot ?? it) as Record<string, string>;
-      lines.push(`${c.bin ?? ""},${c.brand ?? ""},${c.country ?? ""},${it.price}`);
+      lines.push(`${i + 1}. BIN: ${c.bin ?? ""} | Brand: ${c.brand ?? ""} | Country: ${c.country ?? ""} | Price: $${Number(it.price).toFixed(2)}`);
     });
-    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `order-${o.id.slice(0, 8)}.csv`; a.click();
+    a.href = url; a.download = `order-${dateStr}-${o.id.slice(0, 8)}.txt`; a.click();
     URL.revokeObjectURL(url);
     toast.success("Downloaded");
   };
