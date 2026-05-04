@@ -278,10 +278,16 @@ const Shop = () => {
                     <td className="p-3 text-center font-display text-primary-glow">{Number(c.price).toFixed(2)}</td>
                     <td className="p-3 text-[11px] text-muted-foreground max-w-[180px] truncate" title={c.base}>{c.base}</td>
                     <td className="p-3 text-center">
-                      <button onClick={() => addToCart(c.id)} disabled={cartIds.has(c.id)}
-                        className="text-primary-glow hover:underline text-xs disabled:opacity-40 disabled:no-underline">
-                        {cartIds.has(c.id) ? "In cart" : "Add to cart"}
-                      </button>
+                      {cartIds.has(c.id) ? (
+                        <span className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full bg-success/20 text-success border border-success/40">
+                          <ShoppingCart className="h-3 w-3" />In cart
+                        </span>
+                      ) : (
+                        <button onClick={() => addToCart(c.id)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary-glow text-white shadow-neon hover:shadow-neon-lg hover:scale-105 transition-all duration-200">
+                          <ShoppingCart className="h-3.5 w-3.5" />Add to cart
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

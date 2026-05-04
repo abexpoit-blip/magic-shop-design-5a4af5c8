@@ -163,14 +163,25 @@ cardsRouter.post("/bulk-delete", requireAuth, requireRole("seller", "admin"), (r
   const isAdmin = req.user!.role === "admin";
 
   const placeholders = ids.map(() => "?").join(",");
-  let sql = `DELETE FROM cards WHERE id IN (${placeholders})`;
-  if (!isAdmin) sql += ` AND seller_id = ?`;
 
-  const params = [...ids];
-  if (!isAdmin) params.push(sellerId);
-
-  db.prepare(sql).run(...params);
-  res.json({ ok: true });
+  try {
+    db.transaction(() => {
+      db.pragma("foreign_keys = OFF");
+      // Remove from carts
+      db.prepare(`DELETE FROM cart_items WHERE card_id IN (${placeholders})`).run(...ids);
+      // Delete cards (with ownership check for non-admins)
+      let sql = `DELETE FROM cards WHERE id IN (${placeholders})`;
+      if (!isAdmin) sql += ` AND seller_id = ?`;
+      const params = [...ids];
+      if (!isAdmin) params.push(sellerId);
+      db.prepare(sql).run(...params);
+      db.pragma("foreign_keys = ON");
+    })();
+    res.json({ ok: true });
+  } catch (e: any) {
+    db.pragma("foreign_keys = ON");
+    res.status(500).json({ error: e.message || "Bulk delete failed" });
+  }
 });
 
 // ── Update single card (seller/admin) ──
@@ -197,11 +208,23 @@ cardsRouter.patch("/:id", requireAuth, (req, res) => {
 
 // Delete card (owner or admin)
 cardsRouter.delete("/:id", requireAuth, (req, res) => {
-  const card = db.prepare(`SELECT seller_id FROM cards WHERE id = ?`).get(req.params.id) as any;
+  const card = db.prepare(`SELECT seller_id, status FROM cards WHERE id = ?`).get(req.params.id) as any;
   if (!card) return res.status(404).json({ error: "Not found" });
   if (card.seller_id !== req.user!.id && req.user!.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-  db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
-  res.json({ ok: true });
+  
+  try {
+    db.transaction(() => {
+      // Temporarily disable FK checks so we can delete the card while keeping order_items
+      db.pragma("foreign_keys = OFF");
+      db.prepare(`DELETE FROM cart_items WHERE card_id = ?`).run(req.params.id);
+      db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
+      db.pragma("foreign_keys = ON");
+    })();
+    res.json({ ok: true });
+  } catch (e: any) {
+    db.pragma("foreign_keys = ON");
+    res.status(500).json({ error: e.message || "Delete failed" });
+  }
 });
 
 // ── Reveal full card data (buyer after purchase or seller/admin) ──
