@@ -197,11 +197,22 @@ cardsRouter.patch("/:id", requireAuth, (req, res) => {
 
 // Delete card (owner or admin)
 cardsRouter.delete("/:id", requireAuth, (req, res) => {
-  const card = db.prepare(`SELECT seller_id FROM cards WHERE id = ?`).get(req.params.id) as any;
+  const card = db.prepare(`SELECT seller_id, status FROM cards WHERE id = ?`).get(req.params.id) as any;
   if (!card) return res.status(404).json({ error: "Not found" });
   if (card.seller_id !== req.user!.id && req.user!.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-  db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
-  res.json({ ok: true });
+  
+  // Check if card is referenced in orders (sold cards)
+  if (card.status === "sold") {
+    // Nullify the FK reference in order_items so we can delete
+    db.prepare(`UPDATE order_items SET card_id = NULL WHERE card_id = ?`).run(req.params.id);
+  }
+  
+  try {
+    db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(409).json({ error: "Cannot delete: card is referenced by orders" });
+  }
 });
 
 // ── Reveal full card data (buyer after purchase or seller/admin) ──
