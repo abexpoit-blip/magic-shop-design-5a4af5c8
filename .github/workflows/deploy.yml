@@ -18,6 +18,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          script: |
             set -e
             APP=/var/www/cruzercc
             REPO=https://github.com/abexpoit-blip/magic-shop-design.git
