@@ -110,7 +110,11 @@ jobs:
             npx tsx scripts/seed-admin.ts
 
             # ── Restart backend ──
-            pm2 reload cruzercc-api --update-env 2>/dev/null || pm2 start $APP/backend/ecosystem.config.cjs
+            if pm2 describe cruzercc-api > /dev/null 2>&1; then
+              pm2 reload cruzercc-api --update-env
+            else
+              pm2 start $APP/backend/ecosystem.config.cjs
+            fi
             pm2 save
 
             BACKEND_PORT=$(grep -oP '^PORT=\K\d+' "$BACKEND_ENV" 2>/dev/null || echo "8080")
