@@ -7,6 +7,7 @@ import {
   Wallet, ShoppingBag, User, ArrowRight, CreditCard,
   TrendingDown, Clock, CheckCircle, XCircle, Eye
 } from "lucide-react";
+import { RoleBadge, countryFlag, BrandLogo } from "@/lib/brands";
 
 const Dashboard = () => {
   const { profile, user } = useAuth();
