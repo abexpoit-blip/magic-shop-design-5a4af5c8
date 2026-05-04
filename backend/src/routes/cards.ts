@@ -203,13 +203,15 @@ cardsRouter.delete("/:id", requireAuth, (req, res) => {
   
   try {
     db.transaction(() => {
-      // Remove FK references so card can be deleted (snapshot data already stored in order_items columns)
-      db.prepare(`DELETE FROM order_items WHERE card_id = ?`).run(req.params.id);
+      // Temporarily disable FK checks so we can delete the card while keeping order_items
+      db.pragma("foreign_keys = OFF");
       db.prepare(`DELETE FROM cart_items WHERE card_id = ?`).run(req.params.id);
       db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
+      db.pragma("foreign_keys = ON");
     })();
     res.json({ ok: true });
   } catch (e: any) {
+    db.pragma("foreign_keys = ON");
     res.status(500).json({ error: e.message || "Delete failed" });
   }
 });
