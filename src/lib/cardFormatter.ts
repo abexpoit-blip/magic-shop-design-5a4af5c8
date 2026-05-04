@@ -91,6 +91,24 @@ export function parseCardLine(raw: string): ParsedCard | null {
     zip: "null", country: "null", tel: "null", email: "null",
   };
 
+  // Fast path: already in canonical order
+  if (parts.length >= 12 && isCC(parts[0]) && isMonth(parts[1]) && isYear(parts[2])) {
+    return {
+      cc: norm(parts[0].replace(/\s|-/g, "")),
+      month: norm(parts[1].padStart(2, "0")),
+      year: norm(parts[2].length === 4 ? parts[2].slice(2) : parts[2]),
+      cvv: norm(parts[3] ?? "null"),
+      name: norm(parts[4] ?? "null"),
+      addr: norm(parts[5] ?? "null"),
+      city: norm(parts[6] ?? "null"),
+      state: norm(parts[7] ?? "null"),
+      zip: norm(parts[8] ?? "null"),
+      country: norm(parts[9] ?? "null"),
+      tel: norm(parts[10] ?? "null"),
+      email: norm(parts[11] ?? "null"),
+    };
+  }
+
   const used = new Set<number>();
   const take = (i: number, val: string) => { used.add(i); return norm(val); };
 
