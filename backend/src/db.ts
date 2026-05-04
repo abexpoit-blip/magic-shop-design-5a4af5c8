@@ -105,6 +105,21 @@ addColIfMissing("has_phone", "INTEGER DEFAULT 0");
 addColIfMissing("has_email", "INTEGER DEFAULT 0");
 addColIfMissing("email", "TEXT");
 
+// Add snapshot columns to order_items so downloads work even if cards are deleted
+const addOiCol = (col: string, type: string) => {
+  try { db.exec(`ALTER TABLE order_items ADD COLUMN ${col} ${type}`); } catch { /* exists */ }
+};
+addOiCol("card_bin", "TEXT");
+addOiCol("card_brand", "TEXT");
+addOiCol("card_country", "TEXT");
+addOiCol("card_last4", "TEXT");
+addOiCol("card_city", "TEXT");
+addOiCol("card_state", "TEXT");
+addOiCol("card_zip", "TEXT");
+addOiCol("card_base", "TEXT");
+addOiCol("card_exp_month", "TEXT");
+addOiCol("card_exp_year", "TEXT");
+
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_cards_seller ON cards(seller_id);
   CREATE INDEX IF NOT EXISTS idx_cards_status ON cards(status);

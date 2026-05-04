@@ -73,10 +73,11 @@ cartRouter.post("/checkout", requireAuth, (req, res, next) => {
     const { card_ids } = checkoutSchema.parse(req.body);
 
     const result = db.transaction(() => {
-      // Get available cards
+      // Get available cards with full info for snapshot
       const placeholders = card_ids.map(() => "?").join(",");
       const cards = db.prepare(
-        `SELECT id, seller_id, price FROM cards WHERE id IN (${placeholders}) AND status = 'available'`
+        `SELECT id, seller_id, price, bin, brand, country, last4, city, state, zip, base, exp_month, exp_year
+           FROM cards WHERE id IN (${placeholders}) AND status = 'available'`
       ).all(...card_ids) as any[];
 
       if (cards.length !== card_ids.length) return { error: "Some cards no longer available", status: 409 };
