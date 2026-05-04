@@ -74,9 +74,9 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Role</span>
-                <span className="capitalize font-medium text-foreground">{profile?.role ?? "buyer"}</span>
+                <RoleBadge role={profile?.role ?? "buyer"} />
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Email</span>
