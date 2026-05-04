@@ -102,7 +102,8 @@ const SellerPanel = () => {
   };
 
   const remove = async (id: string) => {
-    try { await cardsApi.del(id); load(); } catch { /* ignore */ }
+    if (!confirm("Delete this card?")) return;
+    try { await cardsApi.del(id); toast.success("Card deleted"); load(); } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Delete failed"); }
   };
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
