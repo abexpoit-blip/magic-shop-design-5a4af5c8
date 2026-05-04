@@ -197,12 +197,11 @@ const Recharge = () => {
   // Fee calculation — user pays deposit + fee on top
   const feePercent = settings.deposit_fee_percent || 2;
   const feeFlat = settings.deposit_fee_flat || 0;
-  const computeFee = (amt: number) => {
-    return (amt * feePercent / 100) + feeFlat;
-  };
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const computeFee = (amt: number) => round2((amt * feePercent / 100) + feeFlat);
   const amtNum = Number(amount) || 0;
   const fee = computeFee(amtNum);
-  const totalToPay = amtNum + fee; // user pays this amount (deposit + fee)
+  const totalToPay = round2(amtNum + fee); // user pays this amount (deposit + fee)
   const MIN_DEPOSIT = 5;
 
   const createInvoice = async () => {
@@ -307,9 +306,10 @@ const Recharge = () => {
                   </p>
                   {(feePercent > 0 || feeFlat > 0) && (
                     <div className="text-xs space-y-0.5 text-muted-foreground">
-                      <p>Fee: -${computeFee(activeInvoice.usd_amount).toFixed(2)}</p>
+                      <p>Fee: +${computeFee(activeInvoice.usd_amount).toFixed(2)}</p>
+                      <p>Total to pay: ${round2(activeInvoice.usd_amount + computeFee(activeInvoice.usd_amount)).toFixed(2)}</p>
                       <p className="text-primary-glow font-bold">
-                        You receive: ${Math.max(0, activeInvoice.usd_amount - computeFee(activeInvoice.usd_amount)).toFixed(2)}
+                        You receive: ${activeInvoice.usd_amount.toFixed(2)}
                       </p>
                     </div>
                   )}
