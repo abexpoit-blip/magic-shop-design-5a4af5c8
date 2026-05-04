@@ -31,12 +31,12 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   const canSell = role === "seller" || isAdmin;
   const effectiveRole: "buyer" | "seller" = canSell ? "seller" : "buyer";
   const roleLabel = isAdmin
-    ? "Admin"
+    ? "🛡️ Admin"
     : effectiveRole === "seller"
-    ? "Seller"
+    ? "✅ Seller"
     : canSell
-    ? "Buyer" // multi-role account currently shopping as a buyer
-    : "Member";
+    ? "🏷️ Buyer"
+    : "🏷️ Member";
   // Skeleton ONLY while genuinely fetching for a logged-in user with no error.
   // The hook guarantees `loading` flips to false within 8s (timeout) so this
   // can never be stuck "true" forever.
