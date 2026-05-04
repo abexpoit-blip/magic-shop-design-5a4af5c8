@@ -245,7 +245,14 @@ const Shop = () => {
                   ))
                 )}
 
-                {!loading && cards.map((c, idx) => (
+                {!loading && cards.map((c, idx) => {
+                  // Auto-detect and fix swapped country/state
+                  const isCountryInState = COUNTRIES.some(ct => ct.code === c.state?.toUpperCase());
+                  const isStateInCountry = c.country && c.country.length <= 3 && !COUNTRIES.some(ct => ct.code === c.country?.toUpperCase());
+                  const displayCountry = (isCountryInState && isStateInCountry) ? c.state : c.country;
+                  const displayState = (isCountryInState && isStateInCountry) ? c.country : c.state;
+
+                  return (
                   <tr key={c.id} className={`border-t border-border/40 hover:bg-primary/5 transition ${idx % 2 ? "bg-secondary/20" : ""}`}>
                     <td className="p-3 text-center">
                       <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} className="accent-primary cursor-pointer" />
@@ -268,11 +275,11 @@ const Shop = () => {
                     <td className="p-3 text-center font-mono">{c.exp_month ?? "—"}</td>
                     <td className="p-3 text-center font-mono">{c.exp_year ?? "—"}</td>
                     <td className="p-3 text-center max-w-[140px] truncate" title={c.city ?? ""}>{c.city ?? "—"}</td>
-                    <td className="p-3 text-center">{c.state ?? "—"}</td>
+                    <td className="p-3 text-center">{displayState ?? "—"}</td>
                     <td className="p-3 text-center font-mono">{c.zip ?? "—"}</td>
                     <td className="p-3 text-center whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        {countryFlag(c.country)} {countryCode(c.country)}
+                        {countryFlag(displayCountry)} {countryCode(displayCountry)}
                       </span>
                     </td>
                     <td className="p-3 text-center text-xs">{c.has_phone ? <span className="text-success">yes</span> : <span className="text-muted-foreground">no</span>}</td>
@@ -294,7 +301,8 @@ const Shop = () => {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
 
                 {noResults && (
                   <tr>
