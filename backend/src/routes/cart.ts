@@ -96,7 +96,12 @@ cartRouter.post("/checkout", requireAuth, (req, res, next) => {
 
       for (const c of cards) {
         const itemId = genId();
-        db.prepare(`INSERT INTO order_items (id, order_id, card_id, seller_id, price) VALUES (?, ?, ?, ?, ?)`).run(itemId, orderId, c.id, c.seller_id, c.price);
+        db.prepare(
+          `INSERT INTO order_items (id, order_id, card_id, seller_id, price,
+             card_bin, card_brand, card_country, card_last4, card_city, card_state, card_zip, card_base, card_exp_month, card_exp_year)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).run(itemId, orderId, c.id, c.seller_id, c.price,
+          c.bin, c.brand, c.country, c.last4, c.city, c.state, c.zip, c.base, c.exp_month, c.exp_year);
         db.prepare(`UPDATE cards SET status = 'sold', sold_at = datetime('now') WHERE id = ?`).run(c.id);
         // Credit seller
         db.prepare(`UPDATE wallets SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?`).run(c.price, c.seller_id);
