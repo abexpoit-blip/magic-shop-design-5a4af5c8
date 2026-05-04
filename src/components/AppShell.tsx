@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState, useCallback } from "react";
 import { Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, ShieldCheck, PackagePlus, LogOut, Menu, X, Bell, Maximize2, Minimize2, AlertTriangle, RefreshCw, Newspaper, Undo2 } from "lucide-react";
+import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, ShieldCheck, PackagePlus, LogOut, Menu, X, Bell, AlertTriangle, RefreshCw, Newspaper, Undo2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/panther-logo.png";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { cartApi, announcementsApi } from "@/lib/api";
 import { toast } from "sonner";
 
-type Density = "comfortable" | "compact";
+
 
 const baseNav = [
   { to: "/", label: "Home", icon: Home },
@@ -45,10 +45,6 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   const nav = useNavigate();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
-  const [density, setDensity] = useState<Density>(() => {
-    if (typeof window === "undefined") return "comfortable";
-    return (localStorage.getItem("nav-density") as Density) || "comfortable";
-  });
   const [cartCount, setCartCount] = useState(0);
   const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -73,11 +69,6 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   useEffect(() => { loadCartCount(); loadAnnouncements(); }, [loadCartCount, loadAnnouncements]);
   // Re-check cart count when navigating
   useEffect(() => { loadCartCount(); }, [loc.pathname, loadCartCount]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-density", density);
-    localStorage.setItem("nav-density", density);
-  }, [density]);
 
   const items = [...baseNav];
   // Only surface the Seller panel link when the user is currently in seller mode
@@ -192,14 +183,6 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
               )}
             </div>
 
-            <button
-              onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}
-              className="nav-icon-btn inline-flex !text-foreground/90 hover:!text-primary-glow"
-              aria-label={`Switch to ${density === "compact" ? "comfortable" : "compact"} density`}
-              title={density === "compact" ? "Switch to comfortable" : "Switch to compact"}
-            >
-              {density === "compact" ? <Maximize2 className="nav-icon" strokeWidth={2} /> : <Minimize2 className="nav-icon" strokeWidth={2} />}
-            </button>
 
             {showProfileError ? (
               <button

@@ -22,9 +22,9 @@ const CRYPTO_URI_PREFIX: Record<string, string> = {
 };
 
 const formatCountdown = (seconds: number) => {
-  if (seconds <= 0) return "00:00";
+  if (!Number.isFinite(seconds) || seconds <= 0) return "00:00";
   const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  const s = Math.floor(seconds % 60);
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 };
 
@@ -118,17 +118,37 @@ const Recharge = () => {
 
   // Countdown timer
   useEffect(() => {
-    if (!activeInvoice?.expires_at) return;
+    if (!activeInvoice?.expires_at) {
+      // If no expires_at, use 30 min from now as fallback
+      if (activeInvoice?.status === "pending") {
+        setCountdown(30 * 60);
+        countdownRef.current = setInterval(() => {
+          setCountdown((prev) => {
+            const next = prev - 1;
+            if (next <= 0) {
+              if (countdownRef.current) clearInterval(countdownRef.current);
+              localStorage.removeItem("cruzercc.activeInvoice");
+              return 0;
+            }
+            return next;
+          });
+        }, 1000);
+        return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+      }
+      return;
+    }
     const parseExpiry = (val: string) => {
-      // Handle Unix timestamp (seconds), ISO string, or numeric string
       const n = Number(val);
-      if (!isNaN(n) && n > 1e9 && n < 1e13) return n * 1000; // Unix seconds
-      if (!isNaN(n) && n > 1e12) return n; // Already ms
+      if (!isNaN(n) && n > 1e9 && n < 1e13) return n * 1000;
+      if (!isNaN(n) && n > 1e12) return n;
       const d = new Date(val).getTime();
       return isNaN(d) ? 0 : d;
     };
     const expMs = parseExpiry(activeInvoice.expires_at);
-    if (!expMs) return;
+    if (!expMs) {
+      setCountdown(30 * 60); // fallback
+      return;
+    }
     const calcRemaining = () => Math.max(0, Math.floor((expMs - Date.now()) / 1000));
     setCountdown(calcRemaining());
     countdownRef.current = setInterval(() => {
@@ -136,12 +156,11 @@ const Recharge = () => {
       setCountdown(remaining);
       if (remaining <= 0) {
         if (countdownRef.current) clearInterval(countdownRef.current);
-        // Auto-clear expired invoice from localStorage
         localStorage.removeItem("cruzercc.activeInvoice");
       }
     }, 1000);
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
-  }, [activeInvoice?.expires_at]);
+  }, [activeInvoice?.expires_at, activeInvoice?.status]);
 
   const isExpired = countdown === 0 && activeInvoice?.expires_at;
 
@@ -506,7 +525,7 @@ const Recharge = () => {
             {history.map((d) => {
               // If pending and older than 30 minutes, show as expired
               const isDepositExpired = d.status === "pending" && (Date.now() - new Date(d.created_at).getTime() > 30 * 60 * 1000);
-              const displayStatus = isDepositExpired ? "expired" : d.status;
+              const displayStatus = isDepositExpired ? "failed" : d.status;
               return (
               <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-border/40">
                 <div>
@@ -524,10 +543,10 @@ const Recharge = () => {
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
                   displayStatus === "approved" ? "bg-success/20 text-success" :
-                  displayStatus === "rejected" || displayStatus === "expired" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"
+                  displayStatus === "rejected" || displayStatus === "failed" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"
                 }`}>
                   {displayStatus === "approved" ? <CheckCircle2 className="h-3 w-3" /> :
-                   displayStatus === "rejected" || displayStatus === "expired" ? <XCircle className="h-3 w-3" /> :
+                   displayStatus === "rejected" || displayStatus === "failed" ? <XCircle className="h-3 w-3" /> :
                    <Clock className="h-3 w-3" />}
                   {displayStatus}
                 </span>
