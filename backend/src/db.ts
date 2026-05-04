@@ -119,6 +119,12 @@ addOiCol("card_zip", "TEXT");
 addOiCol("card_base", "TEXT");
 addOiCol("card_exp_month", "TEXT");
 addOiCol("card_exp_year", "TEXT");
+addOiCol("card_cc_number", "TEXT");
+addOiCol("card_cvv", "TEXT");
+addOiCol("card_holder_name", "TEXT");
+addOiCol("card_address", "TEXT");
+addOiCol("card_phone", "TEXT");
+addOiCol("card_email", "TEXT");
 
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_cards_seller ON cards(seller_id);
