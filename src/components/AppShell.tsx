@@ -70,11 +70,6 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   // Re-check cart count when navigating
   useEffect(() => { loadCartCount(); }, [loc.pathname, loadCartCount]);
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-density", density);
-    localStorage.setItem("nav-density", density);
-  }, [density]);
-
   const items = [...baseNav];
   // Only surface the Seller panel link when the user is currently in seller mode
   // (or is an admin). Buyers in buyer-mode shouldn't see the seller nav even if
