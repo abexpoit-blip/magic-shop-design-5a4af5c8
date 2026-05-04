@@ -5,7 +5,7 @@ import { cardsApi, cartApi, sellersApi } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { COUNTRIES, countryFlag, BrandLogo, detectBrandFromBin } from "@/lib/brands";
+import { COUNTRIES, countryFlag, countryName, countryCode, BrandLogo, detectBrandFromBin } from "@/lib/brands";
 import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, BadgeCheck, Store } from "lucide-react";
 import { TrustBadge } from "@/components/TrustBadge";
 import { toast } from "sonner";
@@ -270,7 +270,11 @@ const Shop = () => {
                     <td className="p-3 text-center max-w-[140px] truncate" title={c.city ?? ""}>{c.city ?? "—"}</td>
                     <td className="p-3 text-center">{c.state ?? "—"}</td>
                     <td className="p-3 text-center font-mono">{c.zip ?? "—"}</td>
-                    <td className="p-3 text-center whitespace-nowrap">{countryFlag(c.country)} {c.country}</td>
+                    <td className="p-3 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        {countryFlag(c.country)} {countryCode(c.country)}
+                      </span>
+                    </td>
                     <td className="p-3 text-center text-xs">{c.has_phone ? <span className="text-success">yes</span> : <span className="text-muted-foreground">no</span>}</td>
                     <td className="p-3 text-center text-xs max-w-[180px] truncate" title={c.email ?? undefined}>
                       {c.email ? <span className="text-foreground">{c.email}</span> : <span className="text-muted-foreground">—</span>}
