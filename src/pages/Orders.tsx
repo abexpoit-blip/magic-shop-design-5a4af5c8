@@ -126,8 +126,8 @@ const Orders = () => {
                   <td className="p-3 font-display text-primary-glow">${Number(o.total).toFixed(2)}</td>
                   <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleString()}</td>
                   <td className="p-3 text-right">
-                    <Button size="sm" variant="outline" onClick={() => download(o)} className="border-primary/40 text-primary-glow">
-                      <Download className="h-3 w-3 mr-1" /> Download
+                    <Button size="sm" variant="outline" onClick={() => download(o)} disabled={downloading === o.id} className="border-primary/40 text-primary-glow">
+                      <Download className="h-3 w-3 mr-1" /> {downloading === o.id ? "Loading…" : "Download"}
                     </Button>
                   </td>
                 </tr>
