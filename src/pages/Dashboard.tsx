@@ -7,6 +7,7 @@ import {
   Wallet, ShoppingBag, User, ArrowRight, CreditCard,
   TrendingDown, Clock, CheckCircle, XCircle, Eye
 } from "lucide-react";
+import { RoleBadge, countryFlag, BrandLogo } from "@/lib/brands";
 
 const Dashboard = () => {
   const { profile, user } = useAuth();
@@ -73,9 +74,9 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Role</span>
-                <span className="capitalize font-medium text-foreground">{profile?.role ?? "buyer"}</span>
+                <RoleBadge role={profile?.role ?? "buyer"} />
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Email</span>
@@ -219,13 +220,12 @@ const Dashboard = () => {
                   </div>
                   {expandedOrder === order.id && order.items && order.items.length > 0 && (
                     <div className="p-3 border-t border-border/30 bg-secondary/10 space-y-1.5">
-                      {order.items.map((item, i) => (
+                    {order.items.map((item, i) => (
                         <div key={i} className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-secondary/30">
                           <div className="flex items-center gap-2 font-mono">
-                            <CreditCard className="h-3.5 w-3.5 text-primary-glow" />
-                            <span>{item.brand ?? "Card"}</span>
-                            <span className="text-muted-foreground">{item.bin}****{item.last4}</span>
-                            <span className="text-muted-foreground">{item.country}</span>
+                            <BrandLogo brand={item.brand ?? "Card"} className="h-4" />
+                            <span>{item.bin}****{item.last4}</span>
+                            <span className="text-muted-foreground">{item.country ? `${countryFlag(item.country)} ${item.country}` : ""}</span>
                           </div>
                           <span className="font-medium">${Number(item.price).toFixed(2)}</span>
                         </div>
