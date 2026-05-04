@@ -6,6 +6,9 @@
 /* cruzercc.shop — Premium Dark Theme. All colors HSL. */
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   :root {
     --background: 240 14% 3.5%;
     --foreground: 45 20% 96%;
