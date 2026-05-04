@@ -194,18 +194,19 @@ const Recharge = () => {
     };
   }, []);
 
-  // Fee calculation
-  const feePercent = settings.deposit_fee_percent || 0;
+  // Fee calculation — user pays deposit + fee on top
+  const feePercent = settings.deposit_fee_percent || 2;
   const feeFlat = settings.deposit_fee_flat || 0;
   const computeFee = (amt: number) => {
     return (amt * feePercent / 100) + feeFlat;
   };
   const amtNum = Number(amount) || 0;
   const fee = computeFee(amtNum);
-  const credited = Math.max(0, amtNum - fee);
+  const totalToPay = amtNum + fee; // user pays this amount (deposit + fee)
+  const MIN_DEPOSIT = 5;
 
   const createInvoice = async () => {
-    if (!amtNum || amtNum < 5) return toast.error("Minimum deposit is $5");
+    if (!amtNum || amtNum < MIN_DEPOSIT) return toast.error(`Minimum deposit is $${MIN_DEPOSIT}`);
     setBusy(true);
     try {
       const inv = await plisioApi.createInvoice({ amount: amtNum, currency });
@@ -417,32 +418,41 @@ const Recharge = () => {
 
                 <div>
                   <label className="text-xs uppercase tracking-wider text-muted-foreground">Amount (USD)</label>
-                  <Input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min={5}
+                  <Input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min={MIN_DEPOSIT}
                     placeholder="50" className="mt-1.5 bg-input/60 text-2xl font-display h-14" />
+                  <p className="text-[10px] text-muted-foreground mt-1">Minimum deposit: ${MIN_DEPOSIT}</p>
                 </div>
 
-                {/* Fee breakdown */}
-                {amtNum > 0 && (feePercent > 0 || feeFlat > 0) && (
+                {/* Fee breakdown — always show when amount entered */}
+                {amtNum > 0 && (
                   <div className="p-3 rounded-xl bg-secondary/30 border border-border/40 space-y-1.5 text-xs">
                     <div className="flex justify-between text-muted-foreground">
                       <span>Deposit amount</span>
                       <span>${amtNum.toFixed(2)}</span>
                     </div>
-                    {feePercent > 0 && (
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Fee ({feePercent}%)</span>
-                        <span>-${(amtNum * feePercent / 100).toFixed(2)}</span>
-                      </div>
+                    {(feePercent > 0 || feeFlat > 0) && (
+                      <>
+                        {feePercent > 0 && (
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Fee ({feePercent}%)</span>
+                            <span>+${(amtNum * feePercent / 100).toFixed(2)}</span>
+                          </div>
+                        )}
+                        {feeFlat > 0 && (
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Flat fee</span>
+                            <span>+${feeFlat.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </>
                     )}
-                    {feeFlat > 0 && (
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Flat fee</span>
-                        <span>-${feeFlat.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="border-t border-border/40 pt-1.5 flex justify-between font-display text-primary-glow">
+                    <div className="border-t border-border/40 pt-1.5 flex justify-between font-display text-primary-glow font-bold">
+                      <span>Total to pay</span>
+                      <span>${totalToPay.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-success font-display">
                       <span>You receive</span>
-                      <span>${credited.toFixed(2)}</span>
+                      <span>${amtNum.toFixed(2)}</span>
                     </div>
                   </div>
                 )}
@@ -462,7 +472,7 @@ const Recharge = () => {
           <section className="glass rounded-2xl p-6">
             <h2 className="font-display tracking-wider mb-3 text-primary-glow">TOP-UP BONUS</h2>
             <ul className="space-y-2.5">
-              {[["$500", "$35 bonus"], ["$1,000", "$100 bonus"], ["$2,000", "$240 bonus"], ["$5,000", "$750 bonus"]].map(([a, b]) => (
+              {[["$50", "$2 bonus"], ["$100", "$5 bonus"], ["$500", "$35 bonus"], ["$1,000", "$100 bonus"], ["$2,000", "$240 bonus"], ["$5,000", "$750 bonus"]].map(([a, b]) => (
                 <li key={a} className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-border/40">
                   <span className="font-display text-foreground">{a}</span>
                   <span className="text-primary-glow font-medium flex items-center gap-1.5">

@@ -59,8 +59,39 @@ export const COUNTRIES: { code: string; name: string; flag: string }[] = [
   { code: "HU", name: "Hungary", flag: "🇭🇺" },
 ];
 
-export const countryFlag = (code?: string | null) =>
-  COUNTRIES.find((c) => c.code === code?.toUpperCase())?.flag ?? "🌐";
+export const countryFlag = (code?: string | null) => {
+  if (!code) return "🌐";
+  const upper = code.toUpperCase().trim();
+  // Try direct code match
+  const byCode = COUNTRIES.find((c) => c.code === upper);
+  if (byCode) return byCode.flag;
+  // Try matching by full country name
+  const byName = COUNTRIES.find((c) => c.name.toUpperCase() === upper);
+  if (byName) return byName.flag;
+  return "🌐";
+};
+
+/** Get country code from country name or code */
+export const countryCode = (input?: string | null): string => {
+  if (!input) return "";
+  const upper = input.toUpperCase().trim();
+  const byCode = COUNTRIES.find((c) => c.code === upper);
+  if (byCode) return byCode.code;
+  const byName = COUNTRIES.find((c) => c.name.toUpperCase() === upper);
+  if (byName) return byName.code;
+  return input.toUpperCase().slice(0, 2);
+};
+
+/** Get full country name from code or name */
+export const countryName = (input?: string | null): string => {
+  if (!input) return "";
+  const upper = input.toUpperCase().trim();
+  const byCode = COUNTRIES.find((c) => c.code === upper);
+  if (byCode) return byCode.name;
+  const byName = COUNTRIES.find((c) => c.name.toUpperCase() === upper);
+  if (byName) return byName.name;
+  return input;
+};
 
 /** Auto-detect card brand from BIN/card number */
 export function detectBrandFromBin(bin: string): string {
