@@ -17,6 +17,8 @@ echo "📦 Installing & building backend..."
 cd backend
 npm install --no-audit --no-fund
 npm run build
+echo "🗄️  Running migrations..."
+npm run migrate || echo "⚠️  Migration warnings (non-fatal)"
 cd ..
 
 echo "♻️  Restarting backend..."
