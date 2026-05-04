@@ -45,10 +45,6 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   const nav = useNavigate();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
-  const [density, setDensity] = useState<Density>(() => {
-    if (typeof window === "undefined") return "comfortable";
-    return (localStorage.getItem("nav-density") as Density) || "comfortable";
-  });
   const [cartCount, setCartCount] = useState(0);
   const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
   const [showNotifs, setShowNotifs] = useState(false);
