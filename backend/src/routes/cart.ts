@@ -81,7 +81,7 @@ cartRouter.post("/checkout", requireAuth, (req, res, next) => {
       ).all(...card_ids) as any[];
 
       if (cards.length !== card_ids.length) return { error: "Some cards no longer available", status: 409 };
-      if (cards.some(c => c.seller_id === req.user!.id)) return { error: "Cannot buy own cards", status: 400 };
+      if (req.user!.role !== "admin" && cards.some(c => c.seller_id === req.user!.id)) return { error: "Cannot buy own cards", status: 400 };
 
       const total = cards.reduce((s, c) => s + Number(c.price), 0);
 

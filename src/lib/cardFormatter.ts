@@ -59,8 +59,31 @@ function splitLine(line: string): string[] {
 export function parseCardLine(raw: string): ParsedCard | null {
   const line = raw.trim();
   if (!line) return null;
-  const parts = splitLine(line).filter((p) => p.length > 0);
+
+  // Skip header lines
+  if (/^(base|cc|card|number)\b/i.test(line)) return null;
+
+  let parts = splitLine(line).filter((p) => p.length > 0);
   if (parts.length === 0) return null;
+
+  // Handle prefix format: base|prices|cc|month|year|cvv|...
+  // Detect if first field looks like a base string (contains underscores + date pattern or $ sign)
+  // and second field looks like a price
+  if (parts.length >= 3 && /[_$]/.test(parts[0]) && !isCC(parts[0].replace(/\s|-/g, ""))) {
+    const maybePrice = parts[1];
+    // If second field is a price-like value (number or $number), skip both base and price prefix
+    if (/^\$?\d+(\.\d+)?$/.test(maybePrice)) {
+      parts = parts.slice(2); // Remove base and price prefix, rest is cc|month|year|cvv|...
+    } else {
+      parts = parts.slice(1); // Remove just the base prefix
+    }
+  }
+
+  // Also handle trailing price field (e.g., |8.00$)
+  const lastField = parts[parts.length - 1];
+  if (lastField && /^\$?\d+(\.\d+)?\$?$/.test(lastField) && parts.length > 12) {
+    parts = parts.slice(0, -1); // Remove trailing price
+  }
 
   const out: ParsedCard = {
     cc: "null", month: "null", year: "null", cvv: "null",
