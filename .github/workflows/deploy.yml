@@ -102,6 +102,9 @@ jobs:
             npm install
             npm run build
 
+            # ── Run DB migrations ──
+            npm run migrate || echo "⚠️  migrate script not found, skipping"
+
             # ── Seed accounts (idempotent — runs every deploy) ──
             cd $APP/backend
             npx tsx scripts/seed-admin.ts

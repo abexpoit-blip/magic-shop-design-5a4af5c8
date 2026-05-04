@@ -31,16 +31,34 @@ depositsRouter.post("/:id/approve", requireAuth, requireRole("admin"), (req, res
   if (!dep) return res.status(404).json({ error: "Not found" });
   if (dep.status !== "pending") return res.status(400).json({ error: "Already decided" });
 
+  // Bonus tiers
+  const amount = Number(dep.amount);
+  const bonusTiers = [
+    { min: 5000, bonus: 750 },
+    { min: 2000, bonus: 240 },
+    { min: 1000, bonus: 100 },
+    { min: 500, bonus: 35 },
+    { min: 100, bonus: 5 },
+    { min: 50, bonus: 2 },
+  ];
+  const tier = bonusTiers.find(t => amount >= t.min);
+  const bonus = tier ? tier.bonus : 0;
+  const totalCredit = Math.round((amount + bonus) * 100) / 100;
+
   db.transaction(() => {
     db.prepare(`UPDATE deposits SET status = 'approved', admin_notes = ?, reviewed_by = ?, reviewed_at = datetime('now') WHERE id = ?`)
       .run(req.body.admin_notes || null, req.user!.id, req.params.id);
     db.prepare(`UPDATE wallets SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?`)
-      .run(dep.amount, dep.user_id);
+      .run(totalCredit, dep.user_id);
     db.prepare(`INSERT INTO transactions (user_id, type, amount, ref_id) VALUES (?, 'deposit', ?, ?)`)
-      .run(dep.user_id, dep.amount, dep.id);
+      .run(dep.user_id, amount, dep.id);
+    if (bonus > 0) {
+      db.prepare(`INSERT INTO transactions (user_id, type, amount, ref_id, note) VALUES (?, 'bonus', ?, ?, ?)`)
+        .run(dep.user_id, bonus, dep.id, `Deposit bonus for $${amount} deposit`);
+    }
   })();
 
-  res.json({ deposit: { id: req.params.id, status: "approved" } });
+  res.json({ deposit: { id: req.params.id, status: "approved", bonus } });
 });
 
 depositsRouter.post("/:id/reject", requireAuth, requireRole("admin"), (req, res) => {
