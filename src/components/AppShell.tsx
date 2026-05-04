@@ -183,14 +183,6 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
               )}
             </div>
 
-            <button
-              onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}
-              className="nav-icon-btn inline-flex !text-foreground/90 hover:!text-primary-glow"
-              aria-label={`Switch to ${density === "compact" ? "comfortable" : "compact"} density`}
-              title={density === "compact" ? "Switch to comfortable" : "Switch to compact"}
-            >
-              {density === "compact" ? <Maximize2 className="nav-icon" strokeWidth={2} /> : <Minimize2 className="nav-icon" strokeWidth={2} />}
-            </button>
 
             {showProfileError ? (
               <button
