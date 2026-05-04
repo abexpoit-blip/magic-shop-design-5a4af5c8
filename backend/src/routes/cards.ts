@@ -163,14 +163,25 @@ cardsRouter.post("/bulk-delete", requireAuth, requireRole("seller", "admin"), (r
   const isAdmin = req.user!.role === "admin";
 
   const placeholders = ids.map(() => "?").join(",");
-  let sql = `DELETE FROM cards WHERE id IN (${placeholders})`;
-  if (!isAdmin) sql += ` AND seller_id = ?`;
 
-  const params = [...ids];
-  if (!isAdmin) params.push(sellerId);
-
-  db.prepare(sql).run(...params);
-  res.json({ ok: true });
+  try {
+    db.transaction(() => {
+      db.pragma("foreign_keys = OFF");
+      // Remove from carts
+      db.prepare(`DELETE FROM cart_items WHERE card_id IN (${placeholders})`).run(...ids);
+      // Delete cards (with ownership check for non-admins)
+      let sql = `DELETE FROM cards WHERE id IN (${placeholders})`;
+      if (!isAdmin) sql += ` AND seller_id = ?`;
+      const params = [...ids];
+      if (!isAdmin) params.push(sellerId);
+      db.prepare(sql).run(...params);
+      db.pragma("foreign_keys = ON");
+    })();
+    res.json({ ok: true });
+  } catch (e: any) {
+    db.pragma("foreign_keys = ON");
+    res.status(500).json({ error: e.message || "Bulk delete failed" });
+  }
 });
 
 // ── Update single card (seller/admin) ──
