@@ -64,13 +64,13 @@ const Orders = () => {
         const month = c.exp_month != null ? String(c.exp_month).padStart(2, "0") : "null";
         const year = c.exp_year != null ? String(c.exp_year) : "null";
         const cvv = c.cvv ?? "null";
-        const name = c.holder_name ?? "null";
-        const addr = c.address ?? "null";
+        const name = c.holder_name ?? c.name ?? "null";
+        const addr = c.address ?? c.addr ?? "null";
         const city = c.city ?? "null";
         const state = c.state ?? "null";
         const zip = c.zip ?? "null";
         const country = c.country ?? "null";
-        const tel = c.phone ?? "null";
+        const tel = c.phone ?? c.tel ?? "null";
         const email = c.email ?? "null";
         const price = `$${Number(it.price).toFixed(2)}`;
         lines.push(`${base}|${cc}|${month}|${year}|${cvv}|${name}|${addr}|${city}|${state}|${zip}|${country}|${tel}|${email}|${price}`);
