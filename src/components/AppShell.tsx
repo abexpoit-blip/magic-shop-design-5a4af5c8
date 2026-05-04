@@ -139,7 +139,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
                 <it.icon className="nav-pill-icon" strokeWidth={1.75} />
                 <span>{it.label}</span>
                 {it.to === "/cart" && cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+                  <span className="absolute -top-2 -right-2 min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-destructive text-white text-[11px] font-bold px-1 shadow-lg ring-2 ring-background z-10 animate-pulse">
                     {cartCount}
                   </span>
                 )}
