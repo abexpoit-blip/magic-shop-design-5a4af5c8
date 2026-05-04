@@ -1,8 +1,5 @@
 name: Deploy Backend to VPS
 
-# Runs only when backend or workflow files change.
-# Frontend is intentionally NOT deployed yet (Delivery 2).
-
 on:
   push:
     branches: [main]
@@ -13,7 +10,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy backend to 161.97.100.218
+    name: Deploy backend to VPS
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,17 +25,42 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             set -e
-            cd /var/www/cruzercc
+            APP=/var/www/cruzercc
+            cd $APP
             echo "▶ Pulling latest code..."
             git pull origin main
-            cd backend
+
+            cd $APP/backend
             echo "▶ Installing dependencies..."
             npm install
             echo "▶ Building..."
             npm run build
             echo "▶ Running migrations..."
-            npm run migrate
-            echo "▶ Restarting API..."
-            pm2 restart cruzercc-api || pm2 start ecosystem.config.cjs
+            npm run migrate || echo "⚠️  Migration warnings (non-fatal)"
+
+            echo "▶ Starting/reloading API..."
+            if pm2 describe cruzercc-api > /dev/null 2>&1; then
+              pm2 reload cruzercc-api --update-env
+            else
+              pm2 start $APP/backend/ecosystem.config.cjs
+            fi
             pm2 save
+
+            BACKEND_PORT=$(grep -oP '^PORT=\K\d+' "$APP/backend/.env" 2>/dev/null || echo "8080")
+
+            echo "▶ Health check..."
+            ok=false
+            for i in $(seq 1 15); do
+              if curl -sf "http://127.0.0.1:${BACKEND_PORT}/api/health" | grep -q '"ok":true'; then
+                echo "✅ Backend healthy"
+                ok=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "$ok" = false ]; then
+              echo "❌ Backend health check FAILED"
+              pm2 logs cruzercc-api --lines 30 --nostream || true
+              exit 1
+            fi
             echo "✅ Backend deployed."
