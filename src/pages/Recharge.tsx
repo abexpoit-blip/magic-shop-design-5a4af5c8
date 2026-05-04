@@ -525,7 +525,7 @@ const Recharge = () => {
             {history.map((d) => {
               // If pending and older than 30 minutes, show as expired
               const isDepositExpired = d.status === "pending" && (Date.now() - new Date(d.created_at).getTime() > 30 * 60 * 1000);
-              const displayStatus = isDepositExpired ? "expired" : d.status;
+              const displayStatus = isDepositExpired ? "failed" : d.status;
               return (
               <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-border/40">
                 <div>
