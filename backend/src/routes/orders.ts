@@ -12,7 +12,17 @@ ordersRouter.get("/mine", requireAuth, (req, res) => {
 
   for (const o of orders) {
     o.items = db.prepare(
-      `SELECT oi.card_id, oi.price, c.brand, c.bin, c.last4, c.country
+      `SELECT oi.card_id, oi.price,
+              COALESCE(oi.card_bin, c.bin) AS bin,
+              COALESCE(oi.card_brand, c.brand) AS brand,
+              COALESCE(oi.card_last4, c.last4) AS last4,
+              COALESCE(oi.card_country, c.country) AS country,
+              COALESCE(oi.card_city, c.city) AS city,
+              COALESCE(oi.card_state, c.state) AS state,
+              COALESCE(oi.card_zip, c.zip) AS zip,
+              COALESCE(oi.card_base, c.base) AS base,
+              COALESCE(oi.card_exp_month, c.exp_month) AS exp_month,
+              COALESCE(oi.card_exp_year, c.exp_year) AS exp_year
          FROM order_items oi LEFT JOIN cards c ON c.id = oi.card_id
         WHERE oi.order_id = ?`
     ).all(o.id);
