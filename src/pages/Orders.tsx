@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ordersApi, cardsApi } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import { Download, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
