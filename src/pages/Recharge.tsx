@@ -543,10 +543,10 @@ const Recharge = () => {
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
                   displayStatus === "approved" ? "bg-success/20 text-success" :
-                  displayStatus === "rejected" || displayStatus === "expired" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"
+                  displayStatus === "rejected" || displayStatus === "failed" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"
                 }`}>
                   {displayStatus === "approved" ? <CheckCircle2 className="h-3 w-3" /> :
-                   displayStatus === "rejected" || displayStatus === "expired" ? <XCircle className="h-3 w-3" /> :
+                   displayStatus === "rejected" || displayStatus === "failed" ? <XCircle className="h-3 w-3" /> :
                    <Clock className="h-3 w-3" />}
                   {displayStatus}
                 </span>
