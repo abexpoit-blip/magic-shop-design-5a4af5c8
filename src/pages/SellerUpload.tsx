@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BRANDS } from "@/lib/brands";
-import { parseAndFormat, dedupe, detectBrand, ParsedCard } from "@/lib/cardFormatter";
-import { Upload, FileText, Wand2, Trash2, Plus, CheckCircle2, AlertTriangle, Sparkles, Eye, Store, BadgeCheck } from "lucide-react";
+import { parseAndFormat, dedupe, detectBrand, ParsedCard, toPipeFormat } from "@/lib/cardFormatter";
+import { Upload, FileText, Wand2, Trash2, Plus, CheckCircle2, AlertTriangle, Sparkles, Eye, Store, BadgeCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 const countryFlag = (cc: string) => {
@@ -26,6 +26,7 @@ const SellerUpload = () => {
   const [raw, setRaw] = useState("");
   const [parsed, setParsed] = useState<ParsedCard[]>([]);
   const [failed, setFailed] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<Array<{ line: string; row: number; errors: string[] }>>([]);
   const [busy, setBusy] = useState(false);
   const [defaultPrice, setDefaultPrice] = useState("1.50");
   const [refundable, setRefundable] = useState(false);
@@ -49,14 +50,44 @@ const SellerUpload = () => {
     autoFix(txt);
   };
 
+  /** Validate a parsed card and return errors */
+  const validateCard = (card: ParsedCard, rowNum: number): string[] => {
+    const errors: string[] = [];
+    if (card.cc === "null" || card.cc.length < 13 || card.cc.length > 19 || !/^\d+$/.test(card.cc))
+      errors.push(`Row ${rowNum}: Invalid CC number (must be 13-19 digits)`);
+    if (card.month === "null" || !/^(0[1-9]|1[0-2])$/.test(card.month))
+      errors.push(`Row ${rowNum}: Invalid month (must be 01-12)`);
+    if (card.year === "null" || !/^\d{2}$/.test(card.year))
+      errors.push(`Row ${rowNum}: Invalid year (must be 2-digit)`);
+    if (card.cvv === "null" || !/^\d{3,4}$/.test(card.cvv))
+      errors.push(`Row ${rowNum}: Missing or invalid CVV (must be 3-4 digits)`);
+    return errors;
+  };
+
   const autoFix = (input: string = raw) => {
     const { lines, failed: f } = parseAndFormat(input);
     const { unique, dropped } = dedupe(lines);
-    setParsed(unique);
+
+    // Validate each parsed card
+    const errors: Array<{ line: string; row: number; errors: string[] }> = [];
+    const valid: ParsedCard[] = [];
+    unique.forEach((card, i) => {
+      const cardErrors = validateCard(card, i + 1);
+      if (cardErrors.length > 0) {
+        errors.push({ line: toPipeFormat(card), row: i + 1, errors: cardErrors });
+      } else {
+        valid.push(card);
+      }
+    });
+
+    setParsed(valid);
     setFailed(f);
+    setValidationErrors(errors);
+
     if (dropped > 0) toast.success(`Cleaned ${unique.length} unique cards (removed ${dropped} duplicates)`);
-    else if (unique.length > 0) toast.success(`Parsed ${unique.length} cards`);
-    if (f.length > 0) toast.warning(`${f.length} lines could not be parsed`);
+    if (valid.length > 0) toast.success(`${valid.length} cards passed validation`);
+    if (errors.length > 0) toast.error(`${errors.length} cards failed validation — check details below`);
+    if (f.length > 0) toast.warning(`${f.length} lines could not be parsed at all`);
   };
 
   const matchPrice = (brand: string, country: string): number => {
@@ -151,8 +182,9 @@ const SellerUpload = () => {
         <div>
           <h1 className="font-display text-3xl font-black neon-text">AUTO-FORMAT UPLOADER</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Paste cards in any format — comma, pipe, tab, semicolon. The parser auto-detects fields,
-            converts to <code className="text-primary-glow">cc|month|year|cvv|name|addr|city|state|zip|country|tel|email</code>,
+            Paste cards in any format — comma, pipe, tab, semicolon. The smart parser auto-detects fields,
+            strips labels (Address:, City:, etc.), removes duplicate countries/addresses,
+            converts to <code className="text-primary-glow">cc|month/year|cvv|name|addr|city|state|zip|country|tel|email</code>,
             removes duplicates, and applies your price rules.
           </p>
         </div>
@@ -265,12 +297,37 @@ const SellerUpload = () => {
           </section>
         )}
 
+        {validationErrors.length > 0 && (
+          <section className="glass rounded-2xl p-6 border border-destructive/30">
+            <div className="flex items-center gap-2 mb-3">
+              <XCircle className="h-5 w-5 text-destructive" />
+              <h3 className="font-display tracking-wider text-destructive">{validationErrors.length} CARDS FAILED VALIDATION</h3>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Expected format: <code className="text-primary-glow">cc|month/year|cvv|name|addr|city|state|zip|country|tel|email</code>
+            </p>
+            <div className="space-y-2 max-h-60 overflow-auto">
+              {validationErrors.map((ve, i) => (
+                <div key={i} className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                  <pre className="text-[11px] font-mono text-muted-foreground whitespace-pre-wrap mb-1">{ve.line}</pre>
+                  {ve.errors.map((err, j) => (
+                    <p key={j} className="text-xs text-destructive flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3 shrink-0" /> {err}
+                    </p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {failed.length > 0 && (
           <section className="glass rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-4 w-4 text-warning" />
               <h3 className="font-display tracking-wider text-warning">{failed.length} UNPARSEABLE LINES</h3>
             </div>
+            <p className="text-xs text-muted-foreground mb-2">These lines couldn't be parsed into any card format at all.</p>
             <pre className="text-[11px] font-mono text-muted-foreground whitespace-pre-wrap max-h-40 overflow-auto">
               {failed.join("\n")}
             </pre>

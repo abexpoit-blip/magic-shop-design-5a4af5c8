@@ -297,7 +297,7 @@
     font-weight: 500;
     letter-spacing: -0.005em;
     color: hsl(240 5% 70%);
-    overflow: hidden;
+    overflow: visible;
     transition: color 0.25s var(--transition-smooth), background-color 0.25s var(--transition-smooth);
   }
   .nav-pill[data-active="true"] {
