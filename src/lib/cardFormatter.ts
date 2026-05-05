@@ -1,5 +1,5 @@
 // Auto-formats messy card lines into the canonical pipe format:
-// cc|month|year|cvv|name|addr|city|state|zip|country|tel|email
+// cc|month/year|cvv|name|addr|city|state|zip|country|tel|email
 // Missing fields are emitted as the literal "null".
 
 export type ParsedCard = {
@@ -7,10 +7,6 @@ export type ParsedCard = {
   name: string; addr: string; city: string; state: string;
   zip: string; country: string; tel: string; email: string;
 };
-
-const FIELDS: (keyof ParsedCard)[] = [
-  "cc", "month", "year", "cvv", "name", "addr", "city", "state", "zip", "country", "tel", "email",
-];
 
 const NULLISH = new Set(["", "null", "n/a", "na", "none", "-", "undefined"]);
 const norm = (s: string) => (NULLISH.has(s.trim().toLowerCase()) ? "null" : s.trim());
@@ -24,6 +20,7 @@ const isZip = (s: string) => /^[A-Z0-9][A-Z0-9\s-]{2,9}$/i.test(s);
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 const isPhone = (s: string) => /^[+()\d][\d\s\-().]{6,}$/.test(s) && /\d{6,}/.test(s.replace(/\D/g, ""));
 const isCountry2 = (s: string) => /^[A-Z]{2}$/.test(s);
+const isCountryFull = (s: string) => /^[A-Za-z\s]{4,30}$/.test(s) && !/\d/.test(s);
 
 export function detectBrand(cc: string): string {
   const n = cc.replace(/\D/g, "");
@@ -36,25 +33,28 @@ export function detectBrand(cc: string): string {
   return "OTHER";
 }
 
+/** Strip common label prefixes like "Address:", "City:", etc. */
+function stripLabel(s: string): string {
+  return s.replace(/^(address|addr|city|state|zip|zipcode|country|phone|tel|email|name|holder)\s*:\s*/i, "").trim();
+}
+
 /** Split a single line by the most likely delimiter. */
 function splitLine(line: string): string[] {
-  // Try pipe, then tab, then semicolon, then comma
   for (const d of ["|", "\t", ";", ","]) {
     if (line.includes(d)) {
-      return line.split(d).map((s) => s.trim());
+      return line.split(d).map((s) => stripLabel(s.trim()));
     }
   }
-  return line.trim().split(/\s{2,}/);
+  return line.trim().split(/\s{2,}/).map((s) => stripLabel(s.trim()));
 }
 
 /**
- * Heuristically maps an arbitrary list of fields to the canonical schema.
- * Strategy:
- *  1. Find the credit-card number (longest digit-run that passes isCC).
- *  2. Look for MM/YY combo right after it; otherwise pick standalone month + year.
- *  3. Take the next 3-4 digit chunk as CVV.
- *  4. Detect email, phone, 2-letter country code anywhere.
- *  5. Detect ZIP (alphanumeric short), state (2-letter or short upper), city, name, address by position/length.
+ * Smart parser that handles:
+ * - Standard format: cc|month|year|cvv|name|addr|city|state|zip|country|tel|email
+ * - Labeled fields: "Address: 123 Main St", "City: Boston"
+ * - Duplicate fields (e.g. double country, double address) — takes first occurrence
+ * - Base/price prefixes stripped automatically
+ * - MM/YY combined expiry fields
  */
 export function parseCardLine(raw: string): ParsedCard | null {
   const line = raw.trim();
@@ -67,22 +67,19 @@ export function parseCardLine(raw: string): ParsedCard | null {
   if (parts.length === 0) return null;
 
   // Handle prefix format: base|prices|cc|month|year|cvv|...
-  // Detect if first field looks like a base string (contains underscores + date pattern or $ sign)
-  // and second field looks like a price
   if (parts.length >= 3 && /[_$]/.test(parts[0]) && !isCC(parts[0].replace(/\s|-/g, ""))) {
     const maybePrice = parts[1];
-    // If second field is a price-like value (number or $number), skip both base and price prefix
     if (/^\$?\d+(\.\d+)?$/.test(maybePrice)) {
-      parts = parts.slice(2); // Remove base and price prefix, rest is cc|month|year|cvv|...
+      parts = parts.slice(2);
     } else {
-      parts = parts.slice(1); // Remove just the base prefix
+      parts = parts.slice(1);
     }
   }
 
-  // Also handle trailing price field (e.g., |8.00$)
+  // Remove trailing price field
   const lastField = parts[parts.length - 1];
   if (lastField && /^\$?\d+(\.\d+)?\$?$/.test(lastField) && parts.length > 12) {
-    parts = parts.slice(0, -1); // Remove trailing price
+    parts = parts.slice(0, -1);
   }
 
   const out: ParsedCard = {
@@ -91,7 +88,7 @@ export function parseCardLine(raw: string): ParsedCard | null {
     zip: "null", country: "null", tel: "null", email: "null",
   };
 
-  // Fast path: already in canonical order
+  // Fast path: already in canonical order (12+ fields starting with cc, month, year)
   if (parts.length >= 12 && isCC(parts[0]) && isMonth(parts[1]) && isYear(parts[2])) {
     return {
       cc: norm(parts[0].replace(/\s|-/g, "")),
@@ -109,11 +106,30 @@ export function parseCardLine(raw: string): ParsedCard | null {
     };
   }
 
+  // Fast path: cc|MM/YY|cvv|name|addr|city|state|zip|country|tel|email (11 fields with combined expiry)
+  if (parts.length >= 11 && isCC(parts[0]) && isMMYY(parts[1])) {
+    const [mm, yy] = parts[1].split(/[\/\-]/);
+    return {
+      cc: norm(parts[0].replace(/\s|-/g, "")),
+      month: norm(mm.padStart(2, "0")),
+      year: norm(yy.length === 4 ? yy.slice(2) : yy),
+      cvv: norm(parts[2] ?? "null"),
+      name: norm(parts[3] ?? "null"),
+      addr: norm(parts[4] ?? "null"),
+      city: norm(parts[5] ?? "null"),
+      state: norm(parts[6] ?? "null"),
+      zip: norm(parts[7] ?? "null"),
+      country: norm(parts[8] ?? "null"),
+      tel: norm(parts[9] ?? "null"),
+      email: norm(parts[10] ?? "null"),
+    };
+  }
+
   const used = new Set<number>();
   const take = (i: number, val: string) => { used.add(i); return norm(val); };
 
   // 1. Credit card number
-  const ccIdx = parts.findIndex((p) => isCC(p));
+  const ccIdx = parts.findIndex((p) => isCC(p.replace(/\s|-/g, "")));
   if (ccIdx === -1) return null;
   out.cc = take(ccIdx, parts[ccIdx].replace(/\s|-/g, ""));
 
@@ -145,9 +161,30 @@ export function parseCardLine(raw: string): ParsedCard | null {
   const telIdx = parts.findIndex((p, i) => !used.has(i) && isPhone(p));
   if (telIdx !== -1) out.tel = take(telIdx, parts[telIdx]);
 
-  // 6. Country (2-letter uppercase)
+  // 6. Country — prefer 2-letter code, then full country name (take FIRST occurrence only)
   const ctIdx = parts.findIndex((p, i) => !used.has(i) && isCountry2(p.toUpperCase()));
-  if (ctIdx !== -1) out.country = take(ctIdx, parts[ctIdx].toUpperCase());
+  if (ctIdx !== -1) {
+    out.country = take(ctIdx, parts[ctIdx].toUpperCase());
+    // Mark any duplicate country fields as used so they're skipped
+    parts.forEach((p, i) => {
+      if (!used.has(i) && (isCountry2(p.toUpperCase()) || p.toUpperCase() === out.country)) {
+        used.add(i);
+      }
+    });
+  } else {
+    // Try full country name — find first match, mark duplicates
+    const fullCtIdx = parts.findIndex((p, i) => !used.has(i) && isCountryFull(p) && p.length >= 4);
+    if (fullCtIdx !== -1) {
+      const countryVal = parts[fullCtIdx].toUpperCase();
+      out.country = take(fullCtIdx, parts[fullCtIdx]);
+      // Mark duplicates
+      parts.forEach((p, i) => {
+        if (!used.has(i) && p.toUpperCase() === countryVal) {
+          used.add(i);
+        }
+      });
+    }
+  }
 
   // 7. Remaining tokens: name, addr, city, state, zip in order
   const remaining = parts.map((p, i) => ({ p, i })).filter(({ i }) => !used.has(i));
@@ -170,6 +207,10 @@ export function parseCardLine(raw: string): ParsedCard | null {
   const addrIdx = rest.findIndex(({ p }) => /\d/.test(p) && /[A-Za-z]/.test(p) && p.length > 5);
   if (addrIdx !== -1) {
     const item = rest[addrIdx]; out.addr = take(item.i, item.p); rest.splice(addrIdx, 1);
+    // Mark duplicate address fields
+    rest.forEach((r, ri) => {
+      if (!used.has(r.i) && r.p === item.p) { used.add(r.i); rest.splice(ri, 1); }
+    });
   } else if (rest.length > 0) {
     const item = rest.shift()!; out.addr = take(item.i, item.p);
   }
@@ -197,8 +238,10 @@ export function parseCardLine(raw: string): ParsedCard | null {
   return out;
 }
 
+/** Output in upload/fixer format: cc|month/year|cvv|name|addr|city|state|zip|country|tel|email */
 export function toPipeFormat(card: ParsedCard): string {
-  return FIELDS.map((f) => card[f]).join("|");
+  const expiry = `${card.month}/${card.year}`;
+  return `${card.cc}|${expiry}|${card.cvv}|${card.name}|${card.addr}|${card.city}|${card.state}|${card.zip}|${card.country}|${card.tel}|${card.email}`;
 }
 
 export function parseAndFormat(input: string): { lines: ParsedCard[]; output: string; failed: string[] } {
