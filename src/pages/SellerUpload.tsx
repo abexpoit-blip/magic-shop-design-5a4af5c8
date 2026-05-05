@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BRANDS } from "@/lib/brands";
-import { parseAndFormat, dedupe, detectBrand, ParsedCard } from "@/lib/cardFormatter";
-import { Upload, FileText, Wand2, Trash2, Plus, CheckCircle2, AlertTriangle, Sparkles, Eye, Store, BadgeCheck } from "lucide-react";
+import { parseAndFormat, dedupe, detectBrand, ParsedCard, toPipeFormat } from "@/lib/cardFormatter";
+import { Upload, FileText, Wand2, Trash2, Plus, CheckCircle2, AlertTriangle, Sparkles, Eye, Store, BadgeCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 const countryFlag = (cc: string) => {
