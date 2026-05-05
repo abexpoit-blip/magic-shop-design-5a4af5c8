@@ -28,6 +28,16 @@ plisioRouter.post("/create-invoice", requireAuth, async (req: Request, res: Resp
       return res.status(400).json({ error: "amount must be positive" });
     }
 
+    // Enforce minimum deposit from site_settings
+    let minDeposit = 5;
+    try {
+      const row = db.prepare(`SELECT value FROM site_settings WHERE key = 'min_deposit'`).get() as any;
+      if (row) minDeposit = Number(JSON.parse(row.value)) || 5;
+    } catch { /* default */ }
+    if (Number(amount) < minDeposit) {
+      return res.status(400).json({ error: `Minimum deposit is $${minDeposit}` });
+    }
+
     const secretKey = getSecretKey();
     const depositId = Array.from(crypto.randomBytes(16)).map(b => b.toString(16).padStart(2, "0")).join("");
 
