@@ -153,7 +153,9 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
                 <it.icon className="nav-pill-icon" strokeWidth={1.75} />
                 <span>{it.label}</span>
                 {it.to === "/cart" && cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-red-600 text-white text-[12px] font-black px-1.5 shadow-[0_0_8px_rgba(239,68,68,0.7)] ring-2 ring-white/30 z-50">
+                  <span
+                    className={`absolute -top-1 -right-1 min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-red-600 text-white text-[12px] font-black px-1.5 shadow-[0_0_8px_rgba(239,68,68,0.7)] ring-2 ring-white/30 z-50 transition-transform duration-300 ${cartBounce ? "scale-125" : "scale-100"}`}
+                  >
                     {cartCount}
                   </span>
                 )}
@@ -321,7 +323,9 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
                   <it.icon className="nav-drawer-icon" strokeWidth={1.75} />
                   <span>{it.label}</span>
                   {it.to === "/cart" && cartCount > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-red-600 text-white text-[12px] font-black px-1.5 shadow-[0_0_8px_rgba(239,68,68,0.7)] ring-2 ring-white/30 z-50">
+                    <span
+                      className={`absolute top-1 right-1 min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-red-600 text-white text-[12px] font-black px-1.5 shadow-[0_0_8px_rgba(239,68,68,0.7)] ring-2 ring-white/30 z-50 transition-transform duration-300 ${cartBounce ? "scale-125" : "scale-100"}`}
+                    >
                       {cartCount}
                     </span>
                   )}
