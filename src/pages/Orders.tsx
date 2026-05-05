@@ -53,7 +53,7 @@ const Orders = () => {
         `Date: ${date.toLocaleString()}`,
         `Total: $${Number(o.total).toFixed(2)}`,
         `Items: ${items.length}`,
-        `Format: base|cc|month|year|cvv|name|addr|city|state|zip|country|tel|email|price`,
+        `Format: base|cc|month/year|cvv|name|address|city|state|zip|country|phonenumber|email|price`,
         `---`,
       ];
 
@@ -63,6 +63,7 @@ const Orders = () => {
         const cc = c.cc_number ?? c.cc_data ?? "N/A";
         const month = c.exp_month != null ? String(c.exp_month).padStart(2, "0") : "null";
         const year = c.exp_year != null ? String(c.exp_year) : "null";
+        const expiry = `${month}/${year}`;
         const cvv = c.cvv ?? "null";
         const name = c.holder_name ?? c.name ?? "null";
         const addr = c.address ?? c.addr ?? "null";
@@ -73,7 +74,7 @@ const Orders = () => {
         const tel = c.phone ?? c.tel ?? "null";
         const email = c.email ?? "null";
         const price = `$${Number(it.price).toFixed(2)}`;
-        lines.push(`${base}|${cc}|${month}|${year}|${cvv}|${name}|${addr}|${city}|${state}|${zip}|${country}|${tel}|${email}|${price}`);
+        lines.push(`${base}|${cc}|${expiry}|${cvv}|${name}|${addr}|${city}|${state}|${zip}|${country}|${tel}|${email}|${price}`);
       }
 
       const blob = new Blob([lines.join("\n")], { type: "text/plain" });
