@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import crypto from "crypto";
 import { db } from "../db.js";
 import { requireAuth, requireRole } from "../auth-middleware.js";
+import { notifyNewDeposit } from "../jobs/plisio-poller.js";
 
 export const plisioRouter = Router();
 
@@ -79,6 +80,9 @@ plisioRouter.post("/create-invoice", requireAuth, async (req: Request, res: Resp
       WHERE id = ?
     `).run(invoice.txn_id, invoice.wallet_hash, Number(invoice.amount), depositId);
 
+    // Activate the poller to track this deposit
+    notifyNewDeposit();
+
     res.json({
       deposit_id: depositId,
       invoice_id: invoice.txn_id,
@@ -91,7 +95,7 @@ plisioRouter.post("/create-invoice", requireAuth, async (req: Request, res: Resp
         ? (typeof invoice.expire_utc === "number"
             ? new Date(invoice.expire_utc * 1000).toISOString()
             : String(invoice.expire_utc))
-        : new Date(Date.now() + 30 * 60 * 1000).toISOString(), // fallback 30 min
+        : new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     });
   } catch (err: any) {
     console.error("[plisio] create-invoice error:", err);
