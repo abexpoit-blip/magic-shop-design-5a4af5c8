@@ -26,6 +26,7 @@ const SellerUpload = () => {
   const [raw, setRaw] = useState("");
   const [parsed, setParsed] = useState<ParsedCard[]>([]);
   const [failed, setFailed] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<Array<{ line: string; row: number; errors: string[] }>>([]);
   const [busy, setBusy] = useState(false);
   const [defaultPrice, setDefaultPrice] = useState("1.50");
   const [refundable, setRefundable] = useState(false);
