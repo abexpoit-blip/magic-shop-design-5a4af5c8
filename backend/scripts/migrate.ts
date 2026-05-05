@@ -11,9 +11,9 @@ const dbPath = process.env.DB_PATH || path.resolve(__dirname, "../../data/cruzer
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 
-// Only run SQLite-compatible migration files (005+)
-// Files 001-004 are legacy PostgreSQL migrations — skip them
-const PG_ONLY_PREFIX = ["001_", "002_", "003_", "004_"];
+// Files 001-005 are legacy PostgreSQL migrations or data fixes that run before schema exists — skip them
+// The SQLite schema is created by db.ts on server startup
+const PG_ONLY_PREFIX = ["001_", "002_", "003_", "004_", "005_"];
 
 const files = fs.readdirSync(sqlDir).filter(f => f.endsWith(".sql")).sort();
 for (const f of files) {
