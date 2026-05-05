@@ -195,7 +195,7 @@ const Recharge = () => {
   }, []);
 
   // Fee calculation — user pays deposit + fee on top
-  const feePercent = settings.deposit_fee_percent || 2;
+  const feePercent = settings.deposit_fee_percent ?? 0;
   const feeFlat = settings.deposit_fee_flat || 0;
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const computeFee = (amt: number) => round2((amt * feePercent / 100) + feeFlat);
