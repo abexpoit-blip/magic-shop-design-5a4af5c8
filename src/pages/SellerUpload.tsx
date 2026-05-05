@@ -182,8 +182,9 @@ const SellerUpload = () => {
         <div>
           <h1 className="font-display text-3xl font-black neon-text">AUTO-FORMAT UPLOADER</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Paste cards in any format — comma, pipe, tab, semicolon. The parser auto-detects fields,
-            converts to <code className="text-primary-glow">cc|month|year|cvv|name|addr|city|state|zip|country|tel|email</code>,
+            Paste cards in any format — comma, pipe, tab, semicolon. The smart parser auto-detects fields,
+            strips labels (Address:, City:, etc.), removes duplicate countries/addresses,
+            converts to <code className="text-primary-glow">cc|month/year|cvv|name|addr|city|state|zip|country|tel|email</code>,
             removes duplicates, and applies your price rules.
           </p>
         </div>
