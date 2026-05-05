@@ -297,12 +297,37 @@ const SellerUpload = () => {
           </section>
         )}
 
+        {validationErrors.length > 0 && (
+          <section className="glass rounded-2xl p-6 border border-destructive/30">
+            <div className="flex items-center gap-2 mb-3">
+              <XCircle className="h-5 w-5 text-destructive" />
+              <h3 className="font-display tracking-wider text-destructive">{validationErrors.length} CARDS FAILED VALIDATION</h3>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Expected format: <code className="text-primary-glow">cc|month/year|cvv|name|addr|city|state|zip|country|tel|email</code>
+            </p>
+            <div className="space-y-2 max-h-60 overflow-auto">
+              {validationErrors.map((ve, i) => (
+                <div key={i} className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                  <pre className="text-[11px] font-mono text-muted-foreground whitespace-pre-wrap mb-1">{ve.line}</pre>
+                  {ve.errors.map((err, j) => (
+                    <p key={j} className="text-xs text-destructive flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3 shrink-0" /> {err}
+                    </p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {failed.length > 0 && (
           <section className="glass rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-4 w-4 text-warning" />
               <h3 className="font-display tracking-wider text-warning">{failed.length} UNPARSEABLE LINES</h3>
             </div>
+            <p className="text-xs text-muted-foreground mb-2">These lines couldn't be parsed into any card format at all.</p>
             <pre className="text-[11px] font-mono text-muted-foreground whitespace-pre-wrap max-h-40 overflow-auto">
               {failed.join("\n")}
             </pre>
