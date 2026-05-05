@@ -56,7 +56,13 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     try {
       const { items } = await cartApi.list();
-      setCartCount((items ?? []).length);
+      const newCount = (items ?? []).length;
+      if (newCount !== prevCartCount.current) {
+        setCartBounce(true);
+        setTimeout(() => setCartBounce(false), 400);
+      }
+      prevCartCount.current = newCount;
+      setCartCount(newCount);
     } catch { /* ignore */ }
   }, [user]);
 
