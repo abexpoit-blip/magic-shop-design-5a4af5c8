@@ -218,13 +218,15 @@ cardsRouter.delete("/:id", requireAuth, (req, res) => {
   if (card.seller_id !== req.user!.id && req.user!.role !== "admin") return res.status(403).json({ error: "Forbidden" });
   
   try {
+    // PRAGMA foreign_keys must be set OUTSIDE a transaction in SQLite
+    db.pragma("foreign_keys = OFF");
     db.transaction(() => {
-      // Temporarily disable FK checks so we can delete the card while keeping order_items
-      db.pragma("foreign_keys = OFF");
       db.prepare(`DELETE FROM cart_items WHERE card_id = ?`).run(req.params.id);
+      db.prepare(`DELETE FROM refund_requests WHERE card_id = ?`).run(req.params.id);
+      db.prepare(`UPDATE order_items SET card_id = NULL WHERE card_id = ?`).run(req.params.id);
       db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
-      db.pragma("foreign_keys = ON");
     })();
+    db.pragma("foreign_keys = ON");
     res.json({ ok: true });
   } catch (e: any) {
     db.pragma("foreign_keys = ON");
