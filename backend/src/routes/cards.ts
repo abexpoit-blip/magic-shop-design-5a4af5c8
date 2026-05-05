@@ -217,8 +217,6 @@ cardsRouter.delete("/:id", requireAuth, (req, res) => {
     db.pragma("foreign_keys = OFF");
     db.transaction(() => {
       db.prepare(`DELETE FROM cart_items WHERE card_id = ?`).run(req.params.id);
-      db.prepare(`DELETE FROM refund_requests WHERE card_id = ?`).run(req.params.id);
-      db.prepare(`UPDATE order_items SET card_id = NULL WHERE card_id = ?`).run(req.params.id);
       db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
     })();
     db.pragma("foreign_keys = ON");
