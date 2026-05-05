@@ -51,7 +51,7 @@ depositsRouter.post("/:id/approve", requireAuth, requireRole("admin"), (req, res
     db.prepare(`UPDATE wallets SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?`)
       .run(totalCredit, dep.user_id);
     db.prepare(`INSERT INTO transactions (user_id, type, amount, ref_id) VALUES (?, 'deposit', ?, ?)`)
-      .run(dep.user_id, totalCredit, dep.id);
+      .run(dep.user_id, amount, dep.id);
     if (bonus > 0) {
       db.prepare(`INSERT INTO transactions (user_id, type, amount, ref_id, meta) VALUES (?, 'adjustment', ?, ?, ?)`)
         .run(dep.user_id, bonus, dep.id, JSON.stringify({ reason: `Deposit bonus for $${amount} deposit` }));
