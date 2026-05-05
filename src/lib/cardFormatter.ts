@@ -56,6 +56,43 @@ function splitLine(line: string): string[] {
  * - Base/price prefixes stripped automatically
  * - MM/YY combined expiry fields
  */
+/**
+ * Remove duplicate consecutive field blocks.
+ * E.g. cc|mm|yy|cvv|name|addr|city|state|zip|country|addr|city|state|zip|country|tel|email
+ * The duplicated addr..country block is removed, keeping the first occurrence.
+ */
+function deduplicateFields(parts: string[]): string[] {
+  // Find the CC index to know where data fields start
+  const ccIdx = parts.findIndex((p) => isCC(p.replace(/\s|-/g, "")));
+  if (ccIdx === -1) return parts;
+
+  // Fields after cc/month/year/cvv/name start at ccIdx+5
+  const dataStart = ccIdx + 5;
+  if (dataStart >= parts.length) return parts;
+
+  const dataFields = parts.slice(dataStart);
+  // Look for a repeated subsequence: try window sizes 3-6
+  for (let winSize = 3; winSize <= 6; winSize++) {
+    if (dataFields.length < winSize * 2) continue;
+    // Check if fields [0..winSize-1] repeat at [winSize..2*winSize-1]
+    for (let start = 0; start <= dataFields.length - winSize * 2; start++) {
+      let match = true;
+      for (let k = 0; k < winSize; k++) {
+        if (dataFields[start + k].toLowerCase() !== dataFields[start + winSize + k].toLowerCase()) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        // Remove the duplicate block
+        const newData = [...dataFields.slice(0, start + winSize), ...dataFields.slice(start + winSize * 2)];
+        return [...parts.slice(0, dataStart), ...newData];
+      }
+    }
+  }
+  return parts;
+}
+
 export function parseCardLine(raw: string): ParsedCard | null {
   const line = raw.trim();
   if (!line) return null;
@@ -76,10 +113,19 @@ export function parseCardLine(raw: string): ParsedCard | null {
     }
   }
 
-  // Remove trailing price field
-  const lastField = parts[parts.length - 1];
-  if (lastField && /^\$?\d+(\.\d+)?\$?$/.test(lastField) && parts.length > 12) {
-    parts = parts.slice(0, -1);
+  // Remove trailing price field(s)
+  while (parts.length > 0) {
+    const lastField = parts[parts.length - 1];
+    if (lastField && /^\$?\d+(\.\d+)?\$?$/.test(lastField)) {
+      parts = parts.slice(0, -1);
+    } else break;
+  }
+
+  // Deduplicate: when input has labeled + unlabeled duplicate fields
+  // (e.g. "Address: 123 Main|City: Denver|...|123 Main|Denver|...")
+  // detect the repeated block and remove it.
+  if (parts.length > 13) {
+    parts = deduplicateFields(parts);
   }
 
   const out: ParsedCard = {
