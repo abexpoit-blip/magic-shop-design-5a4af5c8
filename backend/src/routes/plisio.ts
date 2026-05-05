@@ -49,7 +49,7 @@ plisioRouter.post("/create-invoice", requireAuth, async (req: Request, res: Resp
     `).run(depositId, req.user!.id, amount, `crypto_${currency}`, currency);
 
     // Call Plisio API to create invoice
-    const webhookUrl = `${process.env.BASE_URL || "https://cruzercc.shop"}/api/plisio/webhook`;
+    const webhookUrl = `${process.env.BASE_URL || "https://cruzercc.shop"}/api/plisio/webhook?json=true`;
     const params = new URLSearchParams({
       source_currency: "USD",
       source_amount: String(amount),
@@ -367,19 +367,17 @@ function verifyPlisioSignature(data: Record<string, any>, secretKey: string): bo
   }
 
   // Remove verify_hash from data before computing
-  const payload = { ...data };
-  delete payload.verify_hash;
+  const ordered = { ...data };
+  delete ordered.verify_hash;
 
-  // Plisio signs by sorting keys and concatenating VALUES (not JSON)
-  const message = Object.keys(payload)
-    .sort()
-    .map(key => String(payload[key]))
-    .join("");
-
+  // Plisio Node.js example: JSON.stringify the object (without verify_hash)
+  // and HMAC-SHA1 with the secret key.
+  // See: https://plisio.net/documentation/endpoints/create-an-invoice#verification-example
+  const message = JSON.stringify(ordered);
   const computed = crypto.createHmac("sha1", secretKey).update(message).digest("hex");
 
   if (computed !== receivedSign) {
-    console.warn("[plisio] Signature mismatch. Expected:", receivedSign, "Computed:", computed);
+    console.warn("[plisio] Signature mismatch. Received:", receivedSign, "Computed:", computed, "Payload keys:", Object.keys(ordered).join(","));
   }
 
   return computed === receivedSign;
