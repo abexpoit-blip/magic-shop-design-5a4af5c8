@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import crypto from "crypto";
 import { db } from "../db.js";
-import { requireAuth } from "../auth-middleware.js";
+import { requireAuth, requireRole } from "../auth-middleware.js";
 
 export const plisioRouter = Router();
 
