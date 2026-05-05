@@ -76,10 +76,19 @@ export function parseCardLine(raw: string): ParsedCard | null {
     }
   }
 
-  // Remove trailing price field
-  const lastField = parts[parts.length - 1];
-  if (lastField && /^\$?\d+(\.\d+)?\$?$/.test(lastField) && parts.length > 12) {
-    parts = parts.slice(0, -1);
+  // Remove trailing price field(s)
+  while (parts.length > 0) {
+    const lastField = parts[parts.length - 1];
+    if (lastField && /^\$?\d+(\.\d+)?\$?$/.test(lastField)) {
+      parts = parts.slice(0, -1);
+    } else break;
+  }
+
+  // Deduplicate: when input has labeled + unlabeled duplicate fields
+  // (e.g. "Address: 123 Main|City: Denver|...|123 Main|Denver|...")
+  // detect the repeated block and remove it.
+  if (parts.length > 13) {
+    parts = deduplicateFields(parts);
   }
 
   const out: ParsedCard = {
