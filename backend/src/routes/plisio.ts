@@ -257,20 +257,26 @@ plisioRouter.get("/deposit-status/:depositId", requireAuth, (req: Request, res: 
  */
 function verifyPlisioSignature(data: Record<string, any>, secretKey: string): boolean {
   const receivedSign = data.verify_hash;
-  if (!receivedSign) return false;
+  if (!receivedSign) {
+    console.warn("[plisio] No verify_hash in webhook data");
+    return false;
+  }
 
   // Remove verify_hash from data before computing
   const payload = { ...data };
   delete payload.verify_hash;
 
-  // Sort keys and build the string
-  const sorted = Object.keys(payload).sort().reduce((acc, key) => {
-    acc[key] = payload[key];
-    return acc;
-  }, {} as Record<string, any>);
+  // Plisio signs by sorting keys and concatenating VALUES (not JSON)
+  const message = Object.keys(payload)
+    .sort()
+    .map(key => String(payload[key]))
+    .join("");
 
-  const message = JSON.stringify(sorted);
   const computed = crypto.createHmac("sha1", secretKey).update(message).digest("hex");
+
+  if (computed !== receivedSign) {
+    console.warn("[plisio] Signature mismatch. Expected:", receivedSign, "Computed:", computed);
+  }
 
   return computed === receivedSign;
 }
