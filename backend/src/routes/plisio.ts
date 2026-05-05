@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import crypto from "crypto";
 import { db } from "../db.js";
 import { requireAuth, requireRole } from "../auth-middleware.js";
+import { notifyNewDeposit } from "../jobs/plisio-poller.js";
 
 export const plisioRouter = Router();
 
