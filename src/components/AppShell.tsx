@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState, useCallback } from "react";
+import { ReactNode, useEffect, useState, useCallback, useRef } from "react";
 import { Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Home, Store, ShoppingCart, ListOrdered, Wallet, LifeBuoy, ShieldCheck, PackagePlus, LogOut, Menu, X, Bell, AlertTriangle, RefreshCw, Newspaper, Undo2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
