@@ -33,6 +33,7 @@ const Cart = () => {
     try { await cartApi.remove(id); } catch { /* ignore */ }
     setItems((arr) => arr.filter((i) => i.id !== id));
     setSelected((s) => { const n = new Set(s); n.delete(id); return n; });
+    window.dispatchEvent(new Event("cart-updated"));
   };
 
   const toggle = (id: string) =>
@@ -50,6 +51,7 @@ const Cart = () => {
       const cardIds = selectedItems.map((i) => i.card.id);
       await cartApi.checkout(cardIds);
       toast.success(`Order placed — $${total.toFixed(2)}`);
+      window.dispatchEvent(new Event("cart-updated"));
       await refresh();
       load();
     } catch (e: unknown) {

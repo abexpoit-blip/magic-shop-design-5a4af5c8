@@ -100,6 +100,7 @@ const Shop = () => {
     try {
       await cartApi.add(cardId);
       setCartIds((s) => new Set(s).add(cardId));
+      window.dispatchEvent(new Event("cart-updated"));
       toast.success("Added to cart");
       nav("/cart");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
@@ -114,6 +115,7 @@ const Shop = () => {
       await cartApi.addBatch(ids);
       setCartIds((s) => { const n = new Set(s); ids.forEach((id) => n.add(id)); return n; });
       setSelected(new Set());
+      window.dispatchEvent(new Event("cart-updated"));
       toast.success(`Added ${ids.length} to cart`);
       nav("/cart");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
