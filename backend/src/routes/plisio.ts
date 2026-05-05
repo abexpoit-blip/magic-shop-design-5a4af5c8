@@ -253,6 +253,94 @@ plisioRouter.get("/deposit-status/:depositId", requireAuth, (req: Request, res: 
 });
 
 /**
+ * POST /api/plisio/replay/:depositId
+ * Admin-only: re-fetches the invoice status from Plisio and re-runs the
+ * crediting logic for a stuck deposit. Safe to call multiple times —
+ * already-approved deposits are skipped.
+ */
+plisioRouter.post("/replay/:depositId", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
+  try {
+    const dep = db.prepare(`SELECT * FROM deposits WHERE id = ?`).get(req.params.depositId) as any;
+    if (!dep) return res.status(404).json({ error: "Deposit not found" });
+    if (dep.status === "approved") return res.json({ ok: true, message: "Already approved", deposit_id: dep.id });
+    if (!dep.plisio_invoice_id) return res.status(400).json({ error: "No Plisio invoice linked to this deposit" });
+
+    const secretKey = getSecretKey();
+
+    // Fetch current invoice details from Plisio
+    const apiRes = await fetch(`${PLISIO_API}/operations/${dep.plisio_invoice_id}?api_key=${secretKey}`);
+    const apiData = await apiRes.json() as any;
+
+    if (apiData.status !== "success" || !apiData.data) {
+      console.error("[plisio replay] API error:", apiData);
+      return res.status(502).json({ error: "Failed to fetch invoice from Plisio", detail: apiData });
+    }
+
+    const inv = apiData.data;
+    const plisioStatus = inv.status; // completed, mismatch, pending, expired, etc.
+    const confirmations = Number(inv.confirmations || 0);
+    const sourceTxid = inv.tx_url ? inv.txn_id : null;
+
+    console.log(`[plisio replay] Deposit ${dep.id}: Plisio status=${plisioStatus}, confirmations=${confirmations}`);
+
+    // Update confirmations/txid regardless
+    db.prepare(`UPDATE deposits SET confirmations = ?, txid = COALESCE(txid, ?) WHERE id = ?`)
+      .run(confirmations, sourceTxid, dep.id);
+
+    if (plisioStatus === "completed" || plisioStatus === "mismatch") {
+      const creditAmount = Number(dep.amount);
+      const actualUsd = plisioStatus === "mismatch" && inv.source_amount
+        ? Number(inv.source_amount)
+        : creditAmount;
+
+      // Fetch deposit fee settings
+      let feePercent = 0;
+      let feeFlat = 0;
+      try {
+        const fpRow = db.prepare(`SELECT value FROM site_settings WHERE key = 'deposit_fee_percent'`).get() as any;
+        const ffRow = db.prepare(`SELECT value FROM site_settings WHERE key = 'deposit_fee_flat'`).get() as any;
+        if (fpRow) feePercent = Number(JSON.parse(fpRow.value)) || 0;
+        if (ffRow) feeFlat = Number(JSON.parse(ffRow.value)) || 0;
+      } catch { /* defaults */ }
+
+      const fee = (actualUsd * feePercent / 100) + feeFlat;
+      const credited = Math.max(0, actualUsd - fee);
+
+      db.transaction(() => {
+        db.prepare(`
+          UPDATE deposits SET status = 'approved', admin_notes = ?, reviewed_at = datetime('now')
+          WHERE id = ?
+        `).run(`Replayed by admin (${plisioStatus}, ${confirmations} conf, fee: $${fee.toFixed(2)})`, dep.id);
+
+        db.prepare(`UPDATE wallets SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?`)
+          .run(credited, dep.user_id);
+
+        db.prepare(`INSERT INTO transactions (id, user_id, type, amount, ref_id, meta) VALUES (?, ?, 'deposit', ?, ?, ?)`)
+          .run(
+            Array.from(crypto.randomBytes(16)).map(b => b.toString(16).padStart(2, "0")).join(""),
+            dep.user_id, credited, dep.id,
+            JSON.stringify({ replayed: true, plisio_status: plisioStatus, gross: actualUsd, fee })
+          );
+      })();
+
+      console.log(`[plisio replay] ✅ Credited $${credited.toFixed(2)} to user ${dep.user_id}`);
+      return res.json({ ok: true, action: "credited", credited, gross: actualUsd, fee, plisio_status: plisioStatus });
+    }
+
+    if (plisioStatus === "expired" || plisioStatus === "cancelled") {
+      db.prepare(`UPDATE deposits SET status = 'rejected', admin_notes = ? WHERE id = ?`)
+        .run(`Replayed: Plisio status ${plisioStatus}`, dep.id);
+      return res.json({ ok: true, action: "rejected", plisio_status: plisioStatus });
+    }
+
+    // Still pending/new
+    return res.json({ ok: true, action: "no_change", plisio_status: plisioStatus, confirmations });
+  } catch (err: any) {
+    console.error("[plisio replay] Error:", err);
+    res.status(500).json({ error: err.message || "Internal error" });
+  }
+});
+
  * Verify Plisio webhook signature.
  * Plisio signs webhooks with HMAC-SHA1 of the JSON body sorted by keys.
  */
