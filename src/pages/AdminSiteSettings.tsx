@@ -100,7 +100,7 @@ const AdminSiteSettings = () => {
               <Input type="number" step="0.01" min="0" value={s.min_card_price} onChange={(e) => set("min_card_price", Number(e.target.value))} />
             </Field>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
             <Field label="Deposit fee (%)">
               <Input type="number" step="0.1" min="0" max="100" value={s.deposit_fee_percent} onChange={(e) => set("deposit_fee_percent", Number(e.target.value))} />
               <p className="text-[10px] text-muted-foreground mt-1">Percentage deducted from each deposit (e.g. 5 = 5%)</p>
@@ -108,6 +108,10 @@ const AdminSiteSettings = () => {
             <Field label="Deposit flat fee ($)">
               <Input type="number" step="0.01" min="0" value={s.deposit_fee_flat} onChange={(e) => set("deposit_fee_flat", Number(e.target.value))} />
               <p className="text-[10px] text-muted-foreground mt-1">Fixed USD amount deducted from each deposit</p>
+            </Field>
+            <Field label="Minimum deposit ($)">
+              <Input type="number" step="0.01" min="0" value={s.min_deposit} onChange={(e) => set("min_deposit", Number(e.target.value))} />
+              <p className="text-[10px] text-muted-foreground mt-1">Users cannot deposit less than this amount</p>
             </Field>
           </div>
         </Section>

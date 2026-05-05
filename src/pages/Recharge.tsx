@@ -195,14 +195,14 @@ const Recharge = () => {
   }, []);
 
   // Fee calculation — user pays deposit + fee on top
-  const feePercent = settings.deposit_fee_percent || 2;
+  const feePercent = settings.deposit_fee_percent ?? 0;
   const feeFlat = settings.deposit_fee_flat || 0;
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const computeFee = (amt: number) => round2((amt * feePercent / 100) + feeFlat);
   const amtNum = Number(amount) || 0;
   const fee = computeFee(amtNum);
   const totalToPay = round2(amtNum + fee); // user pays this amount (deposit + fee)
-  const MIN_DEPOSIT = 5;
+  const MIN_DEPOSIT = settings.min_deposit || 5;
 
   const createInvoice = async () => {
     if (!amtNum || amtNum < MIN_DEPOSIT) return toast.error(`Minimum deposit is $${MIN_DEPOSIT}`);
