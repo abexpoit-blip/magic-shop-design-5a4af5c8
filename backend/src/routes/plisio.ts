@@ -355,6 +355,7 @@ plisioRouter.post("/replay/:depositId", requireAuth, requireRole("admin"), async
   }
 });
 
+/**
  * Verify Plisio webhook signature.
  * Plisio signs webhooks with HMAC-SHA1 of the JSON body sorted by keys.
  */
