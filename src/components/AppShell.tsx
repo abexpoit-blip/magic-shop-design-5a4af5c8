@@ -77,6 +77,12 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   useEffect(() => { loadCartCount(); loadAnnouncements(); }, [loadCartCount, loadAnnouncements]);
   // Re-check cart count when navigating
   useEffect(() => { loadCartCount(); }, [loc.pathname, loadCartCount]);
+  // Listen for custom "cart-updated" events from Cart/Shop pages for instant badge update
+  useEffect(() => {
+    const handler = () => loadCartCount();
+    window.addEventListener("cart-updated", handler);
+    return () => window.removeEventListener("cart-updated", handler);
+  }, [loadCartCount]);
 
   const items = [...baseNav];
   // Only surface the Seller panel link when the user is currently in seller mode
