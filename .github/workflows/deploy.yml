@@ -12,7 +12,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -23,69 +23,19 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          command_timeout: 8m
+          command_timeout: 14m
           script: |
-            set -e
+            set -euo pipefail
             APP=/var/www/cruzercc
-            BACKEND_ENV="$APP/backend/.env"
 
-            echo "▶ Pulling latest code..."
-            mkdir -p $APP/frontend $APP/data /var/log/cruzercc
+            echo "▶ Preparing app directory..."
             if [ ! -d "$APP/.git" ]; then
               rm -rf $APP
               git clone https://github.com/abexpoit-blip/magic-shop-design.git $APP
             fi
+
             cd $APP
             git fetch origin main
             git reset --hard origin/main
-
-            echo "▶ Building frontend..."
-            npm ci --no-audit --no-fund
-            VITE_API_BASE=/api npm run build
-            rm -rf $APP/frontend/*
-            cp -r dist/* $APP/frontend/
-
-            echo "▶ Building backend..."
-            cd $APP/backend
-            npm ci --no-audit --no-fund
-            npm run build
-
-            echo "▶ Running migrations..."
-            npm run migrate || echo "⚠️  Migration warnings (non-fatal)"
-
-            echo "▶ Seeding accounts..."
-            npx tsx scripts/seed-admin.ts || echo "⚠️  Seed warnings (non-fatal)"
-
-            echo "▶ Restarting API..."
-            if pm2 describe cruzercc-api > /dev/null 2>&1; then
-              pm2 reload cruzercc-api --update-env
-            else
-              pm2 start $APP/backend/ecosystem.config.cjs
-            fi
-            pm2 save
-
-            BACKEND_PORT=$(grep -oP '^PORT=\K\d+' "$BACKEND_ENV" 2>/dev/null || echo "8080")
-
-            echo "▶ Updating nginx..."
-            cd $APP
-            sed "s|127.0.0.1:8080|127.0.0.1:${BACKEND_PORT}|g" nginx/cruzercc.conf > /etc/nginx/sites-available/cruzercc
-            rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/cruzercc.shop /etc/nginx/sites-enabled/cruzercc.conf /etc/nginx/sites-enabled/cruzercc-api.conf
-            ln -sf /etc/nginx/sites-available/cruzercc /etc/nginx/sites-enabled/cruzercc
-            nginx -t && systemctl reload nginx
-
-            echo "▶ Health check..."
-            ok=false
-            for i in $(seq 1 15); do
-              if curl -sf "http://127.0.0.1:${BACKEND_PORT}/api/health" | grep -q '"ok":true'; then
-                ok=true
-                break
-              fi
-              sleep 2
-            done
-            if [ "$ok" = false ]; then
-              echo "❌ API health check FAILED"
-              pm2 logs cruzercc-api --lines 30 --nostream || true
-              exit 1
-            fi
-
-            echo "✅ Deploy complete — API healthy on port ${BACKEND_PORT}"
+            chmod +x $APP/deploy.sh
+            DEPLOY_SKIP_GIT_PULL=1 $APP/deploy.sh
