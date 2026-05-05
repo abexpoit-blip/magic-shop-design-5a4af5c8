@@ -202,7 +202,7 @@ const Recharge = () => {
   const amtNum = Number(amount) || 0;
   const fee = computeFee(amtNum);
   const totalToPay = round2(amtNum + fee); // user pays this amount (deposit + fee)
-  const MIN_DEPOSIT = 5;
+  const MIN_DEPOSIT = settings.min_deposit || 5;
 
   const createInvoice = async () => {
     if (!amtNum || amtNum < MIN_DEPOSIT) return toast.error(`Minimum deposit is $${MIN_DEPOSIT}`);
