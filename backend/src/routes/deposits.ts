@@ -20,9 +20,31 @@ depositsRouter.get("/mine", requireAuth, (req, res) => {
 
 depositsRouter.get("/", requireAuth, requireRole("admin"), (req, res) => {
   const status = req.query.status as string | undefined;
-  const rows = status
-    ? db.prepare(`SELECT * FROM deposits WHERE status = ? ORDER BY created_at DESC`).all(status)
-    : db.prepare(`SELECT * FROM deposits ORDER BY created_at DESC`).all();
+  const search = req.query.search as string | undefined;
+
+  let query = `SELECT d.*, u.email as user_email, u.username as user_username
+               FROM deposits d LEFT JOIN users u ON d.user_id = u.id`;
+  const conditions: string[] = [];
+  const params: any[] = [];
+
+  if (status) {
+    conditions.push("d.status = ?");
+    params.push(status);
+  }
+
+  if (search) {
+    const like = `%${search}%`;
+    conditions.push("(u.email LIKE ? OR u.username LIKE ? OR d.plisio_invoice_id LIKE ? OR d.txid LIKE ? OR d.id LIKE ?)");
+    params.push(like, like, like, like, like);
+  }
+
+  if (conditions.length > 0) {
+    query += " WHERE " + conditions.join(" AND ");
+  }
+
+  query += " ORDER BY d.created_at DESC LIMIT 200";
+
+  const rows = db.prepare(query).all(...params);
   res.json({ deposits: rows });
 });
 

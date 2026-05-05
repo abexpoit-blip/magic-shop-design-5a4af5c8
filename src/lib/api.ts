@@ -218,7 +218,8 @@ export const depositsApi = {
   submit: (data: { amount: number; method: string; proof_url?: string; note?: string }) =>
     api.post<{ deposit: Record<string, unknown> }>("/deposits", data),
   mine: () => api.get<{ deposits: Array<Record<string, unknown>> }>("/deposits/mine"),
-  all: (status?: string) => api.get<{ deposits: Array<Record<string, unknown>> }>("/deposits", { status }),
+  all: (params?: { status?: string; search?: string }) =>
+    api.get<{ deposits: Array<Record<string, unknown>> }>("/deposits", params),
   approve: (id: string, admin_notes?: string) =>
     api.post<{ deposit: Record<string, unknown> }>(`/deposits/${id}/approve`, { admin_notes }),
   reject: (id: string, admin_notes?: string) =>

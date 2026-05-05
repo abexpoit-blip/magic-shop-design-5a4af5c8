@@ -56,6 +56,7 @@ export const refreshSiteSettings = async (): Promise<SiteSettings> => {
       ticker_items: Array.isArray(row?.ticker_items)
         ? (row!.ticker_items as string[])
         : DEFAULT_SETTINGS.ticker_items,
+      min_deposit: (row?.min_deposit != null && Number(row.min_deposit) > 0) ? Number(row.min_deposit) : DEFAULT_SETTINGS.min_deposit,
     };
     broadcast(merged);
     return merged;
