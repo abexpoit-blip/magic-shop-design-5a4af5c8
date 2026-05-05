@@ -168,12 +168,7 @@ cardsRouter.post("/bulk-delete", requireAuth, requireRole("seller", "admin"), (r
     // PRAGMA foreign_keys must be set OUTSIDE a transaction in SQLite
     db.pragma("foreign_keys = OFF");
     db.transaction(() => {
-      // Remove from carts
       db.prepare(`DELETE FROM cart_items WHERE card_id IN (${placeholders})`).run(...ids);
-      // Remove from refund_requests
-      db.prepare(`DELETE FROM refund_requests WHERE card_id IN (${placeholders})`).run(...ids);
-      // Nullify card_id in order_items to preserve order history
-      db.prepare(`UPDATE order_items SET card_id = NULL WHERE card_id IN (${placeholders})`).run(...ids);
       // Delete cards (with ownership check for non-admins)
       let sql = `DELETE FROM cards WHERE id IN (${placeholders})`;
       if (!isAdmin) sql += ` AND seller_id = ?`;
