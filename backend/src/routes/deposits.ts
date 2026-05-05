@@ -53,8 +53,8 @@ depositsRouter.post("/:id/approve", requireAuth, requireRole("admin"), (req, res
     db.prepare(`INSERT INTO transactions (user_id, type, amount, ref_id) VALUES (?, 'deposit', ?, ?)`)
       .run(dep.user_id, amount, dep.id);
     if (bonus > 0) {
-      db.prepare(`INSERT INTO transactions (user_id, type, amount, ref_id, note) VALUES (?, 'bonus', ?, ?, ?)`)
-        .run(dep.user_id, bonus, dep.id, `Deposit bonus for $${amount} deposit`);
+      db.prepare(`INSERT INTO transactions (user_id, type, amount, ref_id, meta) VALUES (?, 'adjustment', ?, ?, ?)`)
+        .run(dep.user_id, bonus, dep.id, JSON.stringify({ reason: `Deposit bonus for $${amount} deposit` }));
     }
   })();
 
