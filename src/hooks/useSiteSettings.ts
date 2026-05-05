@@ -13,6 +13,7 @@ export interface SiteSettings {
   min_card_price: number;
   deposit_fee_percent: number;
   deposit_fee_flat: number;
+  min_deposit: number;
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -34,6 +35,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   min_card_price: 1,
   deposit_fee_percent: 0,
   deposit_fee_flat: 0,
+  min_deposit: 5,
 };
 
 let cache: SiteSettings | null = null;
