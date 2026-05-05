@@ -110,5 +110,5 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 const port = Number(process.env.PORT ?? 8080);
 app.listen(port, () => {
   console.log(`✅ cruzercc API on :${port}`);
-  startPlisioPoller();
+  resumePollerIfNeeded();
 });
