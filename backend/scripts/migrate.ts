@@ -1,19 +1,19 @@
 import "dotenv/config";
+
+// Import db.ts FIRST — this creates all SQLite tables & seeds admin
+// before we attempt any data migrations
+import { db } from "../src/db.js";
+
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const sqlDir = path.resolve(__dirname, "../sql");
-const dbPath = process.env.DB_PATH || path.resolve(__dirname, "../../data/cruzercc.db");
 
-const db = new Database(dbPath);
-db.pragma("journal_mode = WAL");
-
-// Files 001-005 are legacy PostgreSQL migrations or data fixes that run before schema exists — skip them
-// The SQLite schema is created by db.ts on server startup
-const PG_ONLY_PREFIX = ["001_", "002_", "003_", "004_", "005_"];
+// Files 001-004 are legacy PostgreSQL migrations — skip them
+// File 005 is a data fix that's safe to run now that db.ts has created all tables
+const PG_ONLY_PREFIX = ["001_", "002_", "003_", "004_"];
 
 const files = fs.readdirSync(sqlDir).filter(f => f.endsWith(".sql")).sort();
 for (const f of files) {
@@ -35,5 +35,4 @@ for (const f of files) {
     }
   }
 }
-db.close();
 console.log("✅ All migrations complete");
