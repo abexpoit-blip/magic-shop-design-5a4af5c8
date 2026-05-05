@@ -165,9 +165,9 @@ cardsRouter.post("/bulk-delete", requireAuth, requireRole("seller", "admin"), (r
   const placeholders = ids.map(() => "?").join(",");
 
   try {
+    // PRAGMA foreign_keys must be set OUTSIDE a transaction in SQLite
+    db.pragma("foreign_keys = OFF");
     db.transaction(() => {
-      db.pragma("foreign_keys = OFF");
-      // Remove from carts
       db.prepare(`DELETE FROM cart_items WHERE card_id IN (${placeholders})`).run(...ids);
       // Delete cards (with ownership check for non-admins)
       let sql = `DELETE FROM cards WHERE id IN (${placeholders})`;
@@ -175,8 +175,8 @@ cardsRouter.post("/bulk-delete", requireAuth, requireRole("seller", "admin"), (r
       const params = [...ids];
       if (!isAdmin) params.push(sellerId);
       db.prepare(sql).run(...params);
-      db.pragma("foreign_keys = ON");
     })();
+    db.pragma("foreign_keys = ON");
     res.json({ ok: true });
   } catch (e: any) {
     db.pragma("foreign_keys = ON");
@@ -213,13 +213,13 @@ cardsRouter.delete("/:id", requireAuth, (req, res) => {
   if (card.seller_id !== req.user!.id && req.user!.role !== "admin") return res.status(403).json({ error: "Forbidden" });
   
   try {
+    // PRAGMA foreign_keys must be set OUTSIDE a transaction in SQLite
+    db.pragma("foreign_keys = OFF");
     db.transaction(() => {
-      // Temporarily disable FK checks so we can delete the card while keeping order_items
-      db.pragma("foreign_keys = OFF");
       db.prepare(`DELETE FROM cart_items WHERE card_id = ?`).run(req.params.id);
       db.prepare(`DELETE FROM cards WHERE id = ?`).run(req.params.id);
-      db.pragma("foreign_keys = ON");
     })();
+    db.pragma("foreign_keys = ON");
     res.json({ ok: true });
   } catch (e: any) {
     db.pragma("foreign_keys = ON");
