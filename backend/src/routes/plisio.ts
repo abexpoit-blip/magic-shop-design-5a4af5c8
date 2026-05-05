@@ -111,6 +111,7 @@ plisioRouter.post("/webhook", async (req: Request, res: Response) => {
   try {
     const data = req.body;
     console.log("[plisio webhook] Received:", JSON.stringify(data));
+    console.log("[plisio webhook] Content-Type:", req.headers["content-type"]);
 
     // Verify signature
     const secretKey = getSecretKey();
