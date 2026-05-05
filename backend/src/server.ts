@@ -24,6 +24,7 @@ import { depositAddressesRouter } from "./routes/deposit-addresses.js";
 import { priceRulesRouter } from "./routes/price-rules.js";
 import { sellersRouter } from "./routes/sellers.js";
 import { plisioRouter } from "./routes/plisio.js";
+import { startPlisioPoller } from "./jobs/plisio-poller.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -107,4 +108,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 const port = Number(process.env.PORT ?? 8080);
-app.listen(port, () => console.log(`✅ cruzercc API on :${port}`));
+app.listen(port, () => {
+  console.log(`✅ cruzercc API on :${port}`);
+  startPlisioPoller();
+});
