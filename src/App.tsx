@@ -53,7 +53,7 @@ const App = () => (
             {/* Public auth pages */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/seller-login" element={<SellerLogin />} />
-            <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/crzr-x9k2-panel" element={<AdminLogin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin/reset-password" element={<ResetPassword />} />
 
