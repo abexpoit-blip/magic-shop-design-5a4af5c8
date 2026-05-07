@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
-import { countryFlag, brandEmoji, detectBrandFromBin, RoleBadge, CatalogBrandIcon } from "@/lib/brands";
+import { countryFlag, brandEmoji, detectBrandFromBin, RoleBadge, CatalogBrandIcon, BrandIcon } from "@/lib/brands";
 
 const Index = () => {
   const { profile } = useAuth();
