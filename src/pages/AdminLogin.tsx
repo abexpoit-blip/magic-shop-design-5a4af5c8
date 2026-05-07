@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2, ArrowLeft, ArrowRight, AlertCircle, WifiOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-const ADMIN_LOGIN_URL = "https://cruzercc.shop/admin-login";
+const ADMIN_LOGIN_URL = "https://cruzercc.shop/crzr-x9k2-panel";
 const API_BASE_URL = "https://cruzercc.shop/api";
 
 const AdminLogin = () => {
