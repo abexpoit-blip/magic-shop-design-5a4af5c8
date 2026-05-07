@@ -116,32 +116,35 @@ export function brandEmoji(brand: string): string {
 
 const VisaLogo = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 780 500" className={className} xmlns="http://www.w3.org/2000/svg">
-    <path d="M293.2 348.73l33.36-195.76h53.35l-33.38 195.76H293.2zm246.11-191.54c-10.57-3.97-27.16-8.2-47.89-8.2-52.84 0-90.08 26.58-90.36 64.62-.28 28.14 26.5 43.82 46.73 53.18 20.78 9.6 27.77 15.72 27.68 24.3-.14 13.12-16.58 19.12-31.91 19.12-21.35 0-32.67-2.96-50.18-10.27l-6.88-3.11-7.49 43.87c12.46 5.46 35.52 10.2 59.47 10.44 56.19 0 92.7-26.27 93.12-66.88.2-22.28-14.02-39.22-44.8-53.2-18.65-9.06-30.08-15.1-29.96-24.29 0-8.14 9.67-16.84 30.56-16.84 17.45-.28 30.1 3.53 39.94 7.5l4.78 2.26 7.19-42.5zm137.31-4.22h-41.34c-12.81 0-22.39 3.49-28.02 16.25l-79.49 179.51h56.18s9.17-24.14 11.25-29.43l68.55.07c1.6 7.27 6.52 29.36 6.52 29.36h49.64l-43.29-195.76zm-65.95 126.41c4.43-11.3 21.33-54.86 21.33-54.86-.31.52 4.39-11.36 7.1-18.74l3.62 16.93s10.25 46.81 12.39 56.67h-44.44zM238.58 152.97L186.1 290.26l-5.6-27.19c-9.74-31.28-40.09-65.18-74.06-82.12l47.89 167.67 56.56-.07 84.15-195.58h-56.46z" fill="#1a1f71"/>
+    <rect width="780" height="500" rx="40" fill="#1a1f71"/>
+    <path d="M293.2 348.73l33.36-195.76h53.35l-33.38 195.76H293.2zm246.11-191.54c-10.57-3.97-27.16-8.2-47.89-8.2-52.84 0-90.08 26.58-90.36 64.62-.28 28.14 26.5 43.82 46.73 53.18 20.78 9.6 27.77 15.72 27.68 24.3-.14 13.12-16.58 19.12-31.91 19.12-21.35 0-32.67-2.96-50.18-10.27l-6.88-3.11-7.49 43.87c12.46 5.46 35.52 10.2 59.47 10.44 56.19 0 92.7-26.27 93.12-66.88.2-22.28-14.02-39.22-44.8-53.2-18.65-9.06-30.08-15.1-29.96-24.29 0-8.14 9.67-16.84 30.56-16.84 17.45-.28 30.1 3.53 39.94 7.5l4.78 2.26 7.19-42.5zm137.31-4.22h-41.34c-12.81 0-22.39 3.49-28.02 16.25l-79.49 179.51h56.18s9.17-24.14 11.25-29.43l68.55.07c1.6 7.27 6.52 29.36 6.52 29.36h49.64l-43.29-195.76zm-65.95 126.41c4.43-11.3 21.33-54.86 21.33-54.86-.31.52 4.39-11.36 7.1-18.74l3.62 16.93s10.25 46.81 12.39 56.67h-44.44zM238.58 152.97L186.1 290.26l-5.6-27.19c-9.74-31.28-40.09-65.18-74.06-82.12l47.89 167.67 56.56-.07 84.15-195.58h-56.46z" fill="#ffffff"/>
     <path d="M146.92 152.96H60.88l-.68 4.07c67.08 16.22 111.48 55.39 129.85 102.41l-18.72-89.95c-3.23-12.36-12.6-16.06-24.41-16.53z" fill="#f7a600"/>
   </svg>
 );
 
 const MastercardLogo = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 780 500" className={className} xmlns="http://www.w3.org/2000/svg">
-    <circle cx="312" cy="250" r="172" fill="#eb001b"/>
-    <circle cx="468" cy="250" r="172" fill="#f79e1b"/>
-    <path d="M390 116.75a171.62 171.62 0 0 0-78 133.25 171.62 171.62 0 0 0 78 133.25 171.62 171.62 0 0 0 78-133.25 171.62 171.62 0 0 0-78-133.25z" fill="#ff5f00"/>
+    <rect width="780" height="500" rx="40" fill="#000"/>
+    <circle cx="312" cy="250" r="150" fill="#eb001b"/>
+    <circle cx="468" cy="250" r="150" fill="#f79e1b"/>
+    <path d="M390 130a149.6 149.6 0 0 0-56 120 149.6 149.6 0 0 0 56 120 149.6 149.6 0 0 0 56-120 149.6 149.6 0 0 0-56-120z" fill="#ff5f00"/>
   </svg>
 );
 
 const AmexLogo = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 780 500" className={className} xmlns="http://www.w3.org/2000/svg">
-    <rect width="780" height="500" rx="40" fill="#2e77bc"/>
-    <text x="390" y="300" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="180" fill="white" letterSpacing="-4">AMEX</text>
+    <rect width="780" height="500" rx="40" fill="#006fcf"/>
+    <path d="M104 250l40-100h50l-65 100 65 100h-50l-40-100zm110-100h45l30 60 30-60h45l-55 100 55 100h-45l-30-60-30 60h-45l55-100-55-100zm195 0h120v35h-75v22h73v33h-73v22h75v38h-120V150zm145 0h50l40 60 40-60h50l-65 100 65 100h-50l-40-60-40 60h-50l65-100-65-100z" fill="#fff"/>
   </svg>
 );
 
 const DiscoverLogo = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 780 500" className={className} xmlns="http://www.w3.org/2000/svg">
-    <rect width="780" height="500" rx="40" fill="#fff" stroke="#ddd" strokeWidth="2"/>
-    <circle cx="500" cy="250" r="110" fill="#f47216"/>
-    <text x="300" y="295" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="100" fill="#1a1a1a">DISC</text>
-    <text x="600" y="295" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="100" fill="#fff">VER</text>
+    <rect width="780" height="500" rx="40" fill="#fff"/>
+    <rect x="0" y="330" width="780" height="170" rx="0" fill="#f47216"/>
+    <circle cx="490" cy="250" r="100" fill="#f47216"/>
+    <text x="230" y="280" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="110" fill="#1a1a1a">DISC</text>
+    <text x="600" y="280" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="110" fill="#fff">VER</text>
   </svg>
 );
 
