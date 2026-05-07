@@ -196,7 +196,7 @@ const Index = () => {
                   {stockFeed.map((s, i) => (
                     <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/30 hover:bg-primary/15 transition group">
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                        <span className="text-base shrink-0">{brandEmoji(s.brand)}</span>
+                        <span className="shrink-0"><BrandIcon brand={s.brand} className="h-5 w-auto" /></span>
                         {s.country && <span className="text-base shrink-0">{countryFlag(s.country)}</span>}
                         <span className="text-sm text-foreground/85 group-hover:text-foreground transition truncate font-mono">{s.base.replace(/_\$[\d.]+$/, '')}</span>
                         <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-success/20 border border-success/30 text-success font-mono">NEW</span>
