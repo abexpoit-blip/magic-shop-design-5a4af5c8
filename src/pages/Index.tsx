@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AppShell } from "@/components/AppShell";
-import { newsApi, announcementsApi, ordersApi } from "@/lib/api";
+import { newsApi, announcementsApi, ordersApi, cardsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Wallet, ShoppingBag, TrendingUp, Megaphone, Newspaper, Send,
