@@ -325,13 +325,13 @@ const Shop = () => {
                         <BrandLogo brand={c.brand || detectBrandFromBin(c.bin)} className="h-4" />
                         <span>{c.bin}<span className="text-muted-foreground">••••••</span></span>
                         {expiring && (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded-full bg-warning/20 border border-warning/40 text-warning font-mono" title="Expiring soon — discounted">
-                            🔥 SALE
+                          <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse" title="Expiring soon — discounted">
+                            SALE
                           </span>
                         )}
                         {recent && (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded-full bg-success/20 border border-success/40 text-success font-mono" title="Recently uploaded">
-                            ✨ NEW
+                          <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gradient-to-r from-emerald-500 to-teal-400 text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]" title="Recently uploaded">
+                            NEW
                           </span>
                         )}
                       </div>
@@ -359,9 +359,12 @@ const Shop = () => {
                     <td className="p-3 text-center text-xs max-w-[180px] truncate" title={c.email ?? undefined}>
                       {c.email ? <span className="text-foreground">{c.email}</span> : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="p-3 text-center font-display text-primary-glow">
-                      {expiring && <span className="text-warning">🔥 </span>}
-                      {Number(c.price).toFixed(2)}
+                    <td className="p-3 text-center font-display">
+                      {expiring ? (
+                        <span className="text-orange-400 font-bold">{Number(c.price).toFixed(2)}</span>
+                      ) : (
+                        <span className="text-primary-glow">{Number(c.price).toFixed(2)}</span>
+                      )}
                     </td>
                     <td className="p-3 text-[11px] text-muted-foreground max-w-[180px] truncate" title={c.base}>{c.base}</td>
                     <td className="p-3 text-center">
