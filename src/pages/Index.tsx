@@ -52,9 +52,9 @@ const Index = () => {
 
   // Auto-refresh live inventory every 30 seconds
   useEffect(() => {
-    intervalRef.current = setInterval(loadNews, 30000);
+    intervalRef.current = setInterval(() => { loadNews(); loadStockFeed(); }, 30000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [loadNews]);
+  }, [loadNews, loadStockFeed]);
 
   return (
     <AppShell>
