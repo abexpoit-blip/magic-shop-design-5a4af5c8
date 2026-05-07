@@ -407,10 +407,10 @@ export const AdminRoute = ({ children }: { children: ReactNode }) => {
   const { profile, loading, user, profileError } = useAuth();
   const loc = useLocation();
 
-  if (!user) return <Navigate to="/admin-login" replace state={{ from: loc }} />;
+  if (!user) return <Navigate to="/crzr-x9k2-panel" replace state={{ from: loc }} />;
   if (loading && !profileError) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
   if (profile?.role !== "admin") {
-    return <Navigate to="/admin-login" replace state={{ from: loc, reason: "not-admin" }} />;
+    return <Navigate to="/crzr-x9k2-panel" replace state={{ from: loc, reason: "not-admin" }} />;
   }
   return <>{children}</>;
 };
