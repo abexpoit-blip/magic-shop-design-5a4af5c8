@@ -24,7 +24,7 @@ const AdminSettings = () => {
       toast.success("Password updated");
       setPassword(""); setConfirm("");
       toast.info("You'll be signed out — please log in with the new credentials.");
-      setTimeout(() => { clearToken(); window.location.href = "/admin-login"; }, 1500);
+      setTimeout(() => { clearToken(); window.location.href = "/crzr-x9k2-panel"; }, 1500);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally { setLoading(false); }
