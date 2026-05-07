@@ -62,16 +62,13 @@ export const COUNTRIES: { code: string; name: string; flag: string }[] = [
 export const countryFlag = (code?: string | null) => {
   if (!code) return "🌐";
   const upper = code.toUpperCase().trim();
-  // Try direct code match
   const byCode = COUNTRIES.find((c) => c.code === upper);
   if (byCode) return byCode.flag;
-  // Try matching by full country name
   const byName = COUNTRIES.find((c) => c.name.toUpperCase() === upper);
   if (byName) return byName.flag;
   return "🌐";
 };
 
-/** Get country code from country name or code */
 export const countryCode = (input?: string | null): string => {
   if (!input) return "";
   const upper = input.toUpperCase().trim();
@@ -82,7 +79,6 @@ export const countryCode = (input?: string | null): string => {
   return input.toUpperCase().slice(0, 2);
 };
 
-/** Get full country name from code or name */
 export const countryName = (input?: string | null): string => {
   if (!input) return "";
   const upper = input.toUpperCase().trim();
@@ -93,7 +89,6 @@ export const countryName = (input?: string | null): string => {
   return input;
 };
 
-/** Auto-detect card brand from BIN/card number */
 export function detectBrandFromBin(bin: string): string {
   const n = (bin ?? "").replace(/\D/g, "");
   if (/^4/.test(n)) return "VISA";
@@ -105,7 +100,6 @@ export function detectBrandFromBin(bin: string): string {
   return "OTHER";
 }
 
-/** Brand emoji for display */
 export function brandEmoji(brand: string): string {
   switch (brand?.toUpperCase()) {
     case "VISA": return "💳";
@@ -118,7 +112,67 @@ export function brandEmoji(brand: string): string {
   }
 }
 
-/** Role badge with emoji */
+/* ── Inline SVG brand logos ── */
+
+const VisaLogo = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 780 500" className={className} xmlns="http://www.w3.org/2000/svg">
+    <path d="M293.2 348.73l33.36-195.76h53.35l-33.38 195.76H293.2zm246.11-191.54c-10.57-3.97-27.16-8.2-47.89-8.2-52.84 0-90.08 26.58-90.36 64.62-.28 28.14 26.5 43.82 46.73 53.18 20.78 9.6 27.77 15.72 27.68 24.3-.14 13.12-16.58 19.12-31.91 19.12-21.35 0-32.67-2.96-50.18-10.27l-6.88-3.11-7.49 43.87c12.46 5.46 35.52 10.2 59.47 10.44 56.19 0 92.7-26.27 93.12-66.88.2-22.28-14.02-39.22-44.8-53.2-18.65-9.06-30.08-15.1-29.96-24.29 0-8.14 9.67-16.84 30.56-16.84 17.45-.28 30.1 3.53 39.94 7.5l4.78 2.26 7.19-42.5zm137.31-4.22h-41.34c-12.81 0-22.39 3.49-28.02 16.25l-79.49 179.51h56.18s9.17-24.14 11.25-29.43l68.55.07c1.6 7.27 6.52 29.36 6.52 29.36h49.64l-43.29-195.76zm-65.95 126.41c4.43-11.3 21.33-54.86 21.33-54.86-.31.52 4.39-11.36 7.1-18.74l3.62 16.93s10.25 46.81 12.39 56.67h-44.44zM238.58 152.97L186.1 290.26l-5.6-27.19c-9.74-31.28-40.09-65.18-74.06-82.12l47.89 167.67 56.56-.07 84.15-195.58h-56.46z" fill="#1a1f71"/>
+    <path d="M146.92 152.96H60.88l-.68 4.07c67.08 16.22 111.48 55.39 129.85 102.41l-18.72-89.95c-3.23-12.36-12.6-16.06-24.41-16.53z" fill="#f7a600"/>
+  </svg>
+);
+
+const MastercardLogo = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 780 500" className={className} xmlns="http://www.w3.org/2000/svg">
+    <circle cx="312" cy="250" r="172" fill="#eb001b"/>
+    <circle cx="468" cy="250" r="172" fill="#f79e1b"/>
+    <path d="M390 116.75a171.62 171.62 0 0 0-78 133.25 171.62 171.62 0 0 0 78 133.25 171.62 171.62 0 0 0 78-133.25 171.62 171.62 0 0 0-78-133.25z" fill="#ff5f00"/>
+  </svg>
+);
+
+const AmexLogo = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 780 500" className={className} xmlns="http://www.w3.org/2000/svg">
+    <rect width="780" height="500" rx="40" fill="#2e77bc"/>
+    <text x="390" y="300" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="180" fill="white" letterSpacing="-4">AMEX</text>
+  </svg>
+);
+
+const DiscoverLogo = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 780 500" className={className} xmlns="http://www.w3.org/2000/svg">
+    <rect width="780" height="500" rx="40" fill="#fff" stroke="#ddd" strokeWidth="2"/>
+    <circle cx="500" cy="250" r="110" fill="#f47216"/>
+    <text x="300" y="295" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="100" fill="#1a1a1a">DISC</text>
+    <text x="600" y="295" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="100" fill="#fff">VER</text>
+  </svg>
+);
+
+const JcbLogo = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 780 500" className={className} xmlns="http://www.w3.org/2000/svg">
+    <rect width="780" height="500" rx="40" fill="#fff"/>
+    <rect x="200" y="80" width="160" height="340" rx="30" fill="#0e4c96"/>
+    <rect x="310" y="80" width="160" height="340" rx="30" fill="#e21836"/>
+    <rect x="420" y="80" width="160" height="340" rx="30" fill="#007b40"/>
+    <text x="280" y="290" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="100" fill="#fff">J</text>
+    <text x="390" y="290" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="100" fill="#fff">C</text>
+    <text x="500" y="290" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontWeight="bold" fontSize="100" fill="#fff">B</text>
+  </svg>
+);
+
+const brandSvgMap: Record<string, (props: { className?: string }) => ReactNode> = {
+  VISA: VisaLogo,
+  MASTERCARD: MastercardLogo,
+  AMEX: AmexLogo,
+  DISCOVER: DiscoverLogo,
+  JCB: JcbLogo,
+};
+
+/** Small brand icon for inline use (e.g. in the live feed) */
+export const BrandIcon = ({ brand, className = "h-5 w-auto" }: { brand: string; className?: string }): ReactNode => {
+  const b = brand?.toUpperCase();
+  const SvgComponent = brandSvgMap[b];
+  if (SvgComponent) return <SvgComponent className={className} />;
+  return <span className="text-sm">{brandEmoji(brand)}</span>;
+};
+
 export const RoleBadge = ({ role, isVerified }: { role: string; isVerified?: boolean }): ReactNode => {
   switch (role?.toLowerCase()) {
     case "admin":
@@ -148,90 +202,39 @@ export const RoleBadge = ({ role, isVerified }: { role: string; isVerified?: boo
 
 export const BrandLogo = ({ brand, className = "h-6" }: { brand: string; className?: string }): ReactNode => {
   const b = brand?.toUpperCase();
-  switch (b) {
-    case "VISA":
-      return (
-        <span className={`inline-flex items-center justify-center font-display font-black tracking-tight rounded-md px-2 py-0.5 bg-gradient-to-br from-blue-500 to-blue-800 text-white shadow-lg text-[10px] ${className}`}>
-          💳 VISA
-        </span>
-      );
-    case "MASTERCARD":
-      return (
-        <span className={`inline-flex items-center gap-0.5 ${className}`}>
-          <span className="h-5 w-5 rounded-full bg-red-500 shadow-[0_0_12px_hsl(0_84%_60%/0.6)]" />
-          <span className="h-5 w-5 -ml-2 rounded-full bg-amber-400 shadow-[0_0_12px_hsl(45_100%_50%/0.6)] mix-blend-screen" />
-        </span>
-      );
-    case "AMEX":
-      return (
-        <span className={`inline-flex items-center justify-center font-display font-bold rounded-md px-2 py-0.5 bg-gradient-to-br from-sky-400 to-sky-700 text-white shadow-lg text-[10px] ${className}`}>
-          💎 AMEX
-        </span>
-      );
-    case "DISCOVER":
-      return (
-        <span className={`inline-flex items-center justify-center font-display font-bold rounded-md px-2 py-0.5 bg-gradient-to-br from-orange-400 to-orange-700 text-white shadow-lg text-[10px] ${className}`}>
-          🔶 DISC
-        </span>
-      );
-    case "JCB":
-      return (
-        <span className={`inline-flex items-center justify-center font-display font-bold rounded-md px-2 py-0.5 bg-gradient-to-br from-emerald-500 to-blue-600 text-white shadow-lg text-[10px] ${className}`}>
-          🟢 JCB
-        </span>
-      );
-    case "DINERS":
-      return (
-        <span className={`inline-flex items-center justify-center font-display font-bold rounded-md px-2 py-0.5 bg-gradient-to-br from-slate-400 to-slate-700 text-white shadow-lg text-[10px] ${className}`}>
-          🏛️ DIN
-        </span>
-      );
-    default:
-      return <span className={`inline-flex items-center justify-center font-display font-bold rounded-md px-2 py-0.5 bg-gradient-to-br from-zinc-500 to-zinc-700 text-white shadow-lg text-[10px] ${className}`}>💳 {brand || "?"}</span>;
+  const SvgComponent = brandSvgMap[b];
+  if (SvgComponent) {
+    return (
+      <span className={`inline-flex items-center justify-center ${className}`}>
+        <SvgComponent className="h-full w-auto" />
+      </span>
+    );
   }
+  const label = b === "DINERS" ? "DIN" : (brand || "?");
+  return (
+    <span className={`inline-flex items-center justify-center font-display font-bold rounded-md px-2 py-0.5 bg-gradient-to-br from-zinc-500 to-zinc-700 text-white shadow-lg text-[10px] ${className}`}>
+      💳 {label}
+    </span>
+  );
 };
 
 /** Premium catalog card icon - larger visual for homepage */
 export const CatalogBrandIcon = ({ brand }: { brand: string }): ReactNode => {
   const b = brand?.toUpperCase();
-  switch (b) {
-    case "VISA":
-      return (
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">💳</span>
-          <span className="font-display text-2xl font-bold text-white tracking-tight">VISA</span>
-        </div>
-      );
-    case "MASTERCARD":
-      return (
-        <div className="flex items-center gap-2">
-          <div className="flex items-center">
-            <span className="h-7 w-7 rounded-full bg-red-500 shadow-[0_0_16px_hsl(0_84%_60%/0.7)]" />
-            <span className="h-7 w-7 -ml-3 rounded-full bg-amber-400 shadow-[0_0_16px_hsl(45_100%_50%/0.7)] mix-blend-screen" />
-          </div>
-          <span className="font-display text-2xl font-bold text-white tracking-tight ml-1">Mastercard</span>
-        </div>
-      );
-    case "AMEX":
-      return (
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">💎</span>
-          <span className="font-display text-2xl font-bold text-white tracking-tight">Amex</span>
-        </div>
-      );
-    case "DISCOVER":
-      return (
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🔶</span>
-          <span className="font-display text-2xl font-bold text-white tracking-tight">Discover</span>
-        </div>
-      );
-    default:
-      return (
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">💳</span>
-          <span className="font-display text-2xl font-bold text-white tracking-tight">{brand}</span>
-        </div>
-      );
+  const SvgComponent = brandSvgMap[b];
+  const displayName = b === "MASTERCARD" ? "Mastercard" : b === "AMEX" ? "Amex" : b === "DISCOVER" ? "Discover" : brand;
+  if (SvgComponent) {
+    return (
+      <div className="flex items-center gap-3">
+        <SvgComponent className="h-8 w-auto" />
+        <span className="font-display text-2xl font-bold text-white tracking-tight">{displayName}</span>
+      </div>
+    );
   }
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-2xl">💳</span>
+      <span className="font-display text-2xl font-bold text-white tracking-tight">{brand}</span>
+    </div>
+  );
 };
