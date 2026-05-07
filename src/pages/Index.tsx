@@ -27,6 +27,13 @@ const Index = () => {
     } catch { /* ignore */ }
   }, []);
 
+  const loadStockFeed = useCallback(async () => {
+    try {
+      const res = await cardsApi.recentStock();
+      setStockFeed(res.stock ?? []);
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const [, a, o] = await Promise.allSettled([
@@ -34,13 +41,14 @@ const Index = () => {
         announcementsApi.list(),
         ordersApi.mine(),
       ]);
+      loadStockFeed();
       if (a.status === "fulfilled") setAnns((a.value.announcements ?? []) as typeof anns);
       if (o.status === "fulfilled") {
         const orders = (o.value.orders ?? []) as { total: number }[];
         setStats({ orders: orders.length, spend: orders.reduce((s, x) => s + Number(x.total), 0) });
       }
     })();
-  }, [loadNews]);
+  }, [loadNews, loadStockFeed]);
 
   // Auto-refresh live inventory every 30 seconds
   useEffect(() => {
