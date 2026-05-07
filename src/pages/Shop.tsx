@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { COUNTRIES, countryFlag, countryCode, BrandLogo, detectBrandFromBin } from "@/lib/brands";
-import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, Store, ChevronLeft, ChevronRight, Clock, Sparkles, Tag, ArrowUpDown } from "lucide-react";
+import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, Store, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
 import { TrustBadge } from "@/components/TrustBadge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
