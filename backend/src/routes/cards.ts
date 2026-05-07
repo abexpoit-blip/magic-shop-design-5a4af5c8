@@ -22,8 +22,27 @@ function uid(): string {
     .join("");
 }
 
+// ── Auto-discount cards expiring this month to $0.20 (runs lazily) ──
+let lastAutoDiscountRun = 0;
+function autoDiscountExpiring() {
+  const now = Date.now();
+  if (now - lastAutoDiscountRun < 60_000) return; // run at most once per minute
+  lastAutoDiscountRun = now;
+  const d = new Date();
+  const curYear = d.getFullYear() % 100;
+  const curMonth = d.getMonth() + 1;
+  db.prepare(`
+    UPDATE cards SET price = 0.20
+    WHERE status = 'available'
+      AND exp_year IS NOT NULL AND exp_month IS NOT NULL
+      AND CAST(exp_year AS INTEGER) = ? AND CAST(exp_month AS INTEGER) = ?
+      AND price > 0.20
+  `).run(curYear, curMonth);
+}
+
 // Browse available cards (authenticated) — proper pagination
 cardsRouter.get("/", requireAuth, (req, res) => {
+  autoDiscountExpiring();
   const page = Math.max(1, Number(req.query.page) || 1);
   const perPage = Math.min(100, Math.max(1, Number(req.query.per_page) || 25));
   const offset = (page - 1) * perPage;
