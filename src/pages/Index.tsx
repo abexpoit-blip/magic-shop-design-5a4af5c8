@@ -17,6 +17,7 @@ const Index = () => {
   const [news, setNews] = useState<{ id: string; label: string; count: number; brand?: string; country?: string; bin?: string; created_at?: string }[]>([]);
   const [anns, setAnns] = useState<{ id: string; title: string; body: string }[]>([]);
   const [stats, setStats] = useState({ orders: 0, spend: 0 });
+  const [stockFeed, setStockFeed] = useState<Array<{ base: string; brand: string; country: string; count: number; created_at: string }>>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadNews = useCallback(async () => {
