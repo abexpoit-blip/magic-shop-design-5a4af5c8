@@ -316,6 +316,38 @@ cardsRouter.get("/all", requireAuth, requireRole("admin"), (req, res) => {
   res.json({ cards: rows, total, page, per_page: perPage, pages: Math.ceil(total / perPage) });
 });
 
+// ── Stock summary for admin ──
+cardsRouter.get("/stock-summary", requireAuth, requireRole("admin"), (_req, res) => {
+  const rows = db.prepare(`
+    SELECT base,
+           COUNT(*) as total,
+           SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available,
+           SUM(CASE WHEN status = 'sold' THEN 1 ELSE 0 END) as sold,
+           SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END) as expired
+    FROM cards
+    GROUP BY base
+    ORDER BY available DESC
+  `).all();
+  res.json({ summary: rows });
+});
+
+// ── Auto-discount cards expiring this month to $0.20 ──
+cardsRouter.post("/auto-discount-expiring", requireAuth, requireRole("admin"), (_req, res) => {
+  const now = new Date();
+  const curYear = now.getFullYear() % 100;
+  const curMonth = now.getMonth() + 1;
+
+  const result = db.prepare(`
+    UPDATE cards SET price = 0.20
+    WHERE status = 'available'
+      AND exp_year IS NOT NULL AND exp_month IS NOT NULL
+      AND CAST(exp_year AS INTEGER) = ? AND CAST(exp_month AS INTEGER) = ?
+      AND price > 0.20
+  `).run(curYear, curMonth);
+
+  res.json({ ok: true, updated: result.changes });
+});
+
 // ── Auto-cleanup expired cards ──
 // Mark cards as expired if exp_month/exp_year is past
 cardsRouter.post("/cleanup-expired", requireAuth, requireRole("admin"), (_req, res) => {

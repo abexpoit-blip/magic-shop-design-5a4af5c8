@@ -33,6 +33,7 @@ import AdminRefunds from "./pages/AdminRefunds";
 import AdminDepositAddresses from "./pages/AdminDepositAddresses";
 import AdminPaymentGateway from "./pages/AdminPaymentGateway";
 import AdminPayments from "./pages/AdminPayments";
+import AdminStockReview from "./pages/AdminStockReview";
 import News from "./pages/News";
 import BuyerRefunds from "./pages/BuyerRefunds";
 import SellerPriceRules from "./pages/SellerPriceRules";
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="/admin/deposit-addresses" element={<AdminRoute><AdminDepositAddresses /></AdminRoute>} />
             <Route path="/admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
             <Route path="/admin/payment-gateway" element={<AdminRoute><AdminPaymentGateway /></AdminRoute>} />
+            <Route path="/admin/stock-review" element={<AdminRoute><AdminStockReview /></AdminRoute>} />
 
             {/* Buyer/Seller protected routes */}
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
