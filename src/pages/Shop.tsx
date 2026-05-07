@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { cardsApi, cartApi, sellersApi } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { COUNTRIES, countryFlag, countryName, countryCode, BrandLogo, detectBrandFromBin } from "@/lib/brands";
-import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, BadgeCheck, Store } from "lucide-react";
+import { COUNTRIES, countryFlag, countryCode, BrandLogo, detectBrandFromBin } from "@/lib/brands";
+import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, Store, ChevronLeft, ChevronRight, Clock, Sparkles, Tag, ArrowUpDown } from "lucide-react";
 import { TrustBadge } from "@/components/TrustBadge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,12 +15,32 @@ interface Card {
   id: string; bin: string; brand: string; country: string; state: string | null;
   city: string | null; zip: string | null; exp_month: string | null; exp_year: string | null;
   refundable: boolean; has_phone: boolean; has_email: boolean; email?: string | null; base: string; price: number;
-  status: string; seller_id: string;
+  status: string; seller_id: string; created_at: string;
 }
 interface Seller {
   id: string; username: string; seller_display_name: string | null; display_name: string | null;
   is_seller_verified: boolean;
   trust_tier?: "none" | "verified" | "trusted" | "vip";
+}
+
+function isExpiringSoon(card: Card): boolean {
+  if (!card.exp_month || !card.exp_year) return false;
+  const now = new Date();
+  const curYear = now.getFullYear() % 100;
+  const curMonth = now.getMonth() + 1;
+  const ey = parseInt(card.exp_year);
+  const em = parseInt(card.exp_month);
+  if (isNaN(ey) || isNaN(em)) return false;
+  const monthsLeft = (ey - curYear) * 12 + (em - curMonth);
+  return monthsLeft >= 0 && monthsLeft <= 3;
+}
+
+function isRecentUpload(card: Card): boolean {
+  if (!card.created_at) return false;
+  const created = new Date(card.created_at);
+  const now = new Date();
+  const hoursAgo = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
+  return hoursAgo <= 48;
 }
 
 const Shop = () => {
@@ -38,6 +58,11 @@ const Shop = () => {
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastBin, setLastBin] = useState("");
+  const [sort, setSort] = useState("expiry_asc");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCards, setTotalCards] = useState(0);
+  const [bases, setBases] = useState<string[]>([]);
 
   const sellerMap = useMemo(() => {
     const m = new Map<string, Seller>();
@@ -52,22 +77,35 @@ const Shop = () => {
     } catch { setSellers([]); }
   };
 
-  const load = async (auto = false) => {
+  const loadBases = async () => {
+    try {
+      const res = await cardsApi.bases();
+      setBases(res.bases ?? []);
+    } catch { /* ignore */ }
+  };
+
+  const load = useCallback(async (auto = false, p = page) => {
     setLoading(true);
     try {
-      const params: Record<string, string | number | boolean | undefined> = { limit: 200 };
+      const params: Record<string, string | number | boolean | undefined> = {
+        per_page: 25,
+        page: p,
+        sort,
+      };
       if (bin) params.bin = bin;
       if (base !== "all") params.base = base;
       if (country) params.country = country;
       if (zip) params.zip = zip;
       if (seller !== "all") params.seller_id = seller;
-      const { cards: c } = await cardsApi.browse(params);
-      setCards((c ?? []) as Card[]);
+      const res = await cardsApi.browse(params);
+      setCards((res.cards ?? []) as Card[]);
+      setTotalPages(res.pages ?? 1);
+      setTotalCards(res.total ?? 0);
     } catch { setCards([]); }
     setLastBin(bin);
     setLoading(false);
     if (!auto) setSearched(true);
-  };
+  }, [bin, base, country, zip, seller, sort, page]);
 
   const loadCart = async () => {
     if (!user) return;
@@ -77,18 +115,27 @@ const Shop = () => {
     } catch { /* ignore */ }
   };
 
-  useEffect(() => { loadSellers(); load(true); loadCart(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadSellers(); loadBases(); load(true, 1); loadCart(); }, []); // eslint-disable-line
 
   useEffect(() => {
     if (seller === "all") { searchParams.delete("seller"); } else { searchParams.set("seller", seller); }
     setSearchParams(searchParams, { replace: true });
-    load(true);
-    // eslint-disable-next-line
-  }, [seller]);
+    setPage(1);
+    load(true, 1);
+  }, [seller]); // eslint-disable-line
+
+  useEffect(() => {
+    setPage(1);
+    load(true, 1);
+  }, [sort]); // eslint-disable-line
+
+  useEffect(() => {
+    load(true, page);
+  }, [page]); // eslint-disable-line
 
   useEffect(() => {
     if (bin.length >= 6) {
-      const t = setTimeout(() => load(), 350);
+      const t = setTimeout(() => { setPage(1); load(false, 1); }, 350);
       return () => clearTimeout(t);
     }
   }, [bin]); // eslint-disable-line
@@ -121,12 +168,11 @@ const Shop = () => {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
-  const reset = () => { setBin(""); setBase("all"); setCountry(""); setZip(""); setSeller("all"); setSearched(false); setTimeout(() => load(true), 0); };
+  const reset = () => { setBin(""); setBase("all"); setCountry(""); setZip(""); setSeller("all"); setSort("expiry_asc"); setSearched(false); setPage(1); setTimeout(() => load(true, 1), 0); };
 
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = () => setSelected((s) => s.size === cards.length ? new Set() : new Set(cards.map((c) => c.id)));
 
-  const bases = useMemo(() => Array.from(new Set(cards.map((c) => c.base))).slice(0, 50), [cards]);
   const noResults = !loading && cards.length === 0 && (searched || bin.length >= 6);
 
   return (
@@ -134,7 +180,9 @@ const Shop = () => {
       <div className="space-y-4">
         <div>
           <h1 className="font-display text-3xl font-black neon-text">SHOP</h1>
-          <p className="text-sm text-muted-foreground mt-1">Search by BIN — auto-detects after 6 digits</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {totalCards > 0 ? `${totalCards.toLocaleString()} cards in stock` : "Search by BIN — auto-detects after 6 digits"}
+          </p>
         </div>
 
         <div className="glass rounded-2xl p-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
@@ -145,7 +193,7 @@ const Shop = () => {
           </div>
           <div>
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground">BASE</label>
-            <Select value={base} onValueChange={setBase}>
+            <Select value={base} onValueChange={(v) => { setBase(v); setPage(1); setTimeout(() => load(true, 1), 0); }}>
               <SelectTrigger className="bg-input/60 mt-1"><SelectValue placeholder="base" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All bases</SelectItem>
@@ -178,21 +226,33 @@ const Shop = () => {
             <Input value={zip} onChange={(e) => setZip(e.target.value)} placeholder="Please enter your zip code" className="bg-input/60 mt-1" />
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => load()} className="flex-1 bg-gradient-primary shadow-neon"><Search className="h-4 w-4 mr-1" />search</Button>
+            <Button onClick={() => { setPage(1); load(false, 1); }} className="flex-1 bg-gradient-primary shadow-neon"><Search className="h-4 w-4 mr-1" />search</Button>
             <Button onClick={reset} variant="outline" className="border-border/60"><RotateCcw className="h-4 w-4 mr-1" />reset</Button>
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <Button onClick={batchAdd} disabled={selected.size === 0}
-            className="bg-success/20 text-success border border-success/40 hover:bg-success/30 disabled:opacity-50">
-            <ShoppingCart className="h-4 w-4 mr-2" />Batch add shopping cart {selected.size > 0 && `(${selected.size})`}
-          </Button>
-          <div className="flex gap-2">
-            <button onClick={() => load()} className="h-9 w-9 rounded-full glass flex items-center justify-center hover:neon-border transition" title="Search">
-              <Search className="h-4 w-4 text-primary-glow" />
-            </button>
-            <button onClick={() => load(true)} className="h-9 w-9 rounded-full glass flex items-center justify-center hover:neon-border transition" title="Refresh">
+        {/* Sort + Actions bar */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Button onClick={batchAdd} disabled={selected.size === 0}
+              className="bg-success/20 text-success border border-success/40 hover:bg-success/30 disabled:opacity-50">
+              <ShoppingCart className="h-4 w-4 mr-2" />Batch add {selected.size > 0 && `(${selected.size})`}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="bg-input/60 w-[180px] h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expiry_asc">Expiry: Soonest first</SelectItem>
+                <SelectItem value="price_asc">Price: Low → High</SelectItem>
+                <SelectItem value="price_desc">Price: High → Low</SelectItem>
+                <SelectItem value="created_desc">Newest first</SelectItem>
+              </SelectContent>
+            </Select>
+            <button onClick={() => load(true, page)} className="h-9 w-9 rounded-full glass flex items-center justify-center hover:neon-border transition" title="Refresh">
               <RefreshCw className="h-4 w-4 text-primary-glow" />
             </button>
           </div>
@@ -248,14 +308,15 @@ const Shop = () => {
                 )}
 
                 {!loading && cards.map((c, idx) => {
-                  // Auto-detect and fix swapped country/state
                   const isCountryInState = COUNTRIES.some(ct => ct.code === c.state?.toUpperCase());
                   const isStateInCountry = c.country && c.country.length <= 3 && !COUNTRIES.some(ct => ct.code === c.country?.toUpperCase());
                   const displayCountry = (isCountryInState && isStateInCountry) ? c.state : c.country;
                   const displayState = (isCountryInState && isStateInCountry) ? c.country : c.state;
+                  const expiring = isExpiringSoon(c);
+                  const recent = isRecentUpload(c);
 
                   return (
-                  <tr key={c.id} className={`border-t border-border/40 hover:bg-primary/5 transition ${idx % 2 ? "bg-secondary/20" : ""}`}>
+                  <tr key={c.id} className={`border-t border-border/40 hover:bg-primary/5 transition ${idx % 2 ? "bg-secondary/20" : ""} ${expiring ? "bg-warning/5" : ""}`}>
                     <td className="p-3 text-center">
                       <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} className="accent-primary cursor-pointer" />
                     </td>
@@ -263,6 +324,16 @@ const Shop = () => {
                       <div className="flex items-center gap-2">
                         <BrandLogo brand={c.brand || detectBrandFromBin(c.bin)} className="h-4" />
                         <span>{c.bin}<span className="text-muted-foreground">••••••</span></span>
+                        {expiring && (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded-full bg-warning/20 border border-warning/40 text-warning font-mono" title="Expiring soon — discounted">
+                            🔥 SALE
+                          </span>
+                        )}
+                        {recent && (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded-full bg-success/20 border border-success/40 text-success font-mono" title="Recently uploaded">
+                            ✨ NEW
+                          </span>
+                        )}
                       </div>
                       {sellerMap.get(c.seller_id) && (
                         <Link to={`/seller/${c.seller_id}`} onClick={(e) => e.stopPropagation()}
@@ -288,7 +359,10 @@ const Shop = () => {
                     <td className="p-3 text-center text-xs max-w-[180px] truncate" title={c.email ?? undefined}>
                       {c.email ? <span className="text-foreground">{c.email}</span> : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="p-3 text-center font-display text-primary-glow">{Number(c.price).toFixed(2)}</td>
+                    <td className="p-3 text-center font-display text-primary-glow">
+                      {expiring && <span className="text-warning">🔥 </span>}
+                      {Number(c.price).toFixed(2)}
+                    </td>
                     <td className="p-3 text-[11px] text-muted-foreground max-w-[180px] truncate" title={c.base}>{c.base}</td>
                     <td className="p-3 text-center">
                       {cartIds.has(c.id) ? (
@@ -313,16 +387,12 @@ const Shop = () => {
                       <p className="font-display text-lg text-foreground">Not stocked yet</p>
                       <p className="text-sm text-muted-foreground mt-1">
                         {lastBin
-                          ? <>No cards match BIN prefix <code className="px-1.5 py-0.5 rounded bg-secondary/60 text-primary-glow font-mono">{lastBin}</code>{lastBin.length >= 6 && <> ({lastBin.length} digits)</>}.</>
+                          ? <>No cards match BIN prefix <code className="px-1.5 py-0.5 rounded bg-secondary/60 text-primary-glow font-mono">{lastBin}</code>.</>
                           : "No cards match your filters."}
-                        <br />Try a different BIN or check back later.
                       </p>
-                      {(lastBin || base !== "all" || country || zip) && (
-                        <Button onClick={() => { setBin(""); setBase("all"); setCountry(""); setZip(""); setSearched(false); setTimeout(() => load(true), 0); }}
-                          variant="outline" className="mt-4 border-primary/40 text-primary-glow hover:bg-primary/10">
-                          <X className="h-4 w-4 mr-1.5" />Clear search
-                        </Button>
-                      )}
+                      <Button onClick={reset} variant="outline" className="mt-4 border-primary/40 text-primary-glow hover:bg-primary/10">
+                        <X className="h-4 w-4 mr-1.5" />Clear search
+                      </Button>
                     </td>
                   </tr>
                 )}
@@ -337,6 +407,56 @@ const Shop = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border/40 bg-secondary/20">
+              <p className="text-xs text-muted-foreground">
+                Showing {((page - 1) * 25) + 1}–{Math.min(page * 25, totalCards)} of {totalCards.toLocaleString()}
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/10 disabled:opacity-30 transition"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let p: number;
+                  if (totalPages <= 7) {
+                    p = i + 1;
+                  } else if (page <= 4) {
+                    p = i + 1;
+                  } else if (page >= totalPages - 3) {
+                    p = totalPages - 6 + i;
+                  } else {
+                    p = page - 3 + i;
+                  }
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-mono transition ${
+                        page === p
+                          ? "bg-primary/20 border border-primary/60 text-primary-glow"
+                          : "text-muted-foreground hover:bg-secondary/40"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/10 disabled:opacity-30 transition"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </AppShell>
