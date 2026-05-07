@@ -361,14 +361,14 @@ const Shop = () => {
                     <td className="p-3 text-center text-xs max-w-[180px] truncate" title={c.email ?? undefined}>
                       {c.email ? <span className="text-foreground">{c.email}</span> : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="p-3 text-center font-display">
+                    <td className="p-3 text-center font-display whitespace-nowrap">
                       {expiring ? (
-                        <span className="inline-flex flex-col items-center gap-0.5">
-                          <span className="text-orange-400 font-bold text-sm drop-shadow-[0_0_6px_rgba(251,146,60,0.4)]">${Number(c.price).toFixed(2)}</span>
-                          <span className="text-[8px] font-semibold uppercase tracking-wider text-orange-300/70 bg-orange-500/10 px-1.5 py-0.5 rounded-sm border border-orange-500/20">Clearance</span>
+                        <span className="inline-flex flex-col items-center gap-1">
+                          <span className="text-orange-300 font-bold text-[15px] leading-none drop-shadow-[0_0_8px_rgba(251,146,60,0.35)]">${Number(c.price).toFixed(2)}</span>
+                          <span className="text-[7px] font-bold uppercase tracking-[0.15em] leading-none text-orange-200/80 bg-gradient-to-r from-orange-600/25 to-red-600/25 px-2 py-[3px] rounded border border-orange-400/20">⚡ Clearance</span>
                         </span>
                       ) : (
-                        <span className="text-primary-glow font-semibold">${Number(c.price).toFixed(2)}</span>
+                        <span className="text-primary-glow font-semibold text-sm">${Number(c.price).toFixed(2)}</span>
                       )}
                     </td>
                     <td className="p-3 text-[11px] text-muted-foreground max-w-[180px] truncate" title={c.base}>{c.base}</td>
