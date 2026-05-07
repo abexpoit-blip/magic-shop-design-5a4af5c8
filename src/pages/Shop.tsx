@@ -502,57 +502,57 @@ const Shop = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border/40 bg-secondary/20">
-              <p className="text-xs text-muted-foreground">
-                Showing {((page - 1) * 25) + 1}–{Math.min(page * 25, totalCards)} of {totalCards.toLocaleString()}
-              </p>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/10 disabled:opacity-30 transition"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                  let p: number;
-                  if (totalPages <= 7) {
-                    p = i + 1;
-                  } else if (page <= 4) {
-                    p = i + 1;
-                  } else if (page >= totalPages - 3) {
-                    p = totalPages - 6 + i;
-                  } else {
-                    p = page - 3 + i;
-                  }
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-mono transition ${
-                        page === p
-                          ? "bg-primary/20 border border-primary/60 text-primary-glow"
-                          : "text-muted-foreground hover:bg-secondary/40"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/10 disabled:opacity-30 transition"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Pagination — shared between mobile & desktop */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 glass rounded-xl mt-3">
+            <p className="text-xs text-muted-foreground">
+              Showing {((page - 1) * 25) + 1}–{Math.min(page * 25, totalCards)} of {totalCards.toLocaleString()}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/10 disabled:opacity-30 transition"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                let p: number;
+                if (totalPages <= 7) {
+                  p = i + 1;
+                } else if (page <= 4) {
+                  p = i + 1;
+                } else if (page >= totalPages - 3) {
+                  p = totalPages - 6 + i;
+                } else {
+                  p = page - 3 + i;
+                }
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-mono transition ${
+                      page === p
+                        ? "bg-primary/20 border border-primary/60 text-primary-glow"
+                        : "text-muted-foreground hover:bg-secondary/40"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/10 disabled:opacity-30 transition"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );
