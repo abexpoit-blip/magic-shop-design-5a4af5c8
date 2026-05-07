@@ -274,7 +274,94 @@ const Shop = () => {
           </div>
         )}
 
-        <div className="glass rounded-2xl overflow-hidden">
+        {/* ── Mobile card layout ── */}
+        <div className="md:hidden space-y-3">
+          {loading && Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="glass rounded-xl p-4 animate-pulse"><div className="h-20 bg-secondary/40 rounded" /></div>
+          ))}
+          {!loading && cards.map((c) => {
+            const expiring = isExpiringSoon(c);
+            const recent = isRecentUpload(c);
+            const seller = sellerMap.get(c.seller_id);
+            const displayCountry = c.state && c.country && c.state.length > 2 && c.country.length <= 3 ? c.state : c.country;
+            const displayState = c.state && c.country && c.state.length > 2 && c.country.length <= 3 ? c.country : c.state;
+            return (
+              <div key={c.id} className={`glass rounded-xl p-4 border transition ${selected.has(c.id) ? "border-primary/60 bg-primary/5" : "border-border/30"} ${expiring ? "ring-1 ring-orange-500/30" : ""}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} className="accent-primary cursor-pointer mt-0.5 shrink-0" />
+                    <BrandLogo brand={c.brand || detectBrandFromBin(c.bin)} className="h-5 shrink-0" />
+                    <span className="font-mono text-sm text-foreground">{c.bin}<span className="text-muted-foreground">••••••</span></span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {expiring && (
+                      <span className="inline-flex items-center gap-[3px] text-[9px] font-bold uppercase tracking-wide leading-none px-[7px] py-[4px] rounded bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-white shadow-[0_2px_6px_rgba(239,68,68,0.4)] border border-white/15">
+                        <svg className="h-[9px] w-[9px] shrink-0" viewBox="0 0 16 16" fill="none"><path d="M8 1l2.4 4.8L16 6.7l-4 3.9.9 5.4L8 13.4 3.1 16l.9-5.4-4-3.9 5.6-.9L8 1z" fill="currentColor"/></svg>
+                        SALE
+                      </span>
+                    )}
+                    {recent && (
+                      <span className="inline-flex items-center gap-[3px] text-[9px] font-bold uppercase tracking-wide leading-none px-[7px] py-[4px] rounded bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-[0_2px_6px_rgba(16,185,129,0.4)] border border-white/15">
+                        <svg className="h-[9px] w-[9px] shrink-0" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        NEW
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {seller && (
+                  <Link to={`/seller/${c.seller_id}`} className="mt-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary-glow">
+                    <Store className="h-2.5 w-2.5" />
+                    {seller.seller_display_name || seller.display_name || seller.username}
+                    <TrustBadge tier={seller.trust_tier} size="xs" />
+                  </Link>
+                )}
+
+                <div className="mt-3 grid grid-cols-3 gap-x-4 gap-y-1.5 text-xs">
+                  <div><span className="text-muted-foreground">Exp:</span> <span className="font-mono text-foreground">{c.exp_month ?? "—"}/{c.exp_year ?? "—"}</span></div>
+                  <div><span className="text-muted-foreground">Country:</span> {countryFlag(displayCountry)} {countryCode(displayCountry)}</div>
+                  <div><span className="text-muted-foreground">Refund:</span> {c.refundable ? <span className="text-success">YES</span> : "NO"}</div>
+                  {c.city && <div className="truncate"><span className="text-muted-foreground">City:</span> {c.city}</div>}
+                  {displayState && <div><span className="text-muted-foreground">State:</span> {displayState}</div>}
+                  {c.zip && <div><span className="text-muted-foreground">Zip:</span> <span className="font-mono">{c.zip}</span></div>}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="font-display">
+                    {expiring ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="text-orange-300 font-bold text-base drop-shadow-[0_0_8px_rgba(251,146,60,0.35)]">${Number(c.price).toFixed(2)}</span>
+                        <span className="text-[7px] font-bold uppercase tracking-[0.15em] text-orange-200/80 bg-gradient-to-r from-orange-600/25 to-red-600/25 px-1.5 py-[2px] rounded border border-orange-400/20">⚡ Clearance</span>
+                      </span>
+                    ) : (
+                      <span className="text-primary-glow font-semibold text-base">${Number(c.price).toFixed(2)}</span>
+                    )}
+                  </div>
+                  {cartIds.has(c.id) ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-full bg-success/20 text-success border border-success/40">
+                      <ShoppingCart className="h-3 w-3" />In cart
+                    </span>
+                  ) : (
+                    <button onClick={() => addToCart(c.id)}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary to-primary-glow text-white shadow-neon hover:shadow-neon-lg active:scale-95 transition-all">
+                      <ShoppingCart className="h-3 w-3" />Add
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {!loading && noResults && (
+            <div className="glass rounded-xl p-8 text-center">
+              <PackageX className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+              <p className="font-display text-foreground">Not stocked yet</p>
+              <Button onClick={reset} variant="outline" size="sm" className="mt-3 border-primary/40 text-primary-glow"><X className="h-3.5 w-3.5 mr-1" />Clear search</Button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Desktop table layout ── */}
+        <div className="glass rounded-2xl overflow-hidden hidden md:block">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-secondary/60 text-xs uppercase tracking-wider text-muted-foreground">
