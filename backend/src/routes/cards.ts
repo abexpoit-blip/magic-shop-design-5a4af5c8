@@ -194,6 +194,9 @@ cardsRouter.post("/bulk", requireAuth, requireRole("seller", "admin"), (req, res
         }
       })();
     }
+    // Immediately discount any just-uploaded cards expiring this month
+    lastAutoDiscountRun = 0;
+    autoDiscountExpiring();
     res.json({ count });
   } catch (e: any) {
     res.status(500).json({ error: e.message || "Bulk insert failed", inserted: count });
