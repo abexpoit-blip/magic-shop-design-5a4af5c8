@@ -363,9 +363,12 @@ const Shop = () => {
                     </td>
                     <td className="p-3 text-center font-display">
                       {expiring ? (
-                        <span className="text-orange-400 font-bold">{Number(c.price).toFixed(2)}</span>
+                        <span className="inline-flex flex-col items-center gap-0.5">
+                          <span className="text-orange-400 font-bold text-sm drop-shadow-[0_0_6px_rgba(251,146,60,0.4)]">${Number(c.price).toFixed(2)}</span>
+                          <span className="text-[8px] font-semibold uppercase tracking-wider text-orange-300/70 bg-orange-500/10 px-1.5 py-0.5 rounded-sm border border-orange-500/20">Clearance</span>
+                        </span>
                       ) : (
-                        <span className="text-primary-glow">{Number(c.price).toFixed(2)}</span>
+                        <span className="text-primary-glow font-semibold">${Number(c.price).toFixed(2)}</span>
                       )}
                     </td>
                     <td className="p-3 text-[11px] text-muted-foreground max-w-[180px] truncate" title={c.base}>{c.base}</td>
