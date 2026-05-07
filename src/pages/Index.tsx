@@ -198,7 +198,7 @@ const Index = () => {
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                         <span className="text-base shrink-0">{brandEmoji(s.brand)}</span>
                         {s.country && <span className="text-base shrink-0">{countryFlag(s.country)}</span>}
-                        <span className="text-sm text-foreground/85 group-hover:text-foreground transition truncate font-mono">{s.base}</span>
+                        <span className="text-sm text-foreground/85 group-hover:text-foreground transition truncate font-mono">{s.base.replace(/_\$[\d.]+$/, '')}</span>
                         <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-success/20 border border-success/30 text-success font-mono">NEW</span>
                       </div>
                       <span className="text-xs font-display font-bold text-primary-glow shrink-0 ml-3">+{s.count}</span>
