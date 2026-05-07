@@ -171,9 +171,6 @@ const AdminLogin = () => {
         <p className="text-center text-[9px] font-mono tracking-[0.3em] text-muted-foreground mt-5">
           UNAUTHORIZED ACCESS LOGGED · IP MONITORED
         </p>
-        <p className="text-center text-[10px] text-muted-foreground mt-2">
-          Admin login URL: <a href={ADMIN_LOGIN_URL} className="text-primary-glow underline underline-offset-4">{ADMIN_LOGIN_URL}</a>
-        </p>
       </div>
     </div>
   );
