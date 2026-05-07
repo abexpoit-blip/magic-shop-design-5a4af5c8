@@ -325,12 +325,14 @@ const Shop = () => {
                         <BrandLogo brand={c.brand || detectBrandFromBin(c.bin)} className="h-4" />
                         <span>{c.bin}<span className="text-muted-foreground">••••••</span></span>
                         {expiring && (
-                          <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse" title="Expiring soon — discounted">
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-[0.12em] leading-none px-2.5 py-1 rounded-md bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-white shadow-[0_0_12px_rgba(239,68,68,0.55),inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/10 backdrop-blur-sm" title="Expiring soon — discounted">
+                            <svg className="h-2.5 w-2.5" viewBox="0 0 16 16" fill="none"><path d="M8 1l2.4 4.8L16 6.7l-4 3.9.9 5.4L8 13.4 3.1 16l.9-5.4-4-3.9 5.6-.9L8 1z" fill="currentColor"/></svg>
                             SALE
                           </span>
                         )}
                         {recent && (
-                          <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gradient-to-r from-emerald-500 to-teal-400 text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]" title="Recently uploaded">
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-[0.12em] leading-none px-2.5 py-1 rounded-md bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-[0_0_12px_rgba(16,185,129,0.5),inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/10 backdrop-blur-sm" title="Recently uploaded">
+                            <svg className="h-2.5 w-2.5" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3M3.05 3.05l2.12 2.12M10.83 10.83l2.12 2.12M3.05 12.95l2.12-2.12M10.83 5.17l2.12-2.12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                             NEW
                           </span>
                         )}
@@ -361,9 +363,12 @@ const Shop = () => {
                     </td>
                     <td className="p-3 text-center font-display">
                       {expiring ? (
-                        <span className="text-orange-400 font-bold">{Number(c.price).toFixed(2)}</span>
+                        <span className="inline-flex flex-col items-center gap-0.5">
+                          <span className="text-orange-400 font-bold text-sm drop-shadow-[0_0_6px_rgba(251,146,60,0.4)]">${Number(c.price).toFixed(2)}</span>
+                          <span className="text-[8px] font-semibold uppercase tracking-wider text-orange-300/70 bg-orange-500/10 px-1.5 py-0.5 rounded-sm border border-orange-500/20">Clearance</span>
+                        </span>
                       ) : (
-                        <span className="text-primary-glow">{Number(c.price).toFixed(2)}</span>
+                        <span className="text-primary-glow font-semibold">${Number(c.price).toFixed(2)}</span>
                       )}
                     </td>
                     <td className="p-3 text-[11px] text-muted-foreground max-w-[180px] truncate" title={c.base}>{c.base}</td>
