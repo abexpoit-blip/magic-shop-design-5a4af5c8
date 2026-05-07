@@ -15,7 +15,7 @@ const AdminLogin = () => {
   const loc = useLocation();
   const { profile, user, loading: authLoading } = useAuth();
   const fromPath = (loc.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-  const safeAdminFrom = fromPath && fromPath.startsWith("/admin") && fromPath !== "/admin-login"
+  const safeAdminFrom = fromPath && fromPath.startsWith("/admin") && fromPath !== "/crzr-x9k2-panel"
     ? fromPath
     : null;
 
