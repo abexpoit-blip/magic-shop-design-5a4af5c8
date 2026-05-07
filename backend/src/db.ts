@@ -293,5 +293,8 @@ db.exec(`
   );
 `);
 
+// ── Patch: ensure 'type' column exists on news table (for upgrades) ──
+try { db.exec(`ALTER TABLE news ADD COLUMN type TEXT NOT NULL DEFAULT 'update'`); console.log("✅ Added 'type' column to news"); } catch (_) { /* already exists */ }
+
 // Schema initialization lives here; account seeding is handled explicitly by scripts/seed-admin.ts
 console.log("✅ SQLite DB ready:", DB_PATH);
