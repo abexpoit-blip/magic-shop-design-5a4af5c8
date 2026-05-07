@@ -11,7 +11,7 @@ const createNewsSchema = z.object({
 });
 
 newsRouter.get("/", (_req, res) => {
-  const rows = db.prepare(`SELECT * FROM news WHERE is_active = 1 ORDER BY created_at DESC`).all();
+  const rows = db.prepare(`SELECT * FROM news ORDER BY created_at DESC LIMIT 50`).all();
   res.json({ updates: rows });
 });
 
