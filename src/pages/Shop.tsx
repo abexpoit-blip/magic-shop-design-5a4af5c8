@@ -325,14 +325,14 @@ const Shop = () => {
                         <BrandLogo brand={c.brand || detectBrandFromBin(c.bin)} className="h-4" />
                         <span>{c.bin}<span className="text-muted-foreground">••••••</span></span>
                         {expiring && (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-[0.12em] leading-none px-2.5 py-1 rounded-md bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-white shadow-[0_0_12px_rgba(239,68,68,0.55),inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/10 backdrop-blur-sm" title="Expiring soon — discounted">
-                            <svg className="h-2.5 w-2.5" viewBox="0 0 16 16" fill="none"><path d="M8 1l2.4 4.8L16 6.7l-4 3.9.9 5.4L8 13.4 3.1 16l.9-5.4-4-3.9 5.6-.9L8 1z" fill="currentColor"/></svg>
+                          <span className="relative inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] leading-[1] px-2 py-[5px] rounded-[5px] bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-white shadow-[0_2px_8px_rgba(239,68,68,0.45)] border border-white/15 select-none align-middle" title="Expiring soon — discounted">
+                            <svg className="h-[10px] w-[10px] shrink-0" viewBox="0 0 16 16" fill="none"><path d="M8 1l2.4 4.8L16 6.7l-4 3.9.9 5.4L8 13.4 3.1 16l.9-5.4-4-3.9 5.6-.9L8 1z" fill="currentColor"/></svg>
                             SALE
                           </span>
                         )}
                         {recent && (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-[0.12em] leading-none px-2.5 py-1 rounded-md bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-[0_0_12px_rgba(16,185,129,0.5),inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/10 backdrop-blur-sm" title="Recently uploaded">
-                            <svg className="h-2.5 w-2.5" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3M3.05 3.05l2.12 2.12M10.83 10.83l2.12 2.12M3.05 12.95l2.12-2.12M10.83 5.17l2.12-2.12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                          <span className="relative inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] leading-[1] px-2 py-[5px] rounded-[5px] bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-[0_2px_8px_rgba(16,185,129,0.45)] border border-white/15 select-none align-middle" title="Recently uploaded">
+                            <svg className="h-[10px] w-[10px] shrink-0" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                             NEW
                           </span>
                         )}
