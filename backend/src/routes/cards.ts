@@ -22,32 +22,75 @@ function uid(): string {
     .join("");
 }
 
-// Browse available cards (authenticated)
+// Browse available cards (authenticated) — proper pagination
 cardsRouter.get("/", requireAuth, (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 50, 500);
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const perPage = Math.min(100, Math.max(1, Number(req.query.per_page) || 25));
+  const offset = (page - 1) * perPage;
   const brand = req.query.brand as string | undefined;
   const country = req.query.country as string | undefined;
   const bin = req.query.bin as string | undefined;
   const base = req.query.base as string | undefined;
   const zip = req.query.zip as string | undefined;
   const seller_id = req.query.seller_id as string | undefined;
+  const sort = (req.query.sort as string) || "expiry_asc"; // expiry_asc, price_asc, price_desc, created_desc
 
-  let sql = `SELECT id, seller_id, brand, bin, last4, country, state, zip, city, level, type, bank, price, status,
-                    base, refundable, has_phone, has_email, email, exp_month, exp_year, created_at
-             FROM cards WHERE status = 'available'`;
+  let where = `WHERE status = 'available'`;
   const params: any[] = [];
 
-  if (brand) { sql += ` AND lower(brand) = lower(?)`; params.push(brand); }
-  if (country) { sql += ` AND lower(country) = lower(?)`; params.push(country); }
-  if (bin) { sql += ` AND bin LIKE ?`; params.push(`${bin}%`); }
-  if (base && base !== "all") { sql += ` AND base = ?`; params.push(base); }
-  if (zip) { sql += ` AND zip LIKE ?`; params.push(`${zip}%`); }
-  if (seller_id) { sql += ` AND seller_id = ?`; params.push(seller_id); }
-  sql += ` ORDER BY created_at DESC LIMIT ?`;
-  params.push(limit);
+  if (brand) { where += ` AND lower(brand) = lower(?)`; params.push(brand); }
+  if (country) { where += ` AND lower(country) = lower(?)`; params.push(country); }
+  if (bin) { where += ` AND bin LIKE ?`; params.push(`${bin}%`); }
+  if (base && base !== "all") { where += ` AND base = ?`; params.push(base); }
+  if (zip) { where += ` AND zip LIKE ?`; params.push(`${zip}%`); }
+  if (seller_id) { where += ` AND seller_id = ?`; params.push(seller_id); }
 
-  const rows = db.prepare(sql).all(...params);
-  res.json({ cards: rows });
+  // Count total
+  const countRow = db.prepare(`SELECT COUNT(*) as count FROM cards ${where}`).get(...params) as any;
+  const total = countRow?.count ?? 0;
+
+  // Sort
+  let orderBy = "created_at DESC";
+  switch (sort) {
+    case "expiry_asc":
+      orderBy = "CAST(COALESCE(exp_year, '99') AS INTEGER) ASC, CAST(COALESCE(exp_month, '12') AS INTEGER) ASC, price ASC";
+      break;
+    case "price_asc":
+      orderBy = "price ASC";
+      break;
+    case "price_desc":
+      orderBy = "price DESC";
+      break;
+    case "created_desc":
+      orderBy = "created_at DESC";
+      break;
+  }
+
+  const sql = `SELECT id, seller_id, brand, bin, last4, country, state, zip, city, level, type, bank, price, status,
+                      base, refundable, has_phone, has_email, email, exp_month, exp_year, created_at
+               FROM cards ${where}
+               ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
+
+  const rows = db.prepare(sql).all(...params, perPage, offset);
+  res.json({ cards: rows, total, page, per_page: perPage, pages: Math.ceil(total / perPage) });
+});
+
+// Get all unique bases (for filter dropdown)
+cardsRouter.get("/bases", requireAuth, (req, res) => {
+  const rows = db.prepare(`SELECT DISTINCT base FROM cards WHERE status = 'available' AND base IS NOT NULL ORDER BY base`).all() as any[];
+  res.json({ bases: rows.map(r => r.base) });
+});
+
+// Recent stock additions — last 5 uploads grouped by base
+cardsRouter.get("/recent-stock", (req, res) => {
+  const rows = db.prepare(`
+    SELECT base, brand, country, COUNT(*) as count, MAX(created_at) as created_at
+    FROM cards WHERE status = 'available' AND created_at >= datetime('now', '-7 days')
+    GROUP BY base
+    ORDER BY MAX(created_at) DESC
+    LIMIT 5
+  `).all();
+  res.json({ stock: rows });
 });
 
 // Seller's own cards
@@ -79,11 +122,10 @@ cardsRouter.post("/", requireAuth, requireRole("seller", "admin"), (req, res) =>
   res.json({ id });
 });
 
-// ── Bulk create (seller/admin) ──
+// ── Bulk create (seller/admin) — NO LIMIT ──
 cardsRouter.post("/bulk", requireAuth, requireRole("seller", "admin"), (req, res) => {
   const rows = req.body;
   if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ error: "Array of cards required" });
-  if (rows.length > 5000) return res.status(400).json({ error: "Max 5000 cards per batch" });
 
   const insert = db.prepare(`
     INSERT INTO cards (id, seller_id, brand, bin, last4, country, state, zip, city, level, type, bank, price,
@@ -97,36 +139,39 @@ cardsRouter.post("/bulk", requireAuth, requireRole("seller", "admin"), (req, res
   const sellerId = req.user!.id;
   let count = 0;
 
-  const tx = db.transaction(() => {
-    for (const r of rows) {
-      const ccNum = r.cc_number || r.cc || "";
-      const binVal = r.bin || ccNum.slice(0, 6);
-      const brand = detectBrand(ccNum || binVal);
-      const last4 = ccNum.length >= 4 ? ccNum.slice(-4) : r.last4 || "";
-      const id = uid();
-
-      insert.run(
-        id, sellerId, brand,
-        binVal, last4,
-        r.country || null, r.state || null, r.zip || null, r.city || null,
-        r.level || null, r.type || null, r.bank || null,
-        Number(r.price) || 0,
-        r.cc_data || ccNum || null, r.cc_number || ccNum || null,
-        r.cvv || null, r.exp_month || null, r.exp_year || null,
-        r.holder_name || null, r.notes || null,
-        r.base || null, r.refundable ? 1 : 0,
-        r.has_phone ? 1 : 0, r.has_email ? 1 : 0,
-        r.email || null, r.phone || null, r.address || null
-      );
-      count++;
-    }
-  });
-
+  // Process in batches of 5000 for large uploads
+  const batchSize = 5000;
   try {
-    tx();
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const batch = rows.slice(i, i + batchSize);
+      db.transaction(() => {
+        for (const r of batch) {
+          const ccNum = r.cc_number || r.cc || "";
+          const binVal = r.bin || ccNum.slice(0, 6);
+          const brand = detectBrand(ccNum || binVal);
+          const last4 = ccNum.length >= 4 ? ccNum.slice(-4) : r.last4 || "";
+          const id = uid();
+
+          insert.run(
+            id, sellerId, brand,
+            binVal, last4,
+            r.country || null, r.state || null, r.zip || null, r.city || null,
+            r.level || null, r.type || null, r.bank || null,
+            Number(r.price) || 0,
+            r.cc_data || ccNum || null, r.cc_number || ccNum || null,
+            r.cvv || null, r.exp_month || null, r.exp_year || null,
+            r.holder_name || null, r.notes || null,
+            r.base || null, r.refundable ? 1 : 0,
+            r.has_phone ? 1 : 0, r.has_email ? 1 : 0,
+            r.email || null, r.phone || null, r.address || null
+          );
+          count++;
+        }
+      })();
+    }
     res.json({ count });
   } catch (e: any) {
-    res.status(500).json({ error: e.message || "Bulk insert failed" });
+    res.status(500).json({ error: e.message || "Bulk insert failed", inserted: count });
   }
 });
 
@@ -165,11 +210,9 @@ cardsRouter.post("/bulk-delete", requireAuth, requireRole("seller", "admin"), (r
   const placeholders = ids.map(() => "?").join(",");
 
   try {
-    // PRAGMA foreign_keys must be set OUTSIDE a transaction in SQLite
     db.pragma("foreign_keys = OFF");
     db.transaction(() => {
       db.prepare(`DELETE FROM cart_items WHERE card_id IN (${placeholders})`).run(...ids);
-      // Delete cards (with ownership check for non-admins)
       let sql = `DELETE FROM cards WHERE id IN (${placeholders})`;
       if (!isAdmin) sql += ` AND seller_id = ?`;
       const params = [...ids];
@@ -213,7 +256,6 @@ cardsRouter.delete("/:id", requireAuth, (req, res) => {
   if (card.seller_id !== req.user!.id && req.user!.role !== "admin") return res.status(403).json({ error: "Forbidden" });
   
   try {
-    // PRAGMA foreign_keys must be set OUTSIDE a transaction in SQLite
     db.pragma("foreign_keys = OFF");
     db.transaction(() => {
       db.prepare(`DELETE FROM cart_items WHERE card_id = ?`).run(req.params.id);
@@ -235,7 +277,6 @@ cardsRouter.get("/:id/reveal", requireAuth, (req, res) => {
   const userId = req.user!.id;
   const isAdmin = req.user!.role === "admin";
   const isSeller = card.seller_id === userId;
-  // Check if buyer purchased this card
   const order = db.prepare(
     `SELECT o.id
        FROM orders o
@@ -248,9 +289,40 @@ cardsRouter.get("/:id/reveal", requireAuth, (req, res) => {
   res.json({ card });
 });
 
-// Admin browse all cards
+// Admin browse all cards with pagination
 cardsRouter.get("/all", requireAuth, requireRole("admin"), (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 200, 1000);
-  const rows = db.prepare(`SELECT * FROM cards ORDER BY created_at DESC LIMIT ?`).all(limit);
-  res.json({ cards: rows });
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const perPage = Math.min(200, Math.max(1, Number(req.query.per_page) || 50));
+  const offset = (page - 1) * perPage;
+  const status = req.query.status as string | undefined;
+  const q = (req.query.q as string || "").trim().toLowerCase();
+
+  let where = "WHERE 1=1";
+  const params: any[] = [];
+
+  if (status && status !== "all") { where += ` AND status = ?`; params.push(status); }
+  if (q) { where += ` AND (lower(bin) LIKE ? OR lower(brand) LIKE ? OR lower(country) LIKE ?)`; params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
+
+  const countRow = db.prepare(`SELECT COUNT(*) as count FROM cards ${where}`).get(...params) as any;
+  const total = countRow?.count ?? 0;
+
+  const rows = db.prepare(`SELECT * FROM cards ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(...params, perPage, offset);
+  res.json({ cards: rows, total, page, per_page: perPage, pages: Math.ceil(total / perPage) });
+});
+
+// ── Auto-cleanup expired cards ──
+// Mark cards as expired if exp_month/exp_year is past
+cardsRouter.post("/cleanup-expired", requireAuth, requireRole("admin"), (_req, res) => {
+  const now = new Date();
+  const curYear = now.getFullYear() % 100; // 2-digit
+  const curMonth = now.getMonth() + 1;
+
+  const result = db.prepare(`
+    UPDATE cards SET status = 'expired'
+    WHERE status = 'available'
+      AND exp_year IS NOT NULL AND exp_month IS NOT NULL
+      AND (CAST(exp_year AS INTEGER) < ? OR (CAST(exp_year AS INTEGER) = ? AND CAST(exp_month AS INTEGER) < ?))
+  `).run(curYear, curYear, curMonth);
+
+  res.json({ ok: true, expired: result.changes });
 });
