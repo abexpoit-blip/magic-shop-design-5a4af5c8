@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ShieldAlert, Lock, KeyRound, Loader2, ArrowLeft, ArrowRight, AlertCircle, WifiOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-const ADMIN_LOGIN_URL = "https://cruzercc.shop/admin-login";
+const ADMIN_LOGIN_URL = "https://cruzercc.shop/crzr-x9k2-panel";
 const API_BASE_URL = "https://cruzercc.shop/api";
 
 const AdminLogin = () => {
@@ -15,7 +15,7 @@ const AdminLogin = () => {
   const loc = useLocation();
   const { profile, user, loading: authLoading } = useAuth();
   const fromPath = (loc.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-  const safeAdminFrom = fromPath && fromPath.startsWith("/admin") && fromPath !== "/admin-login"
+  const safeAdminFrom = fromPath && fromPath.startsWith("/admin") && fromPath !== "/crzr-x9k2-panel"
     ? fromPath
     : null;
 
@@ -170,9 +170,6 @@ const AdminLogin = () => {
 
         <p className="text-center text-[9px] font-mono tracking-[0.3em] text-muted-foreground mt-5">
           UNAUTHORIZED ACCESS LOGGED · IP MONITORED
-        </p>
-        <p className="text-center text-[10px] text-muted-foreground mt-2">
-          Admin login URL: <a href={ADMIN_LOGIN_URL} className="text-primary-glow underline underline-offset-4">{ADMIN_LOGIN_URL}</a>
         </p>
       </div>
     </div>
