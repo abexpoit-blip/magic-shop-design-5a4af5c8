@@ -35,7 +35,12 @@ cardsRouter.get("/", requireAuth, (req, res) => {
   const seller_id = req.query.seller_id as string | undefined;
   const sort = (req.query.sort as string) || "expiry_asc"; // expiry_asc, price_asc, price_desc, created_desc
 
-  let where = `WHERE status = 'available'`;
+  // Auto-exclude expired cards from the marketplace
+  const now = new Date();
+  const curYear2 = now.getFullYear() % 100;
+  const curMonth = now.getMonth() + 1;
+
+  let where = `WHERE status = 'available' AND NOT (exp_year IS NOT NULL AND exp_month IS NOT NULL AND (CAST(exp_year AS INTEGER) < ${curYear2} OR (CAST(exp_year AS INTEGER) = ${curYear2} AND CAST(exp_month AS INTEGER) < ${curMonth})))`;
   const params: any[] = [];
 
   if (brand) { where += ` AND lower(brand) = lower(?)`; params.push(brand); }
@@ -49,11 +54,12 @@ cardsRouter.get("/", requireAuth, (req, res) => {
   const countRow = db.prepare(`SELECT COUNT(*) as count FROM cards ${where}`).get(...params) as any;
   const total = countRow?.count ?? 0;
 
-  // Sort
+  // Sort — for expiry_asc, compute months remaining so fewest-days-left is truly first
   let orderBy = "created_at DESC";
   switch (sort) {
     case "expiry_asc":
-      orderBy = "CAST(COALESCE(exp_year, '99') AS INTEGER) ASC, CAST(COALESCE(exp_month, '12') AS INTEGER) ASC, price ASC";
+      // Cards with soonest expiry first; nulls go last
+      orderBy = `CASE WHEN exp_year IS NULL OR exp_month IS NULL THEN 9999 ELSE (CAST(exp_year AS INTEGER) - ${curYear2}) * 12 + (CAST(exp_month AS INTEGER) - ${curMonth}) END ASC, price ASC`;
       break;
     case "price_asc":
       orderBy = "price ASC";
