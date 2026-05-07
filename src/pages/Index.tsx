@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AppShell } from "@/components/AppShell";
-import { newsApi, announcementsApi, ordersApi } from "@/lib/api";
+import { newsApi, announcementsApi, ordersApi, cardsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Wallet, ShoppingBag, TrendingUp, Megaphone, Newspaper, Send,
@@ -17,12 +17,20 @@ const Index = () => {
   const [news, setNews] = useState<{ id: string; label: string; count: number; brand?: string; country?: string; bin?: string; created_at?: string }[]>([]);
   const [anns, setAnns] = useState<{ id: string; title: string; body: string }[]>([]);
   const [stats, setStats] = useState({ orders: 0, spend: 0 });
+  const [stockFeed, setStockFeed] = useState<Array<{ base: string; brand: string; country: string; count: number; created_at: string }>>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadNews = useCallback(async () => {
     try {
       const res = await newsApi.list();
       setNews((res.updates ?? []) as typeof news);
+    } catch { /* ignore */ }
+  }, []);
+
+  const loadStockFeed = useCallback(async () => {
+    try {
+      const res = await cardsApi.recentStock();
+      setStockFeed(res.stock ?? []);
     } catch { /* ignore */ }
   }, []);
 
@@ -33,19 +41,20 @@ const Index = () => {
         announcementsApi.list(),
         ordersApi.mine(),
       ]);
+      loadStockFeed();
       if (a.status === "fulfilled") setAnns((a.value.announcements ?? []) as typeof anns);
       if (o.status === "fulfilled") {
         const orders = (o.value.orders ?? []) as { total: number }[];
         setStats({ orders: orders.length, spend: orders.reduce((s, x) => s + Number(x.total), 0) });
       }
     })();
-  }, [loadNews]);
+  }, [loadNews, loadStockFeed]);
 
   // Auto-refresh live inventory every 30 seconds
   useEffect(() => {
-    intervalRef.current = setInterval(loadNews, 30000);
+    intervalRef.current = setInterval(() => { loadNews(); loadStockFeed(); }, 30000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [loadNews]);
+  }, [loadNews, loadStockFeed]);
 
   return (
     <AppShell>
@@ -180,7 +189,25 @@ const Index = () => {
               </span>
             </div>
             <div className="max-h-[380px] overflow-y-auto scrollbar-thin space-y-1.5 pr-2">
-              {news.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">No updates yet.</p>}
+              {/* Recent stock additions */}
+              {stockFeed.length > 0 && (
+                <div className="mb-3 space-y-1.5">
+                  <p className="text-[10px] uppercase tracking-wider text-primary-glow font-mono mb-1">📦 Recent stock added</p>
+                  {stockFeed.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/30 hover:bg-primary/15 transition group">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <span className="text-base shrink-0">{brandEmoji(s.brand)}</span>
+                        {s.country && <span className="text-base shrink-0">{countryFlag(s.country)}</span>}
+                        <span className="text-sm text-foreground/85 group-hover:text-foreground transition truncate font-mono">{s.base}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-success/20 border border-success/30 text-success font-mono">NEW</span>
+                      </div>
+                      <span className="text-xs font-display font-bold text-primary-glow shrink-0 ml-3">+{s.count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Existing news updates */}
+              {news.length === 0 && stockFeed.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">No updates yet.</p>}
               {news.map((n) => {
                 const detectedBrand = n.brand || (n.bin ? detectBrandFromBin(n.bin) : "");
                 const flag = n.country ? countryFlag(n.country) : "";

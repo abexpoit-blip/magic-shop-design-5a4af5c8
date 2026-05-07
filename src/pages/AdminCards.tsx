@@ -1,36 +1,50 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
-import { cardsApi, adminApi } from "@/lib/api";
+import { cardsApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CreditCard, Trash2, Search, EyeOff, Eye, DollarSign, Check, X } from "lucide-react";
+import { CreditCard, Trash2, Search, EyeOff, Eye, DollarSign, Check, X, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface Card {
   id: string; seller_id: string; bin: string; brand: string; country: string;
-  price: number; status: string; created_at: string;
+  price: number; status: string; created_at: string; exp_month?: string; exp_year?: string;
 }
 
 const AdminCards = () => {
   const [cards, setCards] = useState<Card[]>([]);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "available" | "sold" | "hidden">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "available" | "sold" | "hidden" | "expired">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCards, setTotalCards] = useState(0);
 
-  const load = async () => {
+  const load = async (p = page) => {
     setLoading(true);
     try {
-      const params: Record<string, string | number | boolean> = { limit: 200 };
+      const params: Record<string, string | number | boolean> = { per_page: 50, page: p };
       if (statusFilter !== "all") params.status = statusFilter;
       if (query) params.q = query;
-      const { cards: c } = await cardsApi.browse(params);
-      setCards((c ?? []) as unknown as Card[]);
+      const res = await cardsApi.all(params);
+      setCards((res.cards ?? []) as unknown as Card[]);
+      setTotalPages(res.pages ?? 1);
+      setTotalCards(res.total ?? 0);
     } catch { /* ignore */ }
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [query, statusFilter]);
+  useEffect(() => { setPage(1); load(1); }, [query, statusFilter]); // eslint-disable-line
+  useEffect(() => { load(page); }, [page]); // eslint-disable-line
+
+  const cleanupExpired = async () => {
+    try {
+      const res = await cardsApi.cleanupExpired();
+      toast.success(`Marked ${res.expired} expired cards`);
+      load(page);
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
+  };
 
   const toggleOne = (id: string) =>
     setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -50,7 +64,7 @@ const AdminCards = () => {
     try {
       await cardsApi.bulkDelete(ids);
       toast.success(`Deleted ${ids.length}`);
-      setSelected(new Set()); load();
+      setSelected(new Set()); load(page);
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
@@ -60,7 +74,7 @@ const AdminCards = () => {
     try {
       await cardsApi.bulkUpdate(ids, { status });
       toast.success(`Status → ${status} on ${ids.length} cards`);
-      setSelected(new Set()); load();
+      setSelected(new Set()); load(page);
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
@@ -72,7 +86,7 @@ const AdminCards = () => {
     try {
       await cardsApi.bulkUpdate(ids, { price: p });
       toast.success(`Price → $${p.toFixed(2)} on ${ids.length} cards`);
-      setBulkPrice(""); setSelected(new Set()); load();
+      setBulkPrice(""); setSelected(new Set()); load(page);
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
   };
 
@@ -100,9 +114,14 @@ const AdminCards = () => {
   return (
     <AdminLayout title="Card Moderation">
       <section className="glass rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <CreditCard className="h-4 w-4 text-primary-glow" />
-          <h2 className="font-display tracking-wider text-primary-glow">ALL CARDS ({cards.length})</h2>
+        <div className="flex items-center gap-2 mb-4 flex-wrap justify-between">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-primary-glow" />
+            <h2 className="font-display tracking-wider text-primary-glow">ALL CARDS ({totalCards.toLocaleString()})</h2>
+          </div>
+          <Button size="sm" variant="outline" onClick={cleanupExpired} className="border-warning/40 text-warning hover:bg-warning/10">
+            <AlertTriangle className="h-3.5 w-3.5 mr-1" />Auto-expire old cards
+          </Button>
         </div>
 
         <div className="flex gap-2 mb-3 flex-wrap">
@@ -111,7 +130,7 @@ const AdminCards = () => {
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search BIN / brand / country…" className="bg-input/60 pl-9" />
           </div>
           <div className="flex gap-1">
-            {(["all", "available", "sold", "hidden"] as const).map((s) => (
+            {(["all", "available", "sold", "hidden", "expired"] as const).map((s) => (
               <button key={s} onClick={() => setStatusFilter(s)}
                 className={`px-3 py-2 rounded-lg text-xs uppercase tracking-wider transition ${
                   statusFilter === s ? "bg-primary/20 border border-primary/60 text-primary-glow" : "bg-secondary/40 border border-border/40 text-muted-foreground"
@@ -143,6 +162,7 @@ const AdminCards = () => {
                 <th className="p-2 text-left">BIN</th>
                 <th className="p-2 text-left">Brand</th>
                 <th className="p-2 text-left">Country</th>
+                <th className="p-2 text-center">Expiry</th>
                 <th className="p-2 text-right">Price</th>
                 <th className="p-2 text-center">Status</th>
                 <th className="p-2"></th>
@@ -150,11 +170,14 @@ const AdminCards = () => {
             </thead>
             <tbody>
               {cards.map((c) => (
-                <tr key={c.id} className={`border-t border-border/40 ${selected.has(c.id) ? "bg-primary/5" : ""} hover:bg-secondary/20`}>
+                <tr key={c.id} className={`border-t border-border/40 ${selected.has(c.id) ? "bg-primary/5" : ""} ${c.status === "expired" ? "bg-destructive/5 opacity-70" : ""} hover:bg-secondary/20`}>
                   <td className="p-2 text-center"><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="accent-primary" /></td>
                   <td className="p-2 font-mono">{c.bin}</td>
                   <td className="p-2">{c.brand}</td>
                   <td className="p-2">{c.country}</td>
+                  <td className="p-2 text-center font-mono text-xs">
+                    {c.exp_month && c.exp_year ? `${c.exp_month}/${c.exp_year}` : "—"}
+                  </td>
                   <td className="p-2 text-right text-primary-glow font-display">
                     {editingId === c.id ? (
                       <div className="flex items-center justify-end gap-1">
@@ -171,7 +194,9 @@ const AdminCards = () => {
                   <td className="p-2 text-center">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${
                       c.status === "available" ? "bg-success/20 text-success border-success/40" :
-                      c.status === "sold" ? "bg-secondary text-muted-foreground border-border" : "bg-warning/20 text-warning border-warning/40"
+                      c.status === "sold" ? "bg-secondary text-muted-foreground border-border" :
+                      c.status === "expired" ? "bg-destructive/20 text-destructive border-destructive/40" :
+                      "bg-warning/20 text-warning border-warning/40"
                     }`}>{c.status}</span>
                   </td>
                   <td className="p-2 text-right">
@@ -180,11 +205,43 @@ const AdminCards = () => {
                 </tr>
               ))}
               {!loading && cards.length === 0 && (
-                <tr><td colSpan={7} className="p-6 text-center text-muted-foreground text-xs">No cards match filters.</td></tr>
+                <tr><td colSpan={8} className="p-6 text-center text-muted-foreground text-xs">No cards match filters.</td></tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/40">
+            <p className="text-xs text-muted-foreground">
+              Page {page} of {totalPages} ({totalCards.toLocaleString()} total)
+            </p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/10 disabled:opacity-30">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                let p: number;
+                if (totalPages <= 7) p = i + 1;
+                else if (page <= 4) p = i + 1;
+                else if (page >= totalPages - 3) p = totalPages - 6 + i;
+                else p = page - 3 + i;
+                return (
+                  <button key={p} onClick={() => setPage(p)}
+                    className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-mono transition ${
+                      page === p ? "bg-primary/20 border border-primary/60 text-primary-glow" : "text-muted-foreground hover:bg-secondary/40"
+                    }`}>{p}</button>
+                );
+              })}
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/10 disabled:opacity-30">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </AdminLayout>
   );

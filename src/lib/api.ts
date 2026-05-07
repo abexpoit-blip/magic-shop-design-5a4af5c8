@@ -178,7 +178,12 @@ export interface VpsCard {
 
 export const cardsApi = {
   browse: (params?: Record<string, string | number | boolean | undefined>) =>
-    api.get<{ cards: VpsCard[] }>("/cards", params),
+    api.get<{ cards: VpsCard[]; total: number; page: number; per_page: number; pages: number }>("/cards", params),
+  bases: () => api.get<{ bases: string[] }>("/cards/bases"),
+  recentStock: () => api.get<{ stock: Array<{ base: string; brand: string; country: string; count: number; created_at: string }> }>("/cards/recent-stock"),
+  all: (params?: Record<string, string | number | boolean | undefined>) =>
+    api.get<{ cards: VpsCard[]; total: number; page: number; per_page: number; pages: number }>("/cards/all", params),
+  cleanupExpired: () => api.post<{ ok: true; expired: number }>("/cards/cleanup-expired"),
   mine: () => api.get<{ cards: VpsCard[] }>("/cards/mine"),
   create: (data: Record<string, unknown>) => api.post<{ id: string }>("/cards", data),
   bulkCreate: (rows: Record<string, unknown>[]) => api.post<{ count: number }>("/cards/bulk", rows),
