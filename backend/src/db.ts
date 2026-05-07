@@ -276,6 +276,7 @@ db.exec(`
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     title TEXT NOT NULL,
     body TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'update',
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
