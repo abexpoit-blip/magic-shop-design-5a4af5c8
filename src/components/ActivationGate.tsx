@@ -1,0 +1,182 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AppShell } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import { depositsApi } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { Lock, Sparkles, ShieldCheck, Zap, Wallet, Crown, ArrowRight, Loader2 } from "lucide-react";
+
+interface Props {
+  children: React.ReactNode;
+}
+
+/**
+ * Gates marketplace content behind a one-time activation deposit.
+ * Sellers + admins bypass. Buyers must have at least one approved deposit
+ * (current OR historical, even if balance is now 0).
+ */
+export const ActivationGate = ({ children }: Props) => {
+  const { user, profile } = useAuth();
+  const settings = useSiteSettings();
+  const navigate = useNavigate();
+  const [checking, setChecking] = useState(true);
+  const [activated, setActivated] = useState(false);
+
+  const bypass = !user || profile?.role === "admin" || profile?.role === "seller" || profile?.is_seller;
+
+  useEffect(() => {
+    if (bypass) { setChecking(false); setActivated(true); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const { deposits } = await depositsApi.mine();
+        const ok = (deposits ?? []).some((d) => {
+          const s = String((d as any).status ?? "").toLowerCase();
+          return s === "approved" || s === "completed";
+        });
+        if (alive) setActivated(ok);
+      } catch {
+        if (alive) setActivated(false);
+      } finally {
+        if (alive) setChecking(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [bypass, user?.id]);
+
+  if (checking) {
+    return (
+      <AppShell>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (activated) return <>{children}</>;
+
+  const min = Number(settings.min_deposit ?? 5);
+
+  return (
+    <AppShell>
+      <div className="relative overflow-hidden">
+        {/* Ambient glow orbs */}
+        <div className="pointer-events-none absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/20 blur-[120px] animate-pulse" />
+        <div className="pointer-events-none absolute -bottom-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-accent/20 blur-[120px] animate-pulse" />
+
+        <div className="relative max-w-4xl mx-auto py-8 md:py-12">
+          {/* Eyebrow chip */}
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 border border-primary/30 backdrop-blur-xl">
+              <Crown className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Members Vault · Locked</span>
+            </div>
+          </div>
+
+          {/* Headline */}
+          <div className="text-center space-y-3 mb-8">
+            <h1 className="font-display text-4xl md:text-6xl font-black neon-text leading-tight">
+              🔐 Activate Your Account
+            </h1>
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+              The marketplace is reserved for verified members. Make a one-time minimum deposit of{" "}
+              <span className="font-bold text-primary">${min.toFixed(2)}</span> to unlock the vault — funds stay yours, ready to spend.
+            </p>
+          </div>
+
+          {/* Premium glass card */}
+          <div className="relative group">
+            {/* Animated border gradient */}
+            <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-r from-primary via-accent to-primary opacity-60 blur-sm group-hover:opacity-100 transition-opacity" />
+
+            <div className="relative glass rounded-3xl p-6 md:p-10 border border-primary/30 bg-gradient-to-br from-card/95 via-card/80 to-card/95 backdrop-blur-2xl">
+              {/* Top row: lock + amount */}
+              <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-xl animate-pulse" />
+                  <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-2xl shadow-primary/40">
+                    <Lock className="w-10 h-10 text-primary-foreground" strokeWidth={2.5} />
+                  </div>
+                </div>
+
+                <div className="flex-1 text-center md:text-left">
+                  <div className="text-[10px] font-bold tracking-[0.25em] text-muted-foreground uppercase mb-1">
+                    One-Time Activation
+                  </div>
+                  <div className="flex items-baseline justify-center md:justify-start gap-2">
+                    <span className="text-5xl md:text-6xl font-display font-black bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                      ${min.toFixed(2)}
+                    </span>
+                    <span className="text-sm text-muted-foreground font-medium">minimum</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    💰 Credited instantly to your wallet — no fees, no expiry
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+                {[
+                  { icon: ShieldCheck, emoji: "🛡️", title: "Verified Status", desc: "Anti-fraud protection for the whole community" },
+                  { icon: Zap, emoji: "⚡", title: "Instant Access", desc: "Unlocks the entire live inventory immediately" },
+                  { icon: Wallet, emoji: "💎", title: "Wallet Credit", desc: "Every cent goes to your balance — spend anytime" },
+                  { icon: Sparkles, emoji: "✨", title: "Premium Perks", desc: "Auto-replacement, priority support, member pricing" },
+                ].map((f) => (
+                  <div
+                    key={f.title}
+                    className="group/item flex items-start gap-3 p-3.5 rounded-xl bg-gradient-to-br from-background/40 to-background/20 border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all"
+                  >
+                    <div className="shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/30 flex items-center justify-center text-lg group-hover/item:scale-110 transition-transform">
+                      {f.emoji}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                        {f.title}
+                      </div>
+                      <div className="text-xs text-muted-foreground leading-snug mt-0.5">{f.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  onClick={() => navigate("/recharge")}
+                  className="flex-1 h-14 text-base font-bold tracking-wide bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] hover:bg-[position:100%_0] transition-[background-position] duration-500 shadow-xl shadow-primary/30 group/cta"
+                >
+                  <Wallet className="w-5 h-5 mr-2" />
+                  Deposit Now & Activate
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover/cta:translate-x-1 transition-transform" />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/tickets")}
+                  className="h-14 px-6 border-primary/30 hover:bg-primary/10"
+                >
+                  💬 Need Help?
+                </Button>
+              </div>
+
+              {/* Trust strip */}
+              <div className="mt-6 pt-5 border-t border-border/50 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1.5">🔒 <span>Encrypted</span></span>
+                <span className="flex items-center gap-1.5">⚡ <span>Instant Credit</span></span>
+                <span className="flex items-center gap-1.5">🪙 <span>Crypto Accepted</span></span>
+                <span className="flex items-center gap-1.5">♾️ <span>One-Time Only</span></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer note */}
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            This is a one-time activation. Once your deposit is confirmed, the marketplace unlocks permanently. 🚀
+          </p>
+        </div>
+      </div>
+    </AppShell>
+  );
+};
