@@ -161,6 +161,72 @@ export const ActivationGate = ({ children }: Props) => {
                 </div>
               </div>
 
+              {/* Deposit status panel — auto-refreshing */}
+              {(() => {
+                const status = String(latest?.status ?? "").toLowerCase();
+                const cfg = !latest
+                  ? { emoji: "💸", label: "No deposit yet", desc: "Make your first deposit to activate the marketplace.", tone: "border-border/50 bg-muted/20", pill: "bg-muted text-muted-foreground", pillText: "Awaiting", iconColor: "text-muted-foreground" }
+                  : status === "approved" || status === "completed"
+                  ? { emoji: "✅", label: "Deposit approved", desc: "Your account is now activated. Welcome aboard!", tone: "border-emerald-500/40 bg-emerald-500/5", pill: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40", pillText: "Approved", iconColor: "text-emerald-400" }
+                  : status === "rejected" || status === "failed" || status === "expired" || status === "cancelled"
+                  ? { emoji: "❌", label: "Deposit unsuccessful", desc: "Last attempt was not completed. Please try again.", tone: "border-destructive/40 bg-destructive/5", pill: "bg-destructive/20 text-destructive border border-destructive/40", pillText: status.charAt(0).toUpperCase() + status.slice(1), iconColor: "text-destructive" }
+                  : { emoji: "⏳", label: "Deposit pending confirmation", desc: "We're waiting for network confirmation. This page updates automatically.", tone: "border-amber-500/40 bg-amber-500/5", pill: "bg-amber-500/20 text-amber-400 border border-amber-500/40", pillText: "Pending", iconColor: "text-amber-400" };
+                const isApproved = status === "approved" || status === "completed";
+                const isFailed = status === "rejected" || status === "failed" || status === "expired" || status === "cancelled";
+                const isPending = !!latest && !isApproved && !isFailed;
+                const StatusIcon = !latest ? Wallet : isApproved ? CheckCircle2 : isFailed ? XCircle : Clock;
+                return (
+                  <div className={`mb-6 rounded-2xl border ${cfg.tone} p-4 md:p-5 backdrop-blur-xl`}>
+                    <div className="flex items-start gap-3">
+                      <div className="relative shrink-0">
+                        {isPending && <div className="absolute inset-0 rounded-xl bg-amber-500/30 blur-md animate-pulse" />}
+                        <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-background/80 to-background/40 border border-border/60 flex items-center justify-center">
+                          <StatusIcon className={`w-5 h-5 ${cfg.iconColor} ${isPending ? "animate-pulse" : ""}`} />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase">Latest Deposit</span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${cfg.pill}`}>
+                            {isPending && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
+                            {cfg.pillText}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 text-sm font-bold text-foreground flex items-center gap-2">
+                          <span>{cfg.emoji}</span>
+                          <span>{cfg.label}</span>
+                          {latest && (
+                            <span className="ml-auto font-display text-base bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                              ${Number(latest.amount ?? 0).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">{cfg.desc}</div>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                          {latest?.method && <span className="uppercase tracking-wider">🪙 {latest.method}</span>}
+                          {latest?.created_at && <span>📅 {new Date(latest.created_at).toLocaleString()}</span>}
+                          {lastChecked && (
+                            <span className="ml-auto flex items-center gap-1">
+                              <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
+                              <span>auto-refresh · {lastChecked.toLocaleTimeString()}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={fetchDeposits}
+                        disabled={refreshing}
+                        className="shrink-0 w-9 h-9 rounded-lg border border-border/60 hover:border-primary/50 hover:bg-primary/10 flex items-center justify-center transition-colors disabled:opacity-50"
+                        aria-label="Refresh deposit status"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Feature grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
                 {[
