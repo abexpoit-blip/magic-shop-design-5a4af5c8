@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { depositsApi, plisioApi, walletApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +32,10 @@ const formatCountdown = (seconds: number) => {
 const Recharge = () => {
   const { profile } = useAuth();
   const settings = useSiteSettings();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isActivation = searchParams.get("activate") === "1";
+  const urlAmount = searchParams.get("amount");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("LTC");
   const [busy, setBusy] = useState(false);
@@ -116,6 +121,18 @@ const Recharge = () => {
     // eslint-disable-next-line
   }, []);
 
+  // Pre-fill amount from URL (?amount=...) or activation flow (?activate=1 → min_deposit)
+  useEffect(() => {
+    if (amount) return;
+    if (urlAmount && Number(urlAmount) > 0) {
+      setAmount(String(Number(urlAmount)));
+    } else if (isActivation) {
+      const min = Number(settings.min_deposit ?? 5);
+      if (min > 0) setAmount(String(min));
+    }
+    // eslint-disable-next-line
+  }, [settings.min_deposit, urlAmount, isActivation]);
+
   // Countdown timer
   useEffect(() => {
     if (!activeInvoice?.expires_at) {
@@ -177,6 +194,10 @@ const Recharge = () => {
           if (pollRef.current) clearInterval(pollRef.current);
           loadHistory();
           loadTransactions();
+          if (isActivation) {
+            toast.success("🎉 Account activated! Redirecting to the marketplace…");
+            setTimeout(() => navigate("/shop"), 1500);
+          }
         } else if (s.status === "rejected") {
           toast.error("Deposit expired or cancelled.");
           setActiveInvoice(null);
@@ -264,6 +285,24 @@ const Recharge = () => {
     <AppShell>
       <div className="space-y-6 max-w-5xl">
         <h1 className="font-display text-3xl font-black neon-text">RECHARGE CENTER</h1>
+
+        {isActivation && (
+          <div className="relative overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 p-4 md:p-5 backdrop-blur-xl">
+            <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full bg-primary/20 blur-3xl" />
+            <div className="relative flex items-start gap-3">
+              <div className="shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xl shadow-lg shadow-primary/30">🔓</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-bold tracking-[0.25em] text-primary uppercase">Account Activation</div>
+                <div className="text-sm md:text-base font-bold text-foreground mt-0.5">
+                  Complete your one-time deposit of ${Number(settings.min_deposit ?? 5).toFixed(2)} to unlock the marketplace.
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  ✨ The amount is pre-filled below. Once approved, you'll be redirected automatically.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left: Deposit form or active invoice */}

@@ -255,7 +255,7 @@ export const ActivationGate = ({ children }: Props) => {
               {/* CTA */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
-                  onClick={() => navigate("/recharge")}
+                  onClick={() => navigate(`/recharge?activate=1&amount=${min}`)}
                   className="flex-1 h-14 text-base font-bold tracking-wide bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] hover:bg-[position:100%_0] transition-[background-position] duration-500 shadow-xl shadow-primary/30 group/cta"
                 >
                   <Wallet className="w-5 h-5 mr-2" />
