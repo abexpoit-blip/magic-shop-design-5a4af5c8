@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { depositsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
-import { Lock, Sparkles, ShieldCheck, Zap, Wallet, Crown, ArrowRight, Loader2 } from "lucide-react";
+import { Lock, Sparkles, ShieldCheck, Zap, Wallet, Crown, ArrowRight, Loader2, Clock, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+
+interface DepositRow {
+  id: string;
+  amount: number;
+  status: string;
+  method?: string;
+  created_at?: string;
+}
 
 interface Props {
   children: React.ReactNode;
