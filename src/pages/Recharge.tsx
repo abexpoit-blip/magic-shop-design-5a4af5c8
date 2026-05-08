@@ -121,6 +121,18 @@ const Recharge = () => {
     // eslint-disable-next-line
   }, []);
 
+  // Pre-fill amount from URL (?amount=...) or activation flow (?activate=1 → min_deposit)
+  useEffect(() => {
+    if (amount) return;
+    if (urlAmount && Number(urlAmount) > 0) {
+      setAmount(String(Number(urlAmount)));
+    } else if (isActivation) {
+      const min = Number(settings.min_deposit ?? 5);
+      if (min > 0) setAmount(String(min));
+    }
+    // eslint-disable-next-line
+  }, [settings.min_deposit, urlAmount, isActivation]);
+
   // Countdown timer
   useEffect(() => {
     if (!activeInvoice?.expires_at) {
