@@ -10,6 +10,7 @@ import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, Store, Chevron
 import { TrustBadge } from "@/components/TrustBadge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { ActivationGate } from "@/components/ActivationGate";
 
 interface Card {
   id: string; bin: string; brand: string; country: string; state: string | null;
@@ -176,6 +177,7 @@ const Shop = () => {
   const noResults = !loading && cards.length === 0 && (searched || bin.length >= 6);
 
   return (
+    <ActivationGate>
     <AppShell>
       <div className="space-y-4">
         <div>
@@ -555,6 +557,7 @@ const Shop = () => {
         )}
       </div>
     </AppShell>
+    </ActivationGate>
   );
 };
 
