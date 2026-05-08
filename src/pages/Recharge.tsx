@@ -194,6 +194,10 @@ const Recharge = () => {
           if (pollRef.current) clearInterval(pollRef.current);
           loadHistory();
           loadTransactions();
+          if (isActivation) {
+            toast.success("🎉 Account activated! Redirecting to the marketplace…");
+            setTimeout(() => navigate("/shop"), 1500);
+          }
         } else if (s.status === "rejected") {
           toast.error("Deposit expired or cancelled.");
           setActiveInvoice(null);
