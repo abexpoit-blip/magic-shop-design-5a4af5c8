@@ -32,6 +32,10 @@ const formatCountdown = (seconds: number) => {
 const Recharge = () => {
   const { profile } = useAuth();
   const settings = useSiteSettings();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isActivation = searchParams.get("activate") === "1";
+  const urlAmount = searchParams.get("amount");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("LTC");
   const [busy, setBusy] = useState(false);
