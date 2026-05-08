@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { depositsApi, plisioApi, walletApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
