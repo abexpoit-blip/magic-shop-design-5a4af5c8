@@ -30,27 +30,63 @@ export const ActivationGate = ({ children }: Props) => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
   const [activated, setActivated] = useState(false);
+  const [latest, setLatest] = useState<DepositRow | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
   const bypass = !user || profile?.role === "admin" || profile?.role === "seller" || profile?.is_seller;
+
+  const fetchDeposits = async () => {
+    setRefreshing(true);
+    try {
+      const { deposits } = await depositsApi.mine();
+      const list = (deposits ?? []) as unknown as DepositRow[];
+      const ok = list.some((d) => {
+        const s = String(d.status ?? "").toLowerCase();
+        return s === "approved" || s === "completed";
+      });
+      const sorted = [...list].sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return tb - ta;
+      });
+      setLatest(sorted[0] ?? null);
+      setActivated(ok);
+      setLastChecked(new Date());
+      return ok;
+    } catch {
+      return false;
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     if (bypass) { setChecking(false); setActivated(true); return; }
     let alive = true;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
     (async () => {
-      try {
-        const { deposits } = await depositsApi.mine();
-        const ok = (deposits ?? []).some((d) => {
-          const s = String((d as any).status ?? "").toLowerCase();
-          return s === "approved" || s === "completed";
-        });
-        if (alive) setActivated(ok);
-      } catch {
-        if (alive) setActivated(false);
-      } finally {
-        if (alive) setChecking(false);
-      }
+      await fetchDeposits();
+      if (!alive) return;
+      setChecking(false);
+      // Poll every 15s while not activated. Stop once approved.
+      interval = setInterval(async () => {
+        if (!alive) return;
+        const ok = await fetchDeposits();
+        if (ok && interval) { clearInterval(interval); interval = null; }
+      }, 15000);
     })();
-    return () => { alive = false; };
+
+    const onFocus = () => { if (alive && !activated) fetchDeposits(); };
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      alive = false;
+      if (interval) clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bypass, user?.id]);
 
   if (checking) {
