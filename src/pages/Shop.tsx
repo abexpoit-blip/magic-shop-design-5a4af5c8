@@ -10,6 +10,7 @@ import { Search, RotateCcw, ShoppingCart, RefreshCw, PackageX, X, Store, Chevron
 import { TrustBadge } from "@/components/TrustBadge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { ActivationGate } from "@/components/ActivationGate";
 
 interface Card {
   id: string; bin: string; brand: string; country: string; state: string | null;
