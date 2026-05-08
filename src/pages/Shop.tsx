@@ -557,6 +557,7 @@ const Shop = () => {
         )}
       </div>
     </AppShell>
+    </ActivationGate>
   );
 };
 
