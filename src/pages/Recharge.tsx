@@ -286,6 +286,24 @@ const Recharge = () => {
       <div className="space-y-6 max-w-5xl">
         <h1 className="font-display text-3xl font-black neon-text">RECHARGE CENTER</h1>
 
+        {isActivation && (
+          <div className="relative overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 p-4 md:p-5 backdrop-blur-xl">
+            <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full bg-primary/20 blur-3xl" />
+            <div className="relative flex items-start gap-3">
+              <div className="shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xl shadow-lg shadow-primary/30">🔓</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-bold tracking-[0.25em] text-primary uppercase">Account Activation</div>
+                <div className="text-sm md:text-base font-bold text-foreground mt-0.5">
+                  Complete your one-time deposit of ${Number(settings.min_deposit ?? 5).toFixed(2)} to unlock the marketplace.
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  ✨ The amount is pre-filled below. Once approved, you'll be redirected automatically.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left: Deposit form or active invoice */}
           <section className="glass-neon rounded-2xl p-6">
