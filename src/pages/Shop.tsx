@@ -177,6 +177,7 @@ const Shop = () => {
   const noResults = !loading && cards.length === 0 && (searched || bin.length >= 6);
 
   return (
+    <ActivationGate>
     <AppShell>
       <div className="space-y-4">
         <div>
