@@ -183,7 +183,7 @@ const Shop = () => {
         <div>
           <h1 className="font-display text-3xl font-black neon-text">SHOP</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {totalCards > 0 ? `${totalCards.toLocaleString()} cards in stock` : "Search by BIN — auto-detects after 6 digits"}
+            {totalCards > 0 ? "Live inventory available — search by BIN to filter" : "Search by BIN — auto-detects after 6 digits"}
           </p>
         </div>
 
