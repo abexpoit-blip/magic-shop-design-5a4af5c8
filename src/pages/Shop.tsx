@@ -510,7 +510,7 @@ const Shop = () => {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 glass rounded-xl mt-3">
             <p className="text-xs text-muted-foreground">
-              Showing {((page - 1) * 25) + 1}–{Math.min(page * 25, totalCards)} of {totalCards.toLocaleString()}
+              Page {page} of {totalPages}
             </p>
             <div className="flex items-center gap-1">
               <button
