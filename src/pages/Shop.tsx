@@ -183,7 +183,7 @@ const Shop = () => {
         <div>
           <h1 className="font-display text-3xl font-black neon-text">SHOP</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {totalCards > 0 ? `${totalCards.toLocaleString()} cards in stock` : "Search by BIN — auto-detects after 6 digits"}
+            {totalCards > 0 ? "Live inventory available — search by BIN to filter" : "Search by BIN — auto-detects after 6 digits"}
           </p>
         </div>
 
@@ -510,7 +510,7 @@ const Shop = () => {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 glass rounded-xl mt-3">
             <p className="text-xs text-muted-foreground">
-              Showing {((page - 1) * 25) + 1}–{Math.min(page * 25, totalCards)} of {totalCards.toLocaleString()}
+              Page {page} of {totalPages}
             </p>
             <div className="flex items-center gap-1">
               <button

@@ -413,16 +413,48 @@ const Recharge = () => {
                   </p>
                 </div>
 
-                {/* Status */}
+                {/* Status + Approval Progress */}
                 {!isExpired && (
-                  <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-secondary/40 border border-border/40">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary-glow" />
-                    <span className="text-sm text-foreground/80">
-                      {activeInvoice.status === "pending" ? "Waiting for payment..." :
-                       `Status: ${activeInvoice.status} (${activeInvoice.confirmations} confirmations)`}
-                    </span>
+                  <div className="space-y-2 p-4 rounded-xl bg-secondary/40 border border-primary/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary-glow" />
+                        <span className="text-sm font-display tracking-wider text-foreground/90">
+                          {activeInvoice.status === "pending" ? "WAITING FOR PAYMENT" :
+                           activeInvoice.status === "approved" ? "APPROVED ✓" :
+                           `STATUS: ${activeInvoice.status.toUpperCase()}`}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-primary-glow">
+                        {activeInvoice.confirmations ?? 0}/2 confirmations
+                      </span>
+                    </div>
+                    {/* Animated progress bar */}
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-background/60 border border-border/40">
+                      <div
+                        className={`h-full bg-gradient-to-r from-primary via-primary-glow to-accent transition-all duration-500 ${
+                          activeInvoice.status === "approved" ? "" : "animate-pulse"
+                        }`}
+                        style={{
+                          width: `${
+                            activeInvoice.status === "approved" ? 100 :
+                            Math.min(95, 15 + ((activeInvoice.confirmations ?? 0) * 40))
+                          }%`,
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)] bg-[length:200%_100%] animate-shimmer" />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
+                      <span>● Detecting payment</span>
+                      <span>● Confirming</span>
+                      <span>● Credited</span>
+                    </div>
+                    <p className="text-[11px] text-center text-muted-foreground pt-1">
+                      Auto-checking every 10 seconds — keep this tab open ⚡
+                    </p>
                   </div>
                 )}
+
 
                 <Button variant={isExpired ? "default" : "outline"} size="sm" className="w-full" onClick={() => {
                   setActiveInvoice(null);
