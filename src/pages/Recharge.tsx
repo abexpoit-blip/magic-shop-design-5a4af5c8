@@ -442,7 +442,7 @@ const Recharge = () => {
                           }%`,
                         }}
                       />
-                      <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)] bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite]" />
+                      <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)] bg-[length:200%_100%] animate-shimmer" />
                     </div>
                     <div className="flex justify-between text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
                       <span>● Detecting payment</span>
