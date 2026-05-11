@@ -108,7 +108,33 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 const port = Number(process.env.PORT ?? 8080);
-app.listen(port, () => {
-  console.log(`✅ cruzercc API on :${port}`);
+const host = process.env.HOST ?? "127.0.0.1";
+
+const server = app.listen(port, host, () => {
+  console.log(`✅ cruzercc API listening on ${host}:${port} (pid ${process.pid})`);
   resumePollerIfNeeded();
 });
+
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    console.error("");
+    console.error("==================================================================");
+    console.error(`[cruzercc-api] FATAL: port ${host}:${port} already in use (EADDRINUSE)`);
+    console.error("  Another process is bound to this port. Refusing to start.");
+    console.error("  Diagnose with: sudo lsof -i :" + port + " -sTCP:LISTEN -n -P");
+    console.error("==================================================================");
+    console.error("");
+  } else {
+    console.error("[cruzercc-api] FATAL listen error:", err);
+  }
+  // Exit non-zero; PM2 max_restarts will stop the loop after a few tries.
+  process.exit(1);
+});
+
+const shutdown = (sig: string) => () => {
+  console.log(`[cruzercc-api] received ${sig}, closing server...`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 5000).unref();
+};
+process.on("SIGINT", shutdown("SIGINT"));
+process.on("SIGTERM", shutdown("SIGTERM"));
