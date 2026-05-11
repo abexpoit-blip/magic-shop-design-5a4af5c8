@@ -33,6 +33,8 @@ const Admin = () => {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [stats, setStats] = useState<Record<string, any>>({});
+  const [vpsState, setVpsState] = useState<Awaited<ReturnType<typeof adminApi.vpsState>> | null>(null);
+  const [vpsBusy, setVpsBusy] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [news, setNews] = useState<NewsItem[]>([]);
   const [annTitle, setAnnTitle] = useState("");
