@@ -11,6 +11,57 @@ LOG_DIR="/var/log/cruzercc"
 REPO_URL="https://github.com/abexpoit-blip/magic-shop-design.git"
 BACKEND_ENV="$BACKEND_DIR/.env"
 
+get_env_value() {
+  local key="$1"
+  local file="$2"
+  if [ ! -f "$file" ]; then
+    return 1
+  fi
+  awk -F= -v key="$key" '$1==key { sub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit }' "$file"
+}
+
+set_env_value() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+  if grep -qE "^${key}=" "$file"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$file"
+  fi
+}
+
+ensure_backend_port_free() {
+  local configured_port
+  configured_port="$(get_env_value PORT "$BACKEND_ENV" || true)"
+  configured_port="${configured_port:-8080}"
+
+  if ! ss -ltnH "sport = :${configured_port}" | grep -q .; then
+    echo "$configured_port"
+    return
+  fi
+
+  if pm2 pid cruzercc-api >/dev/null 2>&1; then
+    if ss -ltnp "sport = :${configured_port}" 2>/dev/null | grep -F "$(pm2 pid cruzercc-api)" >/dev/null 2>&1; then
+      echo "$configured_port"
+      return
+    fi
+  fi
+
+  local fallback_port
+  for fallback_port in $(seq 18080 18120); do
+    if ! ss -ltnH "sport = :${fallback_port}" | grep -q .; then
+      set_env_value PORT "$fallback_port" "$BACKEND_ENV"
+      echo "⚠️  Port ${configured_port} is busy on this VPS. Switching cruzercc-api to ${fallback_port}."
+      echo "$fallback_port"
+      return
+    fi
+  done
+
+  echo "❌ No free fallback backend port found in 18080-18120" >&2
+  exit 1
+}
+
 install_node_deps() {
   local target_dir="$1"
   if [ -f "$target_dir/package-lock.json" ]; then
@@ -125,6 +176,8 @@ echo "🧾 Commit: $(git rev-parse --short HEAD)"
 
 ensure_backend_env
 
+BACKEND_PORT="$(ensure_backend_port_free)"
+
 echo "📦 Installing & building frontend..."
 install_node_deps "$APP_DIR"
 VITE_API_BASE=/api npm --prefix "$APP_DIR" run build
@@ -148,7 +201,8 @@ fi
 pm2 start "$BACKEND_DIR/ecosystem.config.cjs" --only cruzercc-api --update-env
 pm2 save
 
-BACKEND_PORT=$(grep -oP '^PORT=\K\d+' "$BACKEND_ENV" 2>/dev/null || echo "8080")
+BACKEND_PORT="$(get_env_value PORT "$BACKEND_ENV" || true)"
+BACKEND_PORT="${BACKEND_PORT:-8080}"
 
 echo "🌐 Updating nginx..."
 write_nginx_config "$BACKEND_PORT"
