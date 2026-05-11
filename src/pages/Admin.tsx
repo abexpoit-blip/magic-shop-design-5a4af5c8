@@ -253,7 +253,65 @@ const Admin = () => {
               <StatCard icon={FileText} label="Open Tickets" value={String(stats.openTickets ?? 0)} accent={Number(stats.openTickets) > 0 ? "warning" : "primary"} />
             </div>
 
-            {/* Revenue Chart */}
+            {/* VPS State Verification */}
+            <Section icon={Activity} title="VPS STATE · LIVE DB SNAPSHOT">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-mono text-muted-foreground">
+                  {vpsState ? `Snapshot: ${new Date(vpsState.timestamp).toLocaleString()}` : "Loading..."}
+                </span>
+                <Button size="sm" variant="outline" onClick={refreshVpsState} disabled={vpsBusy}>
+                  {vpsBusy ? "Refreshing..." : "Refresh"}
+                </Button>
+              </div>
+              {vpsState && (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-lg border border-border/40 bg-card/40 p-4">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Users</div>
+                    <div className="text-2xl font-bold">{vpsState.users.total}</div>
+                    <div className="text-xs font-mono text-muted-foreground mt-1">
+                      {vpsState.users.admins} admin · {vpsState.users.sellers} seller · {vpsState.users.buyers} buyer
+                      {vpsState.users.banned > 0 && ` · ${vpsState.users.banned} banned`}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border/40 bg-card/40 p-4">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Cards</div>
+                    <div className="text-2xl font-bold">{vpsState.cards.total}</div>
+                    <div className="text-xs font-mono text-muted-foreground mt-1">
+                      {vpsState.cards.available} available · {vpsState.cards.sold} sold · {vpsState.cards.reserved} reserved
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border/40 bg-card/40 p-4">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Wallet Balances</div>
+                    <div className="text-2xl font-bold">${vpsState.wallets.total_balance.toFixed(2)}</div>
+                    <div className="text-xs font-mono text-muted-foreground mt-1">
+                      {vpsState.wallets.count} wallets · max ${vpsState.wallets.max_balance.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border/40 bg-card/40 p-4">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Orders</div>
+                    <div className="text-2xl font-bold">{vpsState.orders.total}</div>
+                    <div className="text-xs font-mono text-muted-foreground mt-1">
+                      ${vpsState.orders.revenue.toFixed(2)} revenue · {vpsState.pending_seller_applications} pending apps
+                    </div>
+                  </div>
+                </div>
+              )}
+              {vpsState && vpsState.sellers_breakdown.length > 0 && (
+                <div className="mt-4">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Sellers ({vpsState.sellers_breakdown.length})</div>
+                  <div className="rounded-lg border border-border/40 divide-y divide-border/40">
+                    {vpsState.sellers_breakdown.map(s => (
+                      <div key={s.id} className="flex justify-between items-center px-3 py-2 text-sm font-mono">
+                        <span>{s.username}</span>
+                        <span className="text-primary-glow">${Number(s.balance).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Section>
+
+
             <Section icon={BarChart3} title="REVENUE · LAST 30 DAYS">
               {dailyRevenue.length > 0 ? (
                 <div className="flex items-end gap-1 h-48">
