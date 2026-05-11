@@ -52,7 +52,7 @@ ensure_backend_port_free() {
   for fallback_port in $(seq 18080 18120); do
     if ! ss -ltnH "sport = :${fallback_port}" | grep -q .; then
       set_env_value PORT "$fallback_port" "$BACKEND_ENV"
-      echo "⚠️  Port ${configured_port} is busy on this VPS. Switching cruzercc-api to ${fallback_port}."
+      echo "⚠️  Port ${configured_port} is busy on this VPS. Switching cruzercc-api to ${fallback_port}." >&2
       echo "$fallback_port"
       return
     fi
