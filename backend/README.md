@@ -25,7 +25,7 @@ cd cruzercc
 
 # 4. Configure backend env
 cp backend/.env.example backend/.env
-nano backend/.env     # fill DATABASE_URL, JWT_SECRET, CARD_ENCRYPTION_KEY (openssl rand -hex 32)
+nano backend/.env     # fill JWT_SECRET + CARD_ENCRYPTION_KEY; keep HOST=127.0.0.1
 
 # 5. First install + migrate + bootstrap admin
 cd backend
@@ -49,7 +49,7 @@ mkdir -p /var/www/cruzercc/frontend
 rm -rf /var/www/cruzercc/frontend/*
 cp -r dist/* /var/www/cruzercc/frontend/
 
-# 8. Nginx — site root must be /var/www/cruzercc/frontend, API proxy must go to 127.0.0.1:8080
+# 8. Nginx — site root must be /var/www/cruzercc/frontend, API proxy must match backend/.env PORT
 nginx -t && systemctl reload nginx
 
 # 9. Uploads dir
@@ -78,7 +78,13 @@ After those are set, every push to `main` that touches `backend/**` auto-deploys
 curl https://cruzercc.shop/api/health
 curl -X POST https://cruzercc.shop/api/auth/admin-login \
   -H "Content-Type: application/json" \
-  -d '{"identifier":"samexpoit@gmail.com","password":"Shovon@5448"}'
+  -d '{"identifier":"admin@cruzercc.shop","password":"Admin@2026!"}'
 ```
 
-You should get `{ token, user: { roles: ["admin"] } }`.
+You should get healthy JSON for `/api/health` and `{ token, user }` for admin login.
+
+## Port conflict behavior
+
+- `cruzercc-api` always binds `HOST` + `PORT` from `backend/.env`
+- If the configured port is already owned by another app on the VPS, `deploy.sh` automatically moves cruzercc-api to a free high port (`18080-18120`) and rewrites nginx to proxy to that same port
+- This prevents collisions with unrelated PM2 apps while preserving `/api/*` on the public site
