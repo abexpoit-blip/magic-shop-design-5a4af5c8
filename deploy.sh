@@ -234,10 +234,20 @@ if [ "$ok" = false ]; then
   exit 1
 fi
 
-if curl -sf https://cruzercc.shop/api/health | grep -q '"ok":true' 2>/dev/null; then
-  echo "  ✅ Public API healthy"
+public_ok=false
+for i in $(seq 1 10); do
+  if curl -sfk https://cruzercc.shop/api/health | grep -q '"ok":true'; then
+    public_ok=true
+    break
+  fi
+  sleep 2
+done
+if [ "$public_ok" = true ]; then
+  echo "  ✅ Public API healthy (https://cruzercc.shop/api/health)"
 else
-  echo "  ⚠️  Public API not reachable yet"
+  echo "  ⚠️  Public API not reachable through nginx — check: curl -i https://cruzercc.shop/api/health"
+  echo "      nginx upstream is set to 127.0.0.1:${BACKEND_PORT}"
+  nginx -T 2>/dev/null | grep -E "proxy_pass.*127\.0\.0\.1" | sed 's/^/      /'
 fi
 
 DB_PATH="$DATA_DIR/cruzercc.db"
