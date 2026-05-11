@@ -36,7 +36,8 @@ npm run bootstrap-admin
 
 # 6. Start with PM2
 mkdir -p /var/log/cruzercc
-pm2 start ecosystem.config.cjs
+pm2 delete cruzercc-api 2>/dev/null || true
+pm2 start ecosystem.config.cjs --only cruzercc-api --update-env
 pm2 save
 pm2 startup    # follow the printed instruction
 
