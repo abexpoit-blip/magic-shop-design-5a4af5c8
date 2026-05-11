@@ -103,8 +103,16 @@ EOF
 write_nginx_config() {
   local backend_port="$1"
 
+  echo "  ↪ nginx upstream → http://127.0.0.1:${backend_port}"
+
   if [ -f "/etc/letsencrypt/live/cruzercc.shop/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/cruzercc.shop/privkey.pem" ]; then
-    sed "s|127.0.0.1:8080|127.0.0.1:${backend_port}|g" "$APP_DIR/nginx/cruzercc.conf" > /etc/nginx/sites-available/cruzercc
+    # Rewrite ANY 127.0.0.1:<port> upstream in the template to the active backend port.
+    sed -E "s|127\.0\.0\.1:[0-9]+|127.0.0.1:${backend_port}|g" "$APP_DIR/nginx/cruzercc.conf" > /etc/nginx/sites-available/cruzercc
+    # Sanity check: confirm at least one proxy_pass line points at the chosen port.
+    if ! grep -Eq "proxy_pass[[:space:]]+http://127\.0\.0\.1:${backend_port}\b" /etc/nginx/sites-available/cruzercc; then
+      echo "❌ nginx config rewrite did not produce expected proxy_pass to port ${backend_port}" >&2
+      exit 1
+    fi
   else
     cat > /etc/nginx/sites-available/cruzercc <<EOF
 server {
