@@ -67,7 +67,20 @@ const Admin = () => {
     } catch { /* ignore */ }
   };
 
-  useEffect(() => { load(); }, []);
+  const refreshVpsState = async () => {
+    setVpsBusy(true);
+    try {
+      const v = await adminApi.vpsState();
+      setVpsState(v);
+      toast.success("VPS state refreshed");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to load VPS state");
+    } finally {
+      setVpsBusy(false);
+    }
+  };
+
+  useEffect(() => { load(); adminApi.vpsState().then(setVpsState).catch(() => {}); }, []);
   useEffect(() => {
     if (userSearch.length === 0 || userSearch.length >= 2) {
       const t = setTimeout(() => { adminApi.users(userSearch || undefined).then(r => setUsers((r.users ?? []) as unknown as Profile[])).catch(() => {}); }, 300);
