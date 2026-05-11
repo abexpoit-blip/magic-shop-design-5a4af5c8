@@ -143,10 +143,9 @@ npm --prefix "$BACKEND_DIR" run seed-admin || echo "⚠️  Seed warnings (non-f
 
 echo "♻️  Restarting backend..."
 if pm2 describe cruzercc-api > /dev/null 2>&1; then
-  pm2 reload cruzercc-api --update-env
-else
-  pm2 start "$BACKEND_DIR/ecosystem.config.cjs"
+  pm2 delete cruzercc-api
 fi
+pm2 start "$BACKEND_DIR/ecosystem.config.cjs" --only cruzercc-api --update-env
 pm2 save
 
 BACKEND_PORT=$(grep -oP '^PORT=\K\d+' "$BACKEND_ENV" 2>/dev/null || echo "8080")
