@@ -35,14 +35,16 @@ ensure_backend_port_free() {
   local configured_port
   configured_port="$(get_env_value PORT "$BACKEND_ENV" || true)"
   configured_port="${configured_port:-8080}"
+  local current_pid=""
 
   if ! ss -ltnH "sport = :${configured_port}" | grep -q .; then
     echo "$configured_port"
     return
   fi
 
-  if pm2 pid cruzercc-api >/dev/null 2>&1; then
-    if ss -ltnp "sport = :${configured_port}" 2>/dev/null | grep -F "$(pm2 pid cruzercc-api)" >/dev/null 2>&1; then
+  if pm2 describe cruzercc-api >/dev/null 2>&1; then
+    current_pid="$(pm2 pid cruzercc-api 2>/dev/null | awk '/^[1-9][0-9]*$/ { print; exit }')"
+    if [ -n "$current_pid" ] && ss -ltnp "sport = :${configured_port}" 2>/dev/null | grep -Eq "pid=${current_pid},"; then
       echo "$configured_port"
       return
     fi
