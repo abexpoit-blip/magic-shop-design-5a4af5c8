@@ -290,6 +290,16 @@ export const announcementsApi = {
 export const adminApi = {
   users: (q?: string) => api.get<{ users: Array<Record<string, unknown>> }>("/admin/users", { q }),
   stats: () => api.get<Record<string, unknown>>("/admin/stats"),
+  vpsState: () => api.get<{
+    timestamp: string;
+    users: { total: number; admins: number; sellers: number; buyers: number; banned: number };
+    cards: { total: number; available: number; sold: number; reserved: number };
+    wallets: { count: number; total_balance: number; max_balance: number; avg_balance: number };
+    orders: { total: number; revenue: number };
+    pending_seller_applications: number;
+    sellers_breakdown: Array<{ id: string; username: string; balance: number }>;
+    top_buyers_by_balance: Array<{ id: string; username: string; balance: number }>;
+  }>("/admin/vps-state"),
   updateProfile: (id: string, data: Record<string, unknown>) =>
     api.patch<{ ok: true }>(`/admin/users/${id}/profile`, data),
   adjustBalance: (id: string, delta: number) =>

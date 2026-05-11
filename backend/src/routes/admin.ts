@@ -100,6 +100,89 @@ adminRouter.get("/stats", (_req, res) => {
   });
 });
 
+// ── VPS state verification (focused snapshot of DB contents) ──
+adminRouter.get("/vps-state", (_req, res) => {
+  const one = (sql: string) => (db.prepare(sql).get() as any) ?? {};
+
+  const users = one(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN role = 'admin'  THEN 1 ELSE 0 END) AS admins,
+      SUM(CASE WHEN role = 'seller' THEN 1 ELSE 0 END) AS sellers,
+      SUM(CASE WHEN role = 'buyer'  THEN 1 ELSE 0 END) AS buyers,
+      SUM(CASE WHEN is_active = 0   THEN 1 ELSE 0 END) AS banned
+    FROM users
+  `);
+
+  const cards = one(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) AS available,
+      SUM(CASE WHEN status = 'sold'      THEN 1 ELSE 0 END) AS sold,
+      SUM(CASE WHEN status = 'reserved'  THEN 1 ELSE 0 END) AS reserved
+    FROM cards
+  `);
+
+  const wallets = one(`
+    SELECT
+      COUNT(*) AS wallet_count,
+      COALESCE(SUM(balance), 0) AS total_balance,
+      COALESCE(MAX(balance), 0) AS max_balance,
+      COALESCE(AVG(balance), 0) AS avg_balance
+    FROM wallets
+  `);
+
+  const sellerWallets = db.prepare(`
+    SELECT u.id, u.username, COALESCE(w.balance, 0) AS balance
+      FROM users u
+      LEFT JOIN wallets w ON w.user_id = u.id
+     WHERE u.role = 'seller'
+     ORDER BY balance DESC
+  `).all();
+
+  const buyerWalletsTop = db.prepare(`
+    SELECT u.id, u.username, COALESCE(w.balance, 0) AS balance
+      FROM users u
+      LEFT JOIN wallets w ON w.user_id = u.id
+     WHERE u.role = 'buyer'
+     ORDER BY balance DESC
+     LIMIT 10
+  `).all();
+
+  const orders = one(`SELECT COUNT(*) AS total, COALESCE(SUM(total),0) AS revenue FROM orders`);
+  const pendingApps = one(`SELECT COUNT(*) AS c FROM seller_applications WHERE status = 'pending'`).c ?? 0;
+
+  res.json({
+    timestamp: new Date().toISOString(),
+    users: {
+      total: Number(users.total ?? 0),
+      admins: Number(users.admins ?? 0),
+      sellers: Number(users.sellers ?? 0),
+      buyers: Number(users.buyers ?? 0),
+      banned: Number(users.banned ?? 0),
+    },
+    cards: {
+      total: Number(cards.total ?? 0),
+      available: Number(cards.available ?? 0),
+      sold: Number(cards.sold ?? 0),
+      reserved: Number(cards.reserved ?? 0),
+    },
+    wallets: {
+      count: Number(wallets.wallet_count ?? 0),
+      total_balance: Number(wallets.total_balance ?? 0),
+      max_balance: Number(wallets.max_balance ?? 0),
+      avg_balance: Number(wallets.avg_balance ?? 0),
+    },
+    orders: {
+      total: Number(orders.total ?? 0),
+      revenue: Number(orders.revenue ?? 0),
+    },
+    pending_seller_applications: Number(pendingApps),
+    sellers_breakdown: sellerWallets,
+    top_buyers_by_balance: buyerWalletsTop,
+  });
+});
+
 // ── Toggle ban (activate/deactivate) ──
 adminRouter.post("/users/:id/toggle-ban", (req, res) => {
   const user = db.prepare(`SELECT id, is_active FROM users WHERE id = ?`).get(req.params.id) as any;
